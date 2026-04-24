@@ -78,6 +78,36 @@
 .item:hover { background: var(--bg3); color: var(--text); }
 .item.active { background: var(--purple-dim); color: var(--purple-light); }
 
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 30px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text2);
+  font-size: 12.5px;
+  position: relative;
+}
+.subItem:hover { background: var(--bg3); color: var(--text); }
+.subItem.active { background: var(--purple-dim); color: var(--purple-light); }
+
+.chevronBtn {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  border-radius: 3px;
+}
+.chevronBtn:hover { color: var(--text2); }
+.chevronOpen { transform: rotate(90deg); }
+.chevronHidden { visibility: hidden; }
+
 .itemIcon { font-size: 15px; flex-shrink: 0; }
 .itemName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

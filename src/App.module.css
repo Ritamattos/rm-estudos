@@ -119,8 +119,18 @@
 .uploadBtn:hover { border-color: var(--purple); color: var(--purple-light); background: var(--purple-dim); }
 .uploadBtn:disabled { opacity: 0.6; }
 
-.pdfUploaded {
-  font-size: 13px; color: var(--success);
-  display: flex; align-items: center; gap: 8px;
+.fieldHint {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.5;
 }
-.pdfUploaded button { color: var(--text3); text-decoration: underline; font-size: 12px; }
+
+.coverPreview {
+  display: flex; align-items: center; gap: 10px;
+}
+.coverPreview img {
+  width: 64px; height: 44px;
+  object-fit: cover; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.coverPreview button { color: var(--text3); text-decoration: underline; font-size: 12px; }

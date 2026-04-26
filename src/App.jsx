@@ -1,22 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, BookOpen, Briefcase } from 'lucide-react'
+import { Plus, Search, BookOpen, Briefcase, Library, Clapperboard } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
 import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import ItemCard from './components/ItemCard'
 import Modal from './components/Modal'
+import BibliotecaSection from './components/BibliotecaSection'
+import TelaSection from './components/TelaSection'
 import styles from './App.module.css'
 
 const WORKSPACES = [
-  { id: 'marketing', label: 'Marketing', icon: <Briefcase size={15} /> },
-  { id: 'pessoal', label: 'Pessoal', icon: <BookOpen size={15} /> },
+  { id: 'marketing',  label: 'Marketing',  icon: <Briefcase size={15} /> },
+  { id: 'pessoal',    label: 'Pessoal',    icon: <BookOpen size={15} /> },
+  { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={15} /> },
+  { id: 'tela',       label: 'Tela',       icon: <Clapperboard size={15} /> },
 ]
 
 const ITEM_TYPES = [
   { value: 'note', label: '📝 Nota' },
   { value: 'link', label: '🔗 Link' },
-  { value: 'pdf', label: '📄 PDF' },
+  { value: 'pdf',  label: '📄 PDF' },
 ]
 
 const SUB_TYPES = [
@@ -42,8 +46,8 @@ export default function App() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef()
+  const [coverUploading, setCoverUploading] = useState(false)
+  const coverFileRef = useRef()
 
   const store = useStore(user)
 
@@ -111,12 +115,20 @@ export default function App() {
     closeModal()
   }
 
-  async function handlePdfUpload(e) {
+  function convertGDriveLink(url) {
+    const m1 = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+    if (m1) return `https://drive.google.com/file/d/${m1[1]}/view`
+    const m2 = url.match(/drive\.google\.com\/open\?(?:.*&)?id=([^&]+)/)
+    if (m2) return `https://drive.google.com/file/d/${m2[1]}/view`
+    return url
+  }
+
+  async function handleCoverUpload(e) {
     const file = e.target.files[0]; if (!file) return
-    setUploading(true)
+    setCoverUploading(true)
     const url = await store.uploadFile(file)
-    if (url) setForm(prev => ({ ...prev, url, title: prev.title || file.name.replace('.pdf', '') }))
-    setUploading(false)
+    if (url) setForm(prev => ({ ...prev, cover_url: url }))
+    setCoverUploading(false)
     e.target.value = ''
   }
 
@@ -147,95 +159,125 @@ export default function App() {
 
   const subsForCat = store.subcategories.filter(s => s.cat_id === form.cat_id)
 
+  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
+
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
   if (!user) return <Login />
 
   return (
     <div className={styles.app}>
-      <Sidebar
-        categories={store.categories}
-        subcategories={store.subcategories}
-        workspace={workspace}
-        selectedCat={selectedCat}
-        selectedSub={selectedSub}
-        onSelectCat={id => { setSelectedCat(id); setSelectedSub(null) }}
-        onSelectSub={(catId, subId) => { setSelectedCat(catId); setSelectedSub(subId) }}
-        onAddCat={() => openModal('cat', { workspace })}
-        onEditCat={cat => openModal('cat', { editId: cat.id, name: cat.name, icon: cat.icon })}
-        onDeleteCat={id => {
-          if (confirm('Excluir categoria e todas as subcategorias?')) {
-            store.deleteCategory(id)
-            if (selectedCat === id) { setSelectedCat(null); setSelectedSub(null) }
-          }
-        }}
-        onAddSub={catId => openModal('sub', { catId })}
-        onEditSub={sub => openModal('sub', { editId: sub.id, name: sub.name, icon: sub.icon, type: sub.type })}
-        onDeleteSub={id => {
-          if (confirm('Excluir subcategoria?')) {
-            store.deleteSubcategory(id)
-            if (selectedSub === id) setSelectedSub(null)
-          }
-        }}
-        onLogout={() => supabase.auth.signOut()}
-        isDark={isDark}
-        onToggleTheme={() => setIsDark(!isDark)}
-      />
+      {!isSpecialSection && (
+        <Sidebar
+          categories={store.categories}
+          subcategories={store.subcategories}
+          workspace={workspace}
+          selectedCat={selectedCat}
+          selectedSub={selectedSub}
+          onSelectCat={id => { setSelectedCat(id); setSelectedSub(null) }}
+          onSelectSub={(catId, subId) => { setSelectedCat(catId); setSelectedSub(subId) }}
+          onAddCat={() => openModal('cat', { workspace })}
+          onEditCat={cat => openModal('cat', { editId: cat.id, name: cat.name, icon: cat.icon })}
+          onDeleteCat={id => {
+            if (confirm('Excluir categoria e todas as subcategorias?')) {
+              store.deleteCategory(id)
+              if (selectedCat === id) { setSelectedCat(null); setSelectedSub(null) }
+            }
+          }}
+          onAddSub={catId => openModal('sub', { catId })}
+          onEditSub={sub => openModal('sub', { editId: sub.id, name: sub.name, icon: sub.icon, type: sub.type })}
+          onDeleteSub={id => {
+            if (confirm('Excluir subcategoria?')) {
+              store.deleteSubcategory(id)
+              if (selectedSub === id) setSelectedSub(null)
+            }
+          }}
+          onLogout={() => supabase.auth.signOut()}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark(!isDark)}
+        />
+      )}
 
-      <main className={styles.main}>
+      <main className={`${styles.main} ${isSpecialSection ? styles.mainFull : ''}`}>
         <div className={styles.workspaceTabs}>
           {WORKSPACES.map(w => (
-            <button key={w.id} className={`${styles.tab} ${workspace === w.id ? styles.tabActive : ''}`}
-              onClick={() => { setWorkspace(w.id); setSelectedCat(null); setSelectedSub(null) }}>
+            <button
+              key={w.id}
+              className={`${styles.tab} ${workspace === w.id ? styles.tabActive : ''}`}
+              onClick={() => {
+                setWorkspace(w.id)
+                setSelectedCat(null)
+                setSelectedSub(null)
+              }}
+            >
               {w.icon} {w.label}
             </button>
           ))}
-        </div>
 
-        <div className={styles.topbar}>
-          <div>
-            <h1 className={styles.viewTitle}>{viewTitle}</h1>
-            <span className={styles.viewCount}>{filtered.length} item{filtered.length !== 1 ? 's' : ''}</span>
-          </div>
-          <div className={styles.actions}>
-            <div className={styles.searchWrap}>
-              <Search size={14} className={styles.searchIcon} />
-              <input className={styles.search} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+          {isSpecialSection && (
+            <div className={styles.tabsEnd}>
+              <button className={styles.themeTabBtn} onClick={() => setIsDark(!isDark)}>
+                {isDark ? '☀️' : '🌙'}
+              </button>
+              <button className={styles.logoutTabBtn} onClick={() => supabase.auth.signOut()}>
+                Sair
+              </button>
             </div>
-            <select className={styles.typeSelect} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-              <option value="all">Todos os tipos</option>
-              <option value="note">📝 Notas</option>
-              <option value="link">🔗 Links</option>
-              <option value="pdf">📄 PDFs</option>
-            </select>
-            <button className={styles.addBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
-              <Plus size={15} /> Novo item
-            </button>
-          </div>
+          )}
         </div>
 
-        {store.loading ? (
-          <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
-        ) : filtered.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>◆</div>
-            <p>Nenhum item aqui ainda</p>
-            <button className={styles.emptyBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
-              + Adicionar primeiro item
-            </button>
-          </div>
+        {workspace === 'biblioteca' ? (
+          <BibliotecaSection user={user} />
+        ) : workspace === 'tela' ? (
+          <TelaSection user={user} />
         ) : (
-          <div className={styles.grid}>
-            {filtered.map(item => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                cat={store.categories.find(c => c.id === item.cat_id)}
-                sub={store.subcategories.find(s => s.id === item.sub_id)}
-                onEdit={item => openModal('item', { editId: item.id, ...item })}
-                onDelete={id => { if (confirm('Excluir item?')) store.deleteItem(id) }}
-              />
-            ))}
-          </div>
+          <>
+            <div className={styles.topbar}>
+              <div>
+                <h1 className={styles.viewTitle}>{viewTitle}</h1>
+                <span className={styles.viewCount}>{filtered.length} item{filtered.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className={styles.actions}>
+                <div className={styles.searchWrap}>
+                  <Search size={14} className={styles.searchIcon} />
+                  <input className={styles.search} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+                <select className={styles.typeSelect} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                  <option value="all">Todos os tipos</option>
+                  <option value="note">📝 Notas</option>
+                  <option value="link">🔗 Links</option>
+                  <option value="pdf">📄 PDFs</option>
+                </select>
+                <button className={styles.addBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
+                  <Plus size={15} /> Novo item
+                </button>
+              </div>
+            </div>
+
+            {store.loading ? (
+              <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
+            ) : filtered.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyIcon}>◆</div>
+                <p>Nenhum item aqui ainda</p>
+                <button className={styles.emptyBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
+                  + Adicionar primeiro item
+                </button>
+              </div>
+            ) : (
+              <div className={styles.grid}>
+                {filtered.map(item => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    cat={store.categories.find(c => c.id === item.cat_id)}
+                    sub={store.subcategories.find(s => s.id === item.sub_id)}
+                    onEdit={item => openModal('item', { editId: item.id, ...item })}
+                    onDelete={id => { if (confirm('Excluir item?')) store.deleteItem(id) }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -293,22 +335,31 @@ export default function App() {
           )}
 
           {form.type === 'pdf' && (
-            <Field label="PDF">
-              <input ref={fileRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={handlePdfUpload} />
-              {form.url
-                ? <div className={styles.pdfUploaded}>✅ PDF enviado! <button onClick={() => setForm(p => ({ ...p, url: '' }))}>Trocar</button></div>
-                : <button className={styles.uploadBtn} onClick={() => fileRef.current.click()} disabled={uploading}>
-                    {uploading ? 'Enviando...' : '📄 Selecionar PDF'}
-                  </button>
-              }
-              <input placeholder="Ou cole um link do PDF" value={form.url || ''} onChange={f('url')} style={{ marginTop: 8 }} />
+            <Field label="Link do PDF (Google Drive)">
+              <input
+                placeholder="Cole o link do Google Drive aqui..."
+                value={form.url || ''}
+                onChange={e => setForm(prev => ({ ...prev, url: convertGDriveLink(e.target.value) }))}
+              />
+              <span className={styles.fieldHint}>📋 No Google Drive: clique em Compartilhar → "Qualquer pessoa com o link" → copiar link</span>
             </Field>
           )}
 
           <Field label="Autor (opcional)"><input placeholder="Nome do autor" value={form.author || ''} onChange={f('author')} /></Field>
           <Field label="Data (opcional)"><input placeholder="Ex: 2024, Jan/2025..." value={form.item_date || ''} onChange={f('item_date')} /></Field>
           <Field label="URL da fonte (opcional)"><input placeholder="https://..." value={form.source_url || ''} onChange={f('source_url')} /></Field>
-          <Field label="URL da capa (opcional)"><input placeholder="https://imagem.jpg" value={form.cover_url || ''} onChange={f('cover_url')} /></Field>
+          <Field label="Capa (opcional)">
+            <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
+            {form.cover_url
+              ? <div className={styles.coverPreview}>
+                  <img src={form.cover_url} alt="capa" />
+                  <button onClick={() => setForm(p => ({ ...p, cover_url: '' }))}>Remover</button>
+                </div>
+              : <button className={styles.uploadBtn} onClick={() => coverFileRef.current.click()} disabled={coverUploading}>
+                  {coverUploading ? 'Enviando...' : '🖼️ Selecionar imagem de capa'}
+                </button>
+            }
+          </Field>
         </Modal>
       )}
     </div>

@@ -15,12 +15,42 @@
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
+.mainFull { width: 100%; }
+
 .workspaceTabs {
   display: flex;
   gap: 4px;
   padding: 1.25rem 2rem 0;
   border-bottom: 1px solid var(--border);
+  align-items: flex-end;
 }
+
+.tabsEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+.themeTabBtn {
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  color: var(--text3);
+  font-size: 15px;
+  transition: all 0.15s;
+}
+.themeTabBtn:hover { background: var(--bg3); color: var(--text2); }
+
+.logoutTabBtn {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--text3);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.logoutTabBtn:hover { background: var(--bg3); color: var(--text2); border-color: var(--border2); }
 
 .tab {
   display: flex; align-items: center; gap: 7px;
@@ -119,8 +149,18 @@
 .uploadBtn:hover { border-color: var(--purple); color: var(--purple-light); background: var(--purple-dim); }
 .uploadBtn:disabled { opacity: 0.6; }
 
-.pdfUploaded {
-  font-size: 13px; color: var(--success);
-  display: flex; align-items: center; gap: 8px;
+.fieldHint {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.5;
 }
-.pdfUploaded button { color: var(--text3); text-decoration: underline; font-size: 12px; }
+
+.coverPreview {
+  display: flex; align-items: center; gap: 10px;
+}
+.coverPreview img {
+  width: 64px; height: 44px;
+  object-fit: cover; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.coverPreview button { color: var(--text3); text-decoration: underline; font-size: 12px; }

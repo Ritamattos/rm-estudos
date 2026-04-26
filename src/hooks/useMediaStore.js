@@ -22,18 +22,20 @@ export function useMediaStore(user) {
   }
 
   const addMedia = useCallback(async (item) => {
-    const { data } = await supabase.from('rm_media').insert({
+    await supabase.from('rm_media').insert({
       user_id: user.id,
       sort_order: media.length,
       ...item,
-    }).select().single()
-    if (data) setMedia(prev => [data, ...prev])
+    })
+    const { data: refreshed } = await supabase.from('rm_media').select('*').eq('user_id', user.id).order('sort_order')
+    setMedia(refreshed || [])
   }, [user, media])
 
   const updateMedia = useCallback(async (id, fields) => {
     await supabase.from('rm_media').update(fields).eq('id', id)
-    setMedia(prev => prev.map(m => m.id === id ? { ...m, ...fields } : m))
-  }, [])
+    const { data: refreshed } = await supabase.from('rm_media').select('*').eq('user_id', user.id).order('sort_order')
+    setMedia(refreshed || [])
+  }, [user])
 
   const deleteMedia = useCallback(async (id) => {
     await supabase.from('rm_media').delete().eq('id', id)

@@ -22,18 +22,20 @@ export function useBookStore(user) {
   }
 
   const addBook = useCallback(async (book) => {
-    const { data } = await supabase.from('rm_books').insert({
+    await supabase.from('rm_books').insert({
       user_id: user.id,
       sort_order: books.length,
       ...book,
-    }).select().single()
-    if (data) setBooks(prev => [data, ...prev])
+    })
+    const { data: refreshed } = await supabase.from('rm_books').select('*').eq('user_id', user.id).order('sort_order')
+    setBooks(refreshed || [])
   }, [user, books])
 
   const updateBook = useCallback(async (id, fields) => {
     await supabase.from('rm_books').update(fields).eq('id', id)
-    setBooks(prev => prev.map(b => b.id === id ? { ...b, ...fields } : b))
-  }, [])
+    const { data: refreshed } = await supabase.from('rm_books').select('*').eq('user_id', user.id).order('sort_order')
+    setBooks(refreshed || [])
+  }, [user])
 
   const deleteBook = useCallback(async (id) => {
     await supabase.from('rm_books').delete().eq('id', id)

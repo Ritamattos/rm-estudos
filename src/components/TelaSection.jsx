@@ -317,7 +317,7 @@ export default function TelaSection({ user }) {
     <div className={styles.section}>
       <div className={styles.topbar}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>Tela</h1>
+          <h1 className={styles.title}>Cinemateca</h1>
           <div className={styles.statsRow}>
             {STATUS_OPTS.map(s => (
               <span key={s.value} className={styles.statBadge} style={{ color: s.color }}>

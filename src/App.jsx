@@ -14,7 +14,7 @@ const WORKSPACES = [
   { id: 'marketing',  label: 'Marketing',  icon: <Briefcase size={15} /> },
   { id: 'pessoal',    label: 'Pessoal',    icon: <BookOpen size={15} /> },
   { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={15} /> },
-  { id: 'tela',       label: 'Tela',       icon: <Clapperboard size={15} /> },
+  { id: 'tela',       label: 'Cinemateca', icon: <Clapperboard size={15} /> },
 ]
 
 const ITEM_TYPES = [

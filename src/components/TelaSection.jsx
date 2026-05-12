@@ -456,6 +456,7 @@ export default function TelaSection({ user, store: appStore }) {
                         ? <img src={item.cover_url} alt={item.title} />
                         : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
                       }
+                      <div className={styles.cardStatusBar} style={{ background: status?.color }} />
                       <div className={styles.cardOverlay}>
                         <div className={styles.cardBadges}>
                           <span className={styles.cardType}>{type?.icon} {type?.label}</span>

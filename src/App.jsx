@@ -121,7 +121,7 @@ export default function App() {
       workspace,
       tipo,
       type: TIPO_TO_TYPE[tipo] || 'note',
-      status: form.usar_status ? (form.status || 'quero_comecar') : null,
+      status: form.status || null,
       proporcao_capa: form.proporcao_capa || '16:9',
       title: form.title.trim(),
       description: form.description?.trim() || '',
@@ -283,7 +283,7 @@ export default function App() {
                   <option value="all">Todos os tipos</option>
                   {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
-                <button className={styles.addBtn} onClick={() => openModal('item', { tipo: 'nota', usar_status: false, status: null, proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
+                <button className={styles.addBtn} onClick={() => openModal('item', { tipo: 'nota', status: null, proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
                   <Plus size={15} /> Novo item
                 </button>
               </div>
@@ -314,7 +314,7 @@ export default function App() {
               <div className={styles.empty}>
                 <div className={styles.emptyIcon}>◆</div>
                 <p>Nenhum item aqui ainda</p>
-                <button className={styles.emptyBtn} onClick={() => openModal('item', { tipo: 'nota', usar_status: false, status: null, proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
+                <button className={styles.emptyBtn} onClick={() => openModal('item', { tipo: 'nota', status: null, proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
                   + Adicionar primeiro item
                 </button>
               </div>
@@ -326,7 +326,7 @@ export default function App() {
                     item={item}
                     cat={store.categories.find(c => c.id === item.cat_id)}
                     sub={store.subcategories.find(s => s.id === item.sub_id)}
-                    onEdit={item => openModal('item', { editId: item.id, ...item, tipo: resolveEditTipo(item), usar_status: !!item.status })}
+                    onEdit={item => openModal('item', { editId: item.id, ...item, tipo: resolveEditTipo(item) })}
                     onDelete={id => { if (confirm('Excluir item?')) store.deleteItem(id) }}
                     onStatusChange={(id, status) => store.updateItem(id, { status })}
                     onOpenNote={item => setNoteItem(item)}
@@ -364,27 +364,12 @@ export default function App() {
               {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </Field>
-          <div className={styles.toggleRow}>
-            <label className={styles.toggleLabel}>
-              <input
-                type="checkbox"
-                checked={!!form.usar_status}
-                onChange={e => setForm(p => ({
-                  ...p,
-                  usar_status: e.target.checked,
-                  status: e.target.checked ? (p.status || 'quero_comecar') : null,
-                }))}
-              />
-              Usar status
-            </label>
-          </div>
-          {form.usar_status && (
-            <Field label="Status">
-              <select value={form.status || 'quero_comecar'} onChange={f('status')}>
-                {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </Field>
-          )}
+          <Field label="Status">
+            <select value={form.status || ''} onChange={f('status')}>
+              <option value="">— Sem status —</option>
+              {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </Field>
           <Field label="Categoria">
             <select value={form.cat_id || ''} onChange={e => { f('cat_id')(e); setForm(prev => ({ ...prev, sub_id: '' })) }}>
               <option value="">— Sem categoria —</option>

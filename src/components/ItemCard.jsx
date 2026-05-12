@@ -1,21 +1,52 @@
 import { useState } from 'react'
-import { ExternalLink, FileText, Link2, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { ExternalLink, FileText, Link2, Pencil, Trash2, ChevronDown, ChevronUp, NotebookPen } from 'lucide-react'
 import styles from './ItemCard.module.css'
 
-const TYPE_ICONS = { note: '📝', link: '🔗', pdf: '📄' }
+const TYPE_ICONS = {
+  video: '🎥', pdf: '📄', link: '🎮', documento: '📝', nota: '📌',
+  // legacy values
+  note: '📌',
+}
 
-export default function ItemCard({ item, cat, sub, onEdit, onDelete }) {
+const STATUS_OPTS = [
+  { value: 'quero_comecar', label: '📌 Quero começar', color: '#60a5fa' },
+  { value: 'em_andamento',  label: '🔄 Em andamento',  color: '#f59e0b' },
+  { value: 'concluido',     label: '✅ Concluído',      color: '#4ade80' },
+]
+const STATUS_VALUES = STATUS_OPTS.map(s => s.value)
+
+export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusChange, onOpenNote }) {
   const [expanded, setExpanded] = useState(false)
 
+  const effectiveType = item.tipo || item.type
+  const statusObj = STATUS_OPTS.find(s => s.value === (item.status || 'quero_comecar')) || STATUS_OPTS[0]
+
+  function cycleStatus(e) {
+    e.stopPropagation()
+    const idx = STATUS_VALUES.indexOf(item.status || 'quero_comecar')
+    const next = STATUS_VALUES[(idx + 1) % STATUS_VALUES.length]
+    onStatusChange && onStatusChange(item.id, next)
+  }
+
+  const isNota  = effectiveType === 'nota' || effectiveType === 'note'
+  const isPdf   = effectiveType === 'pdf'
+  const isDoc   = effectiveType === 'documento'
+  const isLink  = effectiveType === 'link' || effectiveType === 'video'
+
+  const noteHtml = item.conteudo_nota
+  const notePlain = item.content
+
+  const coverClass = item.proporcao_capa === '1:1' ? styles.cover11 : styles.cover169
+
   return (
-    <div className={`${styles.card} ${styles[item.type]}`}>
+    <div className={`${styles.card} ${styles[effectiveType] || ''}`}>
       {item.cover_url && (
-        <img src={item.cover_url} alt={item.title} className={styles.cover} />
+        <img src={item.cover_url} alt={item.title} className={`${styles.cover} ${coverClass}`} />
       )}
 
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.typeIcon}>{TYPE_ICONS[item.type]}</span>
+          <span className={styles.typeIcon}>{TYPE_ICONS[effectiveType] || '📌'}</span>
           <div>
             <div className={styles.title}>{item.title}</div>
             <div className={styles.tags}>
@@ -25,7 +56,7 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete }) {
           </div>
         </div>
         <div className={styles.actions}>
-          {item.type === 'note' && item.content && (
+          {isNota && (noteHtml || notePlain) && (
             <button className={styles.expandBtn} onClick={() => setExpanded(!expanded)}>
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
@@ -40,6 +71,15 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete }) {
         </div>
       </div>
 
+      <button
+        className={styles.statusBadge}
+        style={{ background: statusObj.color + '22', color: statusObj.color, borderColor: statusObj.color + '44' }}
+        onClick={cycleStatus}
+        title="Clique para mudar status"
+      >
+        {statusObj.label}
+      </button>
+
       {item.description && <p className={styles.desc}>{item.description}</p>}
 
       {(item.author || item.item_date) && (
@@ -49,22 +89,42 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete }) {
         </div>
       )}
 
-      {item.type === 'note' && item.content && (
-        <div className={`${styles.noteContent} ${expanded ? styles.expanded : ''}`}>
-          <div className={styles.noteText}>{item.content}</div>
-          {!expanded && item.content.length > 200 && (
-            <button className={styles.readMore} onClick={() => setExpanded(true)}>Ler mais</button>
-          )}
-        </div>
+      {isNota && (
+        <>
+          {noteHtml ? (
+            <div className={`${styles.noteContent} ${expanded ? styles.expanded : ''}`}>
+              <div className={styles.noteText} dangerouslySetInnerHTML={{ __html: noteHtml }} />
+              {!expanded && noteHtml.length > 300 && (
+                <button className={styles.readMore} onClick={() => setExpanded(true)}>Ler mais</button>
+              )}
+            </div>
+          ) : notePlain ? (
+            <div className={`${styles.noteContent} ${expanded ? styles.expanded : ''}`}>
+              <div className={styles.noteText}>{notePlain}</div>
+              {!expanded && notePlain.length > 200 && (
+                <button className={styles.readMore} onClick={() => setExpanded(true)}>Ler mais</button>
+              )}
+            </div>
+          ) : null}
+          <button className={styles.editNoteBtn} onClick={() => onOpenNote && onOpenNote(item)}>
+            <NotebookPen size={13} /> Abrir editor de nota
+          </button>
+        </>
       )}
 
-      {item.type === 'pdf' && item.url && (
+      {isPdf && item.url && (
         <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.pdfBtn}>
           <FileText size={14} /> Abrir PDF
         </a>
       )}
 
-      {item.type === 'link' && item.url && (
+      {isDoc && item.url && (
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className={`${styles.pdfBtn} ${styles.docBtn}`}>
+          <ExternalLink size={14} /> Abrir documento
+        </a>
+      )}
+
+      {isLink && item.url && (
         <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.urlPreview}>
           <Link2 size={12} />
           <span>{item.url}</span>

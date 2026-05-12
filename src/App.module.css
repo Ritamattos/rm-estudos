@@ -164,3 +164,53 @@
   border: 1px solid var(--border);
 }
 .coverPreview button { color: var(--text3); text-decoration: underline; font-size: 12px; }
+
+/* Status filter bar */
+.statusFilter {
+  display: flex;
+  gap: 6px;
+  padding: 0 2rem 1rem;
+  flex-wrap: wrap;
+}
+
+.statusBtn {
+  padding: 5px 13px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.statusBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.statusBtnActive { background: var(--purple-dim2); color: var(--purple-light); border-color: var(--purple); }
+
+/* Note hint in modal */
+.noteHint {
+  font-size: 12.5px;
+  color: var(--text3);
+  background: var(--bg3);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  line-height: 1.5;
+}
+
+/* Cover ratio toggle */
+.coverRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.coverRatioLabel { font-size: 12px; color: var(--text2); }
+.ratioBtn {
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.ratioBtn:hover { background: var(--bg3); color: var(--text); }
+.ratioBtnActive { background: var(--purple-dim2); color: var(--purple-light); border-color: var(--purple); }

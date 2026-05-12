@@ -6,6 +6,7 @@ import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import ItemCard from './components/ItemCard'
 import Modal from './components/Modal'
+import NoteEditorModal from './components/NoteEditorModal'
 import BibliotecaSection from './components/BibliotecaSection'
 import TelaSection from './components/TelaSection'
 import styles from './App.module.css'
@@ -18,18 +19,35 @@ const WORKSPACES = [
 ]
 
 const ITEM_TYPES = [
-  { value: 'note', label: '📝 Nota' },
-  { value: 'link', label: '🔗 Link' },
-  { value: 'pdf',  label: '📄 PDF' },
+  { value: 'video',     label: '🎥 Vídeo' },
+  { value: 'pdf',       label: '📄 PDF' },
+  { value: 'link',      label: '🎮 Jogo/Link' },
+  { value: 'documento', label: '📝 Documento (Google Docs)' },
+  { value: 'nota',      label: '📌 Nota rápida' },
+]
+
+const STATUS_OPTS = [
+  { value: 'quero_comecar', label: '📌 Quero começar', color: '#60a5fa' },
+  { value: 'em_andamento',  label: '🔄 Em andamento',  color: '#f59e0b' },
+  { value: 'concluido',     label: '✅ Concluído',      color: '#4ade80' },
 ]
 
 const SUB_TYPES = [
-  { value: 'notes', label: '📝 Notas' },
-  { value: 'links', label: '🔗 Links' },
-  { value: 'books', label: '📚 Livros' },
+  { value: 'notes',  label: '📝 Notas' },
+  { value: 'links',  label: '🔗 Links' },
+  { value: 'books',  label: '📚 Livros' },
   { value: 'videos', label: '🎬 Vídeos' },
-  { value: 'mixed', label: '📦 Misto' },
+  { value: 'mixed',  label: '📦 Misto' },
 ]
+
+const TIPO_TO_TYPE = { video: 'link', pdf: 'pdf', link: 'link', documento: 'link', nota: 'note' }
+
+function resolveEditTipo(item) {
+  if (item.tipo) return item.tipo
+  if (item.type === 'note') return 'nota'
+  if (item.type === 'pdf')  return 'pdf'
+  return 'link'
+}
 
 function Field({ label, children }) {
   return <div className={styles.field}><label className={styles.fieldLabel}>{label}</label>{children}</div>
@@ -44,9 +62,11 @@ export default function App() {
   const [selectedSub, setSelectedSub] = useState(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
   const [coverUploading, setCoverUploading] = useState(false)
+  const [noteItem, setNoteItem] = useState(null)
   const coverFileRef = useRef()
 
   const store = useStore(user)
@@ -93,14 +113,18 @@ export default function App() {
 
   async function saveItem() {
     if (!form.title?.trim()) return
+    const tipo = form.tipo || 'nota'
     const payload = {
       cat_id: form.cat_id || null,
       sub_id: form.sub_id || null,
       workspace,
-      type: form.type || 'note',
+      tipo,
+      type: TIPO_TO_TYPE[tipo] || 'note',
+      status: form.status || 'quero_comecar',
+      proporcao_capa: form.proporcao_capa || '16:9',
       title: form.title.trim(),
       description: form.description?.trim() || '',
-      content: form.content?.trim() || '',
+      content: '',
       url: form.url?.trim() || '',
       cover_url: form.cover_url?.trim() || '',
       author: form.author?.trim() || '',
@@ -113,6 +137,12 @@ export default function App() {
       await store.addItem(payload)
     }
     closeModal()
+  }
+
+  async function saveNote(html) {
+    if (!noteItem) return
+    await store.updateItem(noteItem.id, { conteudo_nota: html })
+    setNoteItem(null)
   }
 
   function convertGDriveLink(url) {
@@ -138,7 +168,12 @@ export default function App() {
     if (i.workspace !== workspace) return false
     if (selectedCat && i.cat_id !== selectedCat) return false
     if (selectedSub && i.sub_id !== selectedSub) return false
-    if (typeFilter !== 'all' && i.type !== typeFilter) return false
+    if (statusFilter !== 'all' && (i.status || 'quero_comecar') !== statusFilter) return false
+    if (typeFilter !== 'all') {
+      const eff = i.tipo || i.type
+      if (typeFilter === 'nota') { if (eff !== 'nota' && eff !== 'note') return false }
+      else if (eff !== typeFilter) return false
+    }
     if (search) {
       const q = search.toLowerCase()
       return (
@@ -158,8 +193,8 @@ export default function App() {
       : 'Todos'
 
   const subsForCat = store.subcategories.filter(s => s.cat_id === form.cat_id)
-
   const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
+  const currentTipo = form.tipo || 'nota'
 
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
   if (!user) return <Login />
@@ -207,6 +242,8 @@ export default function App() {
                 setWorkspace(w.id)
                 setSelectedCat(null)
                 setSelectedSub(null)
+                setStatusFilter('all')
+                setTypeFilter('all')
               }}
             >
               {w.icon} {w.label}
@@ -243,14 +280,31 @@ export default function App() {
                 </div>
                 <select className={styles.typeSelect} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
                   <option value="all">Todos os tipos</option>
-                  <option value="note">📝 Notas</option>
-                  <option value="link">🔗 Links</option>
-                  <option value="pdf">📄 PDFs</option>
+                  {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
-                <button className={styles.addBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
+                <button className={styles.addBtn} onClick={() => openModal('item', { tipo: 'nota', status: 'quero_comecar', proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
                   <Plus size={15} /> Novo item
                 </button>
               </div>
+            </div>
+
+            <div className={styles.statusFilter}>
+              <button
+                className={`${styles.statusBtn} ${statusFilter === 'all' ? styles.statusBtnActive : ''}`}
+                onClick={() => setStatusFilter('all')}
+              >
+                Todos
+              </button>
+              {STATUS_OPTS.map(s => (
+                <button
+                  key={s.value}
+                  className={`${styles.statusBtn} ${statusFilter === s.value ? styles.statusBtnActive : ''}`}
+                  style={statusFilter === s.value ? { background: s.color + '22', color: s.color, borderColor: s.color + '55' } : {}}
+                  onClick={() => setStatusFilter(s.value)}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
 
             {store.loading ? (
@@ -259,7 +313,7 @@ export default function App() {
               <div className={styles.empty}>
                 <div className={styles.emptyIcon}>◆</div>
                 <p>Nenhum item aqui ainda</p>
-                <button className={styles.emptyBtn} onClick={() => openModal('item', { type: 'note', cat_id: selectedCat, sub_id: selectedSub })}>
+                <button className={styles.emptyBtn} onClick={() => openModal('item', { tipo: 'nota', status: 'quero_comecar', proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
                   + Adicionar primeiro item
                 </button>
               </div>
@@ -271,8 +325,10 @@ export default function App() {
                     item={item}
                     cat={store.categories.find(c => c.id === item.cat_id)}
                     sub={store.subcategories.find(s => s.id === item.sub_id)}
-                    onEdit={item => openModal('item', { editId: item.id, ...item })}
+                    onEdit={item => openModal('item', { editId: item.id, ...item, tipo: resolveEditTipo(item) })}
                     onDelete={id => { if (confirm('Excluir item?')) store.deleteItem(id) }}
+                    onStatusChange={(id, status) => store.updateItem(id, { status })}
+                    onOpenNote={item => setNoteItem(item)}
                   />
                 ))}
               </div>
@@ -303,8 +359,13 @@ export default function App() {
       {modal === 'item' && (
         <Modal title={form.editId ? 'Editar item' : 'Novo item'} onClose={closeModal} onSave={saveItem} saveLabel={form.editId ? 'Salvar' : 'Adicionar'}>
           <Field label="Tipo">
-            <select value={form.type || 'note'} onChange={f('type')}>
+            <select value={currentTipo} onChange={f('tipo')}>
               {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Status">
+            <select value={form.status || 'quero_comecar'} onChange={f('status')}>
+              {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </Field>
           <Field label="Categoria">
@@ -321,34 +382,66 @@ export default function App() {
               </select>
             </Field>
           )}
-          <Field label="Título"><input placeholder="Título do item" value={form.title || ''} onChange={f('title')} autoFocus={!form.editId} /></Field>
-          <Field label="Descrição (opcional)"><input placeholder="Breve descrição" value={form.description || ''} onChange={f('description')} /></Field>
+          <Field label="Título *">
+            <input placeholder="Título do item" value={form.title || ''} onChange={f('title')} autoFocus={!form.editId} />
+          </Field>
+          <Field label="Descrição (opcional)">
+            <input placeholder="Breve descrição" value={form.description || ''} onChange={f('description')} />
+          </Field>
 
-          {form.type === 'note' && (
-            <Field label="Conteúdo">
-              <textarea placeholder="Escreva sua nota aqui..." value={form.content || ''} onChange={f('content')} rows={6} />
-            </Field>
+          {currentTipo === 'nota' && (
+            <div className={styles.noteHint}>
+              📌 O conteúdo da nota é editado diretamente no card após criar.
+            </div>
           )}
 
-          {form.type === 'link' && (
-            <Field label="URL"><input placeholder="https://..." value={form.url || ''} onChange={f('url')} /></Field>
-          )}
-
-          {form.type === 'pdf' && (
+          {currentTipo === 'pdf' && (
             <Field label="Link do PDF (Google Drive)">
               <input
                 placeholder="Cole o link do Google Drive aqui..."
                 value={form.url || ''}
                 onChange={e => setForm(prev => ({ ...prev, url: convertGDriveLink(e.target.value) }))}
               />
-              <span className={styles.fieldHint}>📋 No Google Drive: clique em Compartilhar → "Qualquer pessoa com o link" → copiar link</span>
+              <span className={styles.fieldHint}>📋 No Google Drive: Compartilhar → "Qualquer pessoa com o link" → copiar</span>
             </Field>
           )}
 
-          <Field label="Autor (opcional)"><input placeholder="Nome do autor" value={form.author || ''} onChange={f('author')} /></Field>
-          <Field label="Data (opcional)"><input placeholder="Ex: 2024, Jan/2025..." value={form.item_date || ''} onChange={f('item_date')} /></Field>
-          <Field label="URL da fonte (opcional)"><input placeholder="https://..." value={form.source_url || ''} onChange={f('source_url')} /></Field>
+          {currentTipo === 'documento' && (
+            <Field label="Link do Google Docs">
+              <input placeholder="https://docs.google.com/..." value={form.url || ''} onChange={f('url')} />
+            </Field>
+          )}
+
+          {(currentTipo === 'link' || currentTipo === 'video') && (
+            <Field label="URL">
+              <input placeholder="https://..." value={form.url || ''} onChange={f('url')} />
+            </Field>
+          )}
+
+          <Field label="Autor (opcional)">
+            <input placeholder="Nome do autor" value={form.author || ''} onChange={f('author')} />
+          </Field>
+          <Field label="Data (opcional)">
+            <input placeholder="Ex: 2024, Jan/2025..." value={form.item_date || ''} onChange={f('item_date')} />
+          </Field>
+          <Field label="URL da fonte (opcional)">
+            <input placeholder="https://..." value={form.source_url || ''} onChange={f('source_url')} />
+          </Field>
+
           <Field label="Capa (opcional)">
+            <div className={styles.coverRow}>
+              <span className={styles.coverRatioLabel}>Proporção:</span>
+              <button
+                type="button"
+                className={`${styles.ratioBtn} ${(form.proporcao_capa || '16:9') === '16:9' ? styles.ratioBtnActive : ''}`}
+                onClick={() => setForm(p => ({ ...p, proporcao_capa: '16:9' }))}
+              >16:9</button>
+              <button
+                type="button"
+                className={`${styles.ratioBtn} ${form.proporcao_capa === '1:1' ? styles.ratioBtnActive : ''}`}
+                onClick={() => setForm(p => ({ ...p, proporcao_capa: '1:1' }))}
+              >1:1</button>
+            </div>
             <input ref={coverFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
             {form.cover_url
               ? <div className={styles.coverPreview}>
@@ -361,6 +454,15 @@ export default function App() {
             }
           </Field>
         </Modal>
+      )}
+
+      {noteItem && (
+        <NoteEditorModal
+          title={noteItem.title}
+          initial={noteItem.conteudo_nota || ''}
+          onClose={() => setNoteItem(null)}
+          onSave={saveNote}
+        />
       )}
     </div>
   )

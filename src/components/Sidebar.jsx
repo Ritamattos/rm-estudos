@@ -80,27 +80,31 @@ export default function Sidebar({
                 )}
               </div>
 
-              {isExpanded && subs.map(sub => (
-                <div key={sub.id}
-                  className={`${styles.subItem} ${selectedSub === sub.id ? styles.active : ''}`}
-                  onClick={e => { e.stopPropagation(); onSelectSub(cat.id, sub.id) }}>
-                  <span className={styles.itemIcon}>{sub.icon}</span>
-                  <span className={styles.itemName}>{sub.name}</span>
-                  <button className={styles.menuBtn} onClick={e => { e.stopPropagation(); setSubMenu(subMenu === sub.id ? null : sub.id) }}>
-                    <MoreHorizontal size={14} />
-                  </button>
-                  {subMenu === sub.id && (
-                    <div className={styles.dropdown}>
-                      <button onClick={e => { e.stopPropagation(); onEditSub(sub); closeMenus() }}>
-                        <Pencil size={12} /> Editar
+              {isExpanded && (
+                <div className={styles.subGroup}>
+                  {subs.map(sub => (
+                    <div key={sub.id}
+                      className={`${styles.subItem} ${selectedSub === sub.id ? styles.active : ''}`}
+                      onClick={e => { e.stopPropagation(); onSelectSub(cat.id, sub.id) }}>
+                      <span className={styles.itemIcon}>{sub.icon}</span>
+                      <span className={styles.itemName}>{sub.name}</span>
+                      <button className={styles.menuBtn} onClick={e => { e.stopPropagation(); setSubMenu(subMenu === sub.id ? null : sub.id) }}>
+                        <MoreHorizontal size={14} />
                       </button>
-                      <button className={styles.danger} onClick={e => { e.stopPropagation(); onDeleteSub(sub.id); closeMenus() }}>
-                        <Trash2 size={12} /> Excluir
-                      </button>
+                      {subMenu === sub.id && (
+                        <div className={styles.dropdown}>
+                          <button onClick={e => { e.stopPropagation(); onEditSub(sub); closeMenus() }}>
+                            <Pencil size={12} /> Editar
+                          </button>
+                          <button className={styles.danger} onClick={e => { e.stopPropagation(); onDeleteSub(sub.id); closeMenus() }}>
+                            <Trash2 size={12} /> Excluir
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )
         })}

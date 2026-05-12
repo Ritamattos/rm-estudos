@@ -71,26 +71,35 @@
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s;
-  color: var(--text2);
-  font-size: 13.5px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
   position: relative;
 }
-.item:hover { background: var(--bg3); color: var(--text); }
+.item:hover { background: var(--bg3); }
 .item.active { background: var(--purple-dim); color: var(--purple-light); }
+
+.subGroup {
+  margin-left: 18px;
+  padding-left: 10px;
+  border-left: 1.5px solid var(--border);
+  margin-bottom: 2px;
+}
 
 .subItem {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px 5px 30px;
+  gap: 7px;
+  padding: 5px 8px;
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s;
-  color: var(--text2);
-  font-size: 12.5px;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 400;
   position: relative;
 }
-.subItem:hover { background: var(--bg3); color: var(--text); }
+.subItem:hover { background: var(--bg3); color: var(--text2); }
 .subItem.active { background: var(--purple-dim); color: var(--purple-light); }
 
 .chevronBtn {

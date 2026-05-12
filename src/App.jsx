@@ -19,11 +19,12 @@ const WORKSPACES = [
 ]
 
 const ITEM_TYPES = [
-  { value: 'video',     label: '🎥 Vídeo' },
+  { value: 'jogo',      label: '🎮 Jogo' },
+  { value: 'link',      label: '🔗 Link' },
   { value: 'pdf',       label: '📄 PDF' },
-  { value: 'link',      label: '🎮 Jogo/Link' },
-  { value: 'documento', label: '📝 Documento (Google Docs)' },
-  { value: 'nota',      label: '📌 Nota rápida' },
+  { value: 'video',     label: '🎥 Vídeo' },
+  { value: 'nota',      label: '📝 Nota' },
+  { value: 'documento', label: '📋 Documento Google' },
 ]
 
 const STATUS_OPTS = [
@@ -40,7 +41,7 @@ const SUB_TYPES = [
   { value: 'mixed',  label: '📦 Misto' },
 ]
 
-const TIPO_TO_TYPE = { video: 'link', pdf: 'pdf', link: 'link', documento: 'link', nota: 'note' }
+const TIPO_TO_TYPE = { video: 'link', pdf: 'pdf', link: 'link', jogo: 'link', documento: 'link', nota: 'note' }
 
 function resolveEditTipo(item) {
   if (item.tipo) return item.tipo
@@ -412,18 +413,22 @@ export default function App() {
             </Field>
           )}
 
-          {(currentTipo === 'link' || currentTipo === 'video') && (
+          {(currentTipo === 'link' || currentTipo === 'video' || currentTipo === 'jogo') && (
             <Field label="URL">
               <input placeholder="https://..." value={form.url || ''} onChange={f('url')} />
             </Field>
           )}
 
-          <Field label="Autor (opcional)">
-            <input placeholder="Nome do autor" value={form.author || ''} onChange={f('author')} />
-          </Field>
-          <Field label="Data (opcional)">
-            <input placeholder="Ex: 2024, Jan/2025..." value={form.item_date || ''} onChange={f('item_date')} />
-          </Field>
+          {currentTipo === 'livro' && (
+            <Field label="Autor (opcional)">
+              <input placeholder="Nome do autor" value={form.author || ''} onChange={f('author')} />
+            </Field>
+          )}
+          {(currentTipo === 'nota' || currentTipo === 'documento') && (
+            <Field label="Data (opcional)">
+              <input placeholder="Ex: 2024, Jan/2025..." value={form.item_date || ''} onChange={f('item_date')} />
+            </Field>
+          )}
           <Field label="URL da fonte (opcional)">
             <input placeholder="https://..." value={form.source_url || ''} onChange={f('source_url')} />
           </Field>

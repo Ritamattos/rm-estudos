@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { ExternalLink, FileText, Link2, Pencil, Trash2, ChevronDown, ChevronUp, NotebookPen } from 'lucide-react'
+import { ExternalLink, FileText, Pencil, Trash2, ChevronDown, ChevronUp, NotebookPen } from 'lucide-react'
 import styles from './ItemCard.module.css'
 
 const TYPE_ICONS = {
-  video: '🎥', pdf: '📄', link: '🎮', documento: '📝', nota: '📌',
-  // legacy values
-  note: '📌',
+  jogo: '🎮', link: '🔗', pdf: '📄', video: '🎥', nota: '📝', documento: '📋',
+  note: '📝',
 }
 
 const STATUS_OPTS = [
@@ -31,7 +30,7 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusCha
   const isNota  = effectiveType === 'nota' || effectiveType === 'note'
   const isPdf   = effectiveType === 'pdf'
   const isDoc   = effectiveType === 'documento'
-  const isLink  = effectiveType === 'link' || effectiveType === 'video'
+  const isLink  = effectiveType === 'link' || effectiveType === 'video' || effectiveType === 'jogo'
 
   const noteHtml = item.conteudo_nota
   const notePlain = item.content
@@ -125,9 +124,8 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusCha
       )}
 
       {isLink && item.url && (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.urlPreview}>
-          <Link2 size={12} />
-          <span>{item.url}</span>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.openLinkBtn}>
+          <ExternalLink size={14} /> Abrir Link
         </a>
       )}
 

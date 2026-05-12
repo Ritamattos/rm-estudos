@@ -22,15 +22,17 @@
 }
 .card.pdf::before      { background: #fb923c; }
 .card.link::before     { background: #38bdf8; }
+.card.jogo::before     { background: #a78bfa; }
 .card.video::before    { background: #f472b6; }
 .card.documento::before{ background: #4ade80; }
 .card.nota::before     { background: var(--purple); }
 .card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139,92,246,0.08); }
 
 .coverArea {
-  margin: -16px -16px 0;
-  height: 200px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
+  border-radius: calc(var(--radius-lg) - 4px);
   flex-shrink: 0;
   background: var(--bg3);
 }
@@ -174,18 +176,19 @@
 .pdfBtn:hover { background: var(--bg3); color: #fb923c; border-color: rgba(251,146,60,0.3); }
 .docBtn:hover { color: #4ade80; border-color: rgba(74,222,128,0.3); }
 
-.urlPreview {
-  display: flex;
+.openLinkBtn {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--text2);
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
-  padding: 7px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
   transition: all 0.15s;
-  max-width: 100%; overflow: hidden;
+  align-self: flex-start;
+  white-space: nowrap;
 }
-.urlPreview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.urlPreview:hover { background: var(--bg3); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+.openLinkBtn:hover { background: #16a34a; transform: translateY(-1px); }

@@ -264,7 +264,7 @@ export default function App() {
         </div>
 
         {workspace === 'biblioteca' ? (
-          <BibliotecaSection user={user} />
+          <BibliotecaSection user={user} store={store} />
         ) : workspace === 'tela' ? (
           <TelaSection user={user} />
         ) : (

@@ -266,7 +266,7 @@ export default function App() {
         {workspace === 'biblioteca' ? (
           <BibliotecaSection user={user} store={store} />
         ) : workspace === 'tela' ? (
-          <TelaSection user={user} />
+          <TelaSection user={user} store={store} />
         ) : (
           <>
             <div className={styles.topbar}>

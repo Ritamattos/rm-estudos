@@ -412,7 +412,7 @@
 
 .listHeader {
   display: grid;
-  grid-template-columns: 52px 1fr 1fr 1fr 90px 100px 110px 90px;
+  grid-template-columns: 52px 1fr 1fr 1fr 100px 110px 90px;
   gap: 12px;
   padding: 8px 12px;
   font-size: 11px;
@@ -426,7 +426,7 @@
 
 .listRow {
   display: grid;
-  grid-template-columns: 52px 1fr 1fr 1fr 90px 100px 110px 90px;
+  grid-template-columns: 52px 1fr 1fr 1fr 100px 110px 90px;
   gap: 12px;
   padding: 8px 12px;
   align-items: center;

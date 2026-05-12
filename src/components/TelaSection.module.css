@@ -1,3 +1,144 @@
+/* ── Wrapper with sidebar ── */
+.wrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.libSidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.libSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.libSidebarTitle {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.libAddCatBtn {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.libAddCatBtn:hover { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); }
+
+.libNavList {
+  padding: 0.5rem 0.75rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.libNavItemWrap { position: relative; }
+
+.libNavItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+}
+.libNavItem:hover { background: var(--bg3); }
+.libNavActive { background: var(--purple-dim) !important; color: var(--purple-light) !important; }
+
+.libNavIcon { font-size: 15px; flex-shrink: 0; }
+.libNavName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.libMenuBtn {
+  opacity: 0;
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2);
+  transition: all 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.libNavItem:hover .libMenuBtn { opacity: 1; }
+.libMenuBtn:hover { background: var(--bg4); color: var(--text); }
+
+.libDropdown {
+  position: absolute;
+  left: 8px; right: 8px;
+  top: calc(100% + 2px);
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.libDropdown button {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.libDropdown button:hover { background: var(--bg3); color: var(--text); }
+.libDropdown button.danger:hover { background: var(--danger-dim); color: var(--danger); }
+
+.libSidebarStats {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.libStatItem { font-size: 11.5px; font-weight: 500; }
+
+.libMain {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.catModalBox {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-xl);
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s ease;
+}
+
 .section {
   flex: 1;
   display: flex;

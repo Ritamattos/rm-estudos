@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X } from 'lucide-react'
+import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal } from 'lucide-react'
 import { useMediaStore } from '../hooks/useMediaStore'
 import styles from './TelaSection.module.css'
 
@@ -99,6 +99,7 @@ function MediaDetailModal({ item, onClose, onEdit, onDelete }) {
               </span>
             </div>
             <h2 className={styles.detailTitle}>{item.title}</h2>
+            {item.category && <p className={styles.detailMeta}>🏷️ {item.category}</p>}
             {item.genre    && <p className={styles.detailMeta}>🎭 {item.genre}</p>}
             {item.platform && <p className={styles.detailMeta}>📡 {item.platform}</p>}
             {item.rating   && <StarDisplay value={item.rating} size={16} />}
@@ -128,10 +129,11 @@ function MediaDetailModal({ item, onClose, onEdit, onDelete }) {
   )
 }
 
-function MediaFormModal({ initial, onClose, onSave, uploadCover }) {
+function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   const [form, setForm] = useState({
     title: '', type: 'filme', genre: '', platform: '',
     status: 'quero_assistir', link: '', rating: null, notes: '', cover_url: '',
+    category: '',
     ...initial,
   })
   const [uploading, setUploading] = useState(false)
@@ -183,6 +185,12 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover }) {
               </select>
             </Field>
           </div>
+          <Field label="Categoria">
+            <select value={form.category || ''} onChange={f('category')}>
+              <option value="">— Sem categoria —</option>
+              {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+            </select>
+          </Field>
           <div className={styles.formRow}>
             <Field label="Gênero">
               <input
@@ -238,8 +246,14 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover }) {
   )
 }
 
-export default function TelaSection({ user }) {
+export default function TelaSection({ user, store: appStore }) {
   const store = useMediaStore(user)
+  const telaCats = appStore ? appStore.categories.filter(c => c.workspace === 'tela') : []
+
+  const [selectedTelaCat, setSelectedTelaCat] = useState(null)
+  const [catMenu, setCatMenu] = useState(null)
+  const [catModal, setCatModal] = useState(null)
+  const [catForm, setCatForm] = useState({ name: '', icon: '' })
   const [viewMode, setViewMode] = useState('grid')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -251,6 +265,7 @@ export default function TelaSection({ user }) {
   const genres = [...new Set(store.media.map(m => m.genre).filter(Boolean))].sort()
 
   const filtered = store.media.filter(m => {
+    if (selectedTelaCat && m.category !== selectedTelaCat.name) return false
     if (statusFilter !== 'all' && m.status !== statusFilter) return false
     if (typeFilter !== 'all' && m.type !== typeFilter) return false
     if (genreFilter !== 'all' && m.genre !== genreFilter) return false
@@ -261,25 +276,10 @@ export default function TelaSection({ user }) {
     return true
   })
 
-  function openDetail(item) {
-    setSelectedItem(item)
-    setModal('detail')
-  }
-
-  function openEdit(item) {
-    setSelectedItem(item)
-    setModal('form')
-  }
-
-  function openAdd() {
-    setSelectedItem(null)
-    setModal('form')
-  }
-
-  function closeModal() {
-    setModal(null)
-    setSelectedItem(null)
-  }
+  function openDetail(item) { setSelectedItem(item); setModal('detail') }
+  function openEdit(item) { setSelectedItem(item); setModal('form') }
+  function openAdd() { setSelectedItem(null); setModal('form') }
+  function closeModal() { setModal(null); setSelectedItem(null) }
 
   async function handleSave(form) {
     const payload = {
@@ -292,6 +292,7 @@ export default function TelaSection({ user }) {
       rating: form.rating || null,
       notes: form.notes?.trim() || '',
       cover_url: form.cover_url?.trim() || '',
+      category: form.category?.trim() || '',
     }
     if (selectedItem?.id) {
       await store.updateMedia(selectedItem.id, payload)
@@ -307,6 +308,24 @@ export default function TelaSection({ user }) {
     closeModal()
   }
 
+  async function saveCat() {
+    if (!catForm.name.trim() || !appStore) return
+    if (catModal === 'add') {
+      await appStore.addCategory(catForm.name.trim(), catForm.icon || '📁', 'tela')
+    } else if (catModal?.id) {
+      await appStore.updateCategory(catModal.id, { name: catForm.name.trim(), icon: catForm.icon || '📁' })
+    }
+    setCatModal(null)
+    setCatForm({ name: '', icon: '' })
+  }
+
+  async function deleteCat(cat) {
+    if (!confirm(`Excluir categoria "${cat.name}"?`) || !appStore) return
+    await appStore.deleteCategory(cat.id)
+    if (selectedTelaCat?.id === cat.id) setSelectedTelaCat(null)
+    setCatMenu(null)
+  }
+
   const counts = {
     quero_assistir: store.media.filter(m => m.status === 'quero_assistir').length,
     assistindo:     store.media.filter(m => m.status === 'assistindo').length,
@@ -314,124 +333,208 @@ export default function TelaSection({ user }) {
   }
 
   return (
-    <div className={styles.section}>
-      <div className={styles.topbar}>
-        <div className={styles.titleArea}>
-          <h1 className={styles.title}>Cinemateca</h1>
-          <div className={styles.statsRow}>
-            {STATUS_OPTS.map(s => (
-              <span key={s.value} className={styles.statBadge} style={{ color: s.color }}>
-                {counts[s.value]} {s.label.toLowerCase()}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className={styles.controls}>
-          <div className={styles.searchWrap}>
-            <Search size={14} className={styles.searchIcon} />
-            <input className={styles.search} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select className={styles.filterSelect} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">Todos os status</option>
-            {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <select className={styles.filterSelect} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option value="all">Todos os tipos</option>
-            {TYPE_OPTS.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
-          </select>
-          {genres.length > 0 && (
-            <select className={styles.filterSelect} value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
-              <option value="all">Todos os gêneros</option>
-              {genres.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+    <div className={styles.wrapper} onClick={() => setCatMenu(null)}>
+
+      <aside className={styles.libSidebar}>
+        <div className={styles.libSidebarHeader}>
+          <span className={styles.libSidebarTitle}>Cinemateca</span>
+          {appStore && (
+            <button className={styles.libAddCatBtn} title="Nova categoria"
+              onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
+              <Plus size={12} />
+            </button>
           )}
-          <div className={styles.viewToggle}>
-            <button className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('grid')} title="Grade">
-              <LayoutGrid size={16} />
-            </button>
-            <button className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('list')} title="Lista">
-              <List size={16} />
-            </button>
-          </div>
-          <button className={styles.addBtn} onClick={openAdd}>
-            <Plus size={15} /> Adicionar
+        </div>
+
+        <nav className={styles.libNavList}>
+          <button className={`${styles.libNavItem} ${!selectedTelaCat ? styles.libNavActive : ''}`}
+            onClick={() => setSelectedTelaCat(null)}>
+            <span className={styles.libNavIcon}>◈</span>
+            <span className={styles.libNavName}>Todos</span>
           </button>
+          {telaCats.map(cat => (
+            <div key={cat.id} className={styles.libNavItemWrap}>
+              <button className={`${styles.libNavItem} ${selectedTelaCat?.id === cat.id ? styles.libNavActive : ''}`}
+                onClick={() => setSelectedTelaCat(cat)}>
+                <span className={styles.libNavIcon}>{cat.icon}</span>
+                <span className={styles.libNavName}>{cat.name}</span>
+                <span className={styles.libMenuBtn}
+                  onClick={e => { e.stopPropagation(); setCatMenu(catMenu === cat.id ? null : cat.id) }}>
+                  <MoreHorizontal size={13} />
+                </span>
+              </button>
+              {catMenu === cat.id && (
+                <div className={styles.libDropdown}>
+                  <button onClick={e => { e.stopPropagation(); setCatModal(cat); setCatForm({ name: cat.name, icon: cat.icon || '📁' }); setCatMenu(null) }}>
+                    <Pencil size={12} /> Editar
+                  </button>
+                  <button className={styles.danger} onClick={e => { e.stopPropagation(); deleteCat(cat) }}>
+                    <Trash2 size={12} /> Excluir
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className={styles.libSidebarStats}>
+          {STATUS_OPTS.map(s => (
+            <span key={s.value} style={{ color: s.color }} className={styles.libStatItem}>
+              {counts[s.value]} {s.label.toLowerCase()}
+            </span>
+          ))}
+        </div>
+      </aside>
+
+      <div className={styles.libMain}>
+        <div className={styles.section}>
+          <div className={styles.topbar}>
+            <div className={styles.titleArea}>
+              <h1 className={styles.title}>
+                {selectedTelaCat ? `${selectedTelaCat.icon} ${selectedTelaCat.name}` : 'Cinemateca'}
+              </h1>
+              <div className={styles.statsRow}>
+                {STATUS_OPTS.map(s => (
+                  <span key={s.value} className={styles.statBadge} style={{ color: s.color }}>
+                    {counts[s.value]} {s.label.toLowerCase()}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className={styles.controls}>
+              <div className={styles.searchWrap}>
+                <Search size={14} className={styles.searchIcon} />
+                <input className={styles.search} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <select className={styles.filterSelect} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="all">Todos os status</option>
+                {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <select className={styles.filterSelect} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                <option value="all">Todos os tipos</option>
+                {TYPE_OPTS.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+              </select>
+              {genres.length > 0 && (
+                <select className={styles.filterSelect} value={genreFilter} onChange={e => setGenreFilter(e.target.value)}>
+                  <option value="all">Todos os gêneros</option>
+                  {genres.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              )}
+              <div className={styles.viewToggle}>
+                <button className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('grid')} title="Grade">
+                  <LayoutGrid size={16} />
+                </button>
+                <button className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('list')} title="Lista">
+                  <List size={16} />
+                </button>
+              </div>
+              <button className={styles.addBtn} onClick={openAdd}>
+                <Plus size={15} /> Adicionar
+              </button>
+            </div>
+          </div>
+
+          {store.loading ? (
+            <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
+          ) : filtered.length === 0 ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}>🎬</div>
+              <p>{store.media.length === 0 ? 'Sua lista está vazia' : 'Nenhum resultado encontrado'}</p>
+              {store.media.length === 0 && (
+                <button className={styles.emptyBtn} onClick={openAdd}>+ Adicionar primeiro</button>
+              )}
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className={styles.grid}>
+              {filtered.map(item => {
+                const status = STATUS_OPTS.find(s => s.value === item.status)
+                const type = TYPE_OPTS.find(t => t.value === item.type)
+                return (
+                  <div key={item.id} className={styles.card} onClick={() => openDetail(item)}>
+                    <div className={styles.cardCover}>
+                      {item.cover_url
+                        ? <img src={item.cover_url} alt={item.title} />
+                        : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
+                      }
+                      <div className={styles.cardOverlay}>
+                        <div className={styles.cardBadges}>
+                          <span className={styles.cardType}>{type?.icon} {type?.label}</span>
+                          <span className={styles.cardStatus} style={{ background: status?.color + '33', color: status?.color, border: `1px solid ${status?.color}55` }}>
+                            {status?.label}
+                          </span>
+                        </div>
+                        {item.rating && <StarDisplay value={item.rating} size={12} />}
+                      </div>
+                      {item.platform && (
+                        <span className={styles.cardPlatform}>{item.platform}</span>
+                      )}
+                    </div>
+                    <div className={styles.cardInfo}>
+                      <p className={styles.cardTitle}>{item.title}</p>
+                      {item.genre && <p className={styles.cardGenre}>{item.genre}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className={styles.listView}>
+              <div className={styles.listHeader}>
+                <span>Capa</span><span>Título</span><span>Tipo</span><span>Gênero</span><span>Plataforma</span><span>Status</span><span>Avaliação</span><span></span>
+              </div>
+              {filtered.map(item => {
+                const status = STATUS_OPTS.find(s => s.value === item.status)
+                const type = TYPE_OPTS.find(t => t.value === item.type)
+                return (
+                  <div key={item.id} className={styles.listRow}>
+                    <div className={styles.listCover} onClick={() => openDetail(item)}>
+                      {item.cover_url
+                        ? <img src={item.cover_url} alt={item.title} />
+                        : <span>{type?.icon || '🎬'}</span>
+                      }
+                    </div>
+                    <span className={styles.listTitle} onClick={() => openDetail(item)}>{item.title}</span>
+                    <span className={styles.listCell}>{type?.icon} {type?.label}</span>
+                    <span className={styles.listCell}>{item.genre || '—'}</span>
+                    <span className={styles.listCell}>{item.platform || '—'}</span>
+                    <span className={styles.listStatus} style={{ color: status?.color }}>{status?.label}</span>
+                    <span className={styles.listCell}><StarDisplay value={item.rating} size={12} /></span>
+                    <div className={styles.listActions}>
+                      {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className={styles.listIconBtn}><ExternalLink size={13} /></a>}
+                      <button className={styles.listIconBtn} onClick={() => openEdit(item)}><Pencil size={13} /></button>
+                      <button className={`${styles.listIconBtn} ${styles.danger}`} onClick={() => handleDelete(item.id)}><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {store.loading ? (
-        <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
-      ) : filtered.length === 0 ? (
-        <div className={styles.empty}>
-          <div className={styles.emptyIcon}>🎬</div>
-          <p>{store.media.length === 0 ? 'Sua lista está vazia' : 'Nenhum resultado encontrado'}</p>
-          {store.media.length === 0 && (
-            <button className={styles.emptyBtn} onClick={openAdd}>+ Adicionar primeiro</button>
-          )}
-        </div>
-      ) : viewMode === 'grid' ? (
-        <div className={styles.grid}>
-          {filtered.map(item => {
-            const status = STATUS_OPTS.find(s => s.value === item.status)
-            const type = TYPE_OPTS.find(t => t.value === item.type)
-            return (
-              <div key={item.id} className={styles.card} onClick={() => openDetail(item)}>
-                <div className={styles.cardCover}>
-                  {item.cover_url
-                    ? <img src={item.cover_url} alt={item.title} />
-                    : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
-                  }
-                  <div className={styles.cardOverlay}>
-                    <div className={styles.cardBadges}>
-                      <span className={styles.cardType}>{type?.icon} {type?.label}</span>
-                      <span className={styles.cardStatus} style={{ background: status?.color + '33', color: status?.color, border: `1px solid ${status?.color}55` }}>
-                        {status?.label}
-                      </span>
-                    </div>
-                    {item.rating && <StarDisplay value={item.rating} size={12} />}
-                  </div>
-                  {item.platform && (
-                    <span className={styles.cardPlatform}>{item.platform}</span>
-                  )}
-                </div>
-                <div className={styles.cardInfo}>
-                  <p className={styles.cardTitle}>{item.title}</p>
-                  {item.genre && <p className={styles.cardGenre}>{item.genre}</p>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className={styles.listView}>
-          <div className={styles.listHeader}>
-            <span>Capa</span><span>Título</span><span>Tipo</span><span>Gênero</span><span>Plataforma</span><span>Status</span><span>Avaliação</span><span></span>
+      {catModal && (
+        <div className={styles.detailBg} onClick={e => { if (e.target === e.currentTarget) setCatModal(null) }}>
+          <div className={styles.catModalBox}>
+            <div className={styles.formHeader}>
+              <span className={styles.formTitle}>{catModal === 'add' ? 'Nova categoria' : 'Editar categoria'}</span>
+              <button className={styles.detailClose} onClick={() => setCatModal(null)}><X size={18} /></button>
+            </div>
+            <div className={styles.formBody}>
+              <Field label="Nome">
+                <input placeholder="Ex: Romance, Ação, Terror..." value={catForm.name}
+                  onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} autoFocus
+                  onKeyDown={e => e.key === 'Enter' && saveCat()} />
+              </Field>
+              <Field label="Ícone (emoji)">
+                <input placeholder="Ex: 🎬" value={catForm.icon}
+                  onChange={e => setCatForm(p => ({ ...p, icon: e.target.value }))} maxLength={2} />
+              </Field>
+            </div>
+            <div className={styles.formFooter}>
+              <button className={styles.cancelBtn} onClick={() => setCatModal(null)}>Cancelar</button>
+              <button className={styles.saveBtn} onClick={saveCat}>{catModal === 'add' ? 'Criar' : 'Salvar'}</button>
+            </div>
           </div>
-          {filtered.map(item => {
-            const status = STATUS_OPTS.find(s => s.value === item.status)
-            const type = TYPE_OPTS.find(t => t.value === item.type)
-            return (
-              <div key={item.id} className={styles.listRow}>
-                <div className={styles.listCover} onClick={() => openDetail(item)}>
-                  {item.cover_url
-                    ? <img src={item.cover_url} alt={item.title} />
-                    : <span>{type?.icon || '🎬'}</span>
-                  }
-                </div>
-                <span className={styles.listTitle} onClick={() => openDetail(item)}>{item.title}</span>
-                <span className={styles.listCell}>{type?.icon} {type?.label}</span>
-                <span className={styles.listCell}>{item.genre || '—'}</span>
-                <span className={styles.listCell}>{item.platform || '—'}</span>
-                <span className={styles.listStatus} style={{ color: status?.color }}>{status?.label}</span>
-                <span className={styles.listCell}><StarDisplay value={item.rating} size={12} /></span>
-                <div className={styles.listActions}>
-                  {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className={styles.listIconBtn}><ExternalLink size={13} /></a>}
-                  <button className={styles.listIconBtn} onClick={() => openEdit(item)}><Pencil size={13} /></button>
-                  <button className={`${styles.listIconBtn} ${styles.danger}`} onClick={() => handleDelete(item.id)}><Trash2 size={13} /></button>
-                </div>
-              </div>
-            )
-          })}
         </div>
       )}
 
@@ -450,6 +553,7 @@ export default function TelaSection({ user }) {
           onClose={closeModal}
           onSave={handleSave}
           uploadCover={store.uploadCover}
+          categories={telaCats}
         />
       )}
     </div>

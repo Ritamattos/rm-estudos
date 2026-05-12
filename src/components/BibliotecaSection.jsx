@@ -9,13 +9,6 @@ const STATUS_OPTS = [
   { value: 'lido',      label: 'Lido',        color: '#4ade80' },
 ]
 
-const TIPOS = [
-  { value: 'livro', label: '📚 Livro' },
-  { value: 'serie', label: '📺 Série' },
-  { value: 'filme', label: '🎬 Filme' },
-  { value: 'manga', label: '📖 Mangá' },
-]
-
 function StarRating({ value, onChange, size = 18 }) {
   const [hover, setHover] = useState(0)
   return (
@@ -57,7 +50,6 @@ function Field({ label, children }) {
 
 function BookDetailModal({ book, onClose, onEdit, onDelete }) {
   const status = STATUS_OPTS.find(s => s.value === book.status)
-  const tipo = TIPOS.find(t => t.value === (book.tipo || 'livro'))
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h)
@@ -76,16 +68,13 @@ function BookDetailModal({ book, onClose, onEdit, onDelete }) {
             }
           </div>
           <div className={styles.detailInfo}>
-            <div className={styles.detailBadges}>
-              <span className={styles.detailStatus} style={{ background: status?.color + '22', color: status?.color }}>
-                {status?.label}
-              </span>
-              {tipo && <span className={styles.tipoBadge}>{tipo.label}</span>}
-            </div>
+            <span className={styles.detailStatus} style={{ background: status?.color + '22', color: status?.color }}>
+              {status?.label}
+            </span>
             <h2 className={styles.detailTitle}>{book.title}</h2>
-            {book.author && <p className={styles.detailAuthor}>✍️ {book.author}</p>}
+            {book.author   && <p className={styles.detailAuthor}>✍️ {book.author}</p>}
             {book.category && <p className={styles.detailCategory}>🏷️ {book.category}</p>}
-            {book.rating && <StarDisplay value={book.rating} size={16} />}
+            {book.rating   && <StarDisplay value={book.rating} size={16} />}
             {book.notes && (
               <div className={styles.detailNotes}>
                 <span className={styles.detailNotesLabel}>Notas</span>
@@ -114,7 +103,7 @@ function BookDetailModal({ book, onClose, onEdit, onDelete }) {
 
 function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   const [form, setForm] = useState({
-    title: '', author: '', category: '', tipo: 'livro',
+    title: '', author: '', category: '',
     status: 'quero_ler', link: '', rating: null, notes: '', cover_url: '',
     ...initial,
   })
@@ -148,34 +137,29 @@ function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
     <div className={styles.detailBg} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className={styles.formBox}>
         <div className={styles.formHeader}>
-          <span className={styles.formTitle}>{isEdit ? 'Editar' : 'Adicionar'}</span>
+          <span className={styles.formTitle}>{isEdit ? 'Editar livro' : 'Adicionar livro'}</span>
           <button className={styles.detailClose} onClick={onClose}><X size={18} /></button>
         </div>
         <div className={styles.formBody}>
           <Field label="Título *">
-            <input placeholder="Ex: O Hobbit" value={form.title} onChange={f('title')} autoFocus />
+            <input placeholder="Ex: O Poder do Hábito" value={form.title} onChange={f('title')} autoFocus />
           </Field>
           <Field label="Autor">
-            <input placeholder="Ex: J.R.R. Tolkien" value={form.author} onChange={f('author')} />
+            <input placeholder="Ex: Charles Duhigg" value={form.author} onChange={f('author')} />
           </Field>
           <div className={styles.formRow}>
-            <Field label="Tipo">
-              <select value={form.tipo || 'livro'} onChange={f('tipo')}>
-                {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </Field>
             <Field label="Categoria">
               <select value={form.category || ''} onChange={f('category')}>
                 <option value="">— Sem categoria —</option>
                 {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
               </select>
             </Field>
+            <Field label="Status">
+              <select value={form.status} onChange={f('status')}>
+                {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </Field>
           </div>
-          <Field label="Status">
-            <select value={form.status} onChange={f('status')}>
-              {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </Field>
           <Field label="Link (Google Drive ou URL)">
             <input placeholder="https://..." value={form.link} onChange={f('link')} />
           </Field>
@@ -183,7 +167,7 @@ function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
             <StarRating value={form.rating} onChange={v => setForm(p => ({ ...p, rating: v }))} />
           </Field>
           <Field label="Notas (opcional)">
-            <textarea placeholder="Seus comentários..." value={form.notes} onChange={f('notes')} rows={3} />
+            <textarea placeholder="Seus comentários sobre o livro..." value={form.notes} onChange={f('notes')} rows={3} />
           </Field>
           <Field label="Capa (opcional)">
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
@@ -212,7 +196,6 @@ export default function BibliotecaSection({ user, store: appStore }) {
   const libCats = appStore ? appStore.categories.filter(c => c.workspace === 'biblioteca') : []
 
   const [selectedLibCat, setSelectedLibCat] = useState(null)
-  const [tipoFilter, setTipoFilter] = useState('all')
   const [catMenu, setCatMenu] = useState(null)
   const [catModal, setCatModal] = useState(null)
   const [catForm, setCatForm] = useState({ name: '', icon: '' })
@@ -224,7 +207,6 @@ export default function BibliotecaSection({ user, store: appStore }) {
 
   const filtered = store.books.filter(b => {
     if (selectedLibCat && b.category !== selectedLibCat.name) return false
-    if (tipoFilter !== 'all' && (b.tipo || 'livro') !== tipoFilter) return false
     if (statusFilter !== 'all' && b.status !== statusFilter) return false
     if (search) {
       const q = search.toLowerCase()
@@ -243,7 +225,6 @@ export default function BibliotecaSection({ user, store: appStore }) {
       title: form.title.trim(),
       author: form.author?.trim() || '',
       category: form.category?.trim() || '',
-      tipo: form.tipo || 'livro',
       status: form.status,
       link: form.link?.trim() || '',
       rating: form.rating || null,
@@ -259,7 +240,7 @@ export default function BibliotecaSection({ user, store: appStore }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Excluir?')) return
+    if (!confirm('Excluir livro?')) return
     await store.deleteBook(id)
     closeModal()
   }
@@ -291,42 +272,31 @@ export default function BibliotecaSection({ user, store: appStore }) {
   return (
     <div className={styles.wrapper} onClick={() => setCatMenu(null)}>
 
-      {/* Sidebar */}
       <aside className={styles.libSidebar}>
         <div className={styles.libSidebarHeader}>
           <span className={styles.libSidebarTitle}>Biblioteca</span>
           {appStore && (
-            <button
-              className={styles.libAddCatBtn}
-              onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}
-              title="Nova categoria"
-            >
+            <button className={styles.libAddCatBtn} title="Nova categoria"
+              onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
               <Plus size={12} />
             </button>
           )}
         </div>
 
         <nav className={styles.libNavList}>
-          <button
-            className={`${styles.libNavItem} ${!selectedLibCat ? styles.libNavActive : ''}`}
-            onClick={() => { setSelectedLibCat(null); setTipoFilter('all') }}
-          >
+          <button className={`${styles.libNavItem} ${!selectedLibCat ? styles.libNavActive : ''}`}
+            onClick={() => setSelectedLibCat(null)}>
             <span className={styles.libNavIcon}>◈</span>
             <span className={styles.libNavName}>Todos</span>
           </button>
-
           {libCats.map(cat => (
             <div key={cat.id} className={styles.libNavItemWrap}>
-              <button
-                className={`${styles.libNavItem} ${selectedLibCat?.id === cat.id ? styles.libNavActive : ''}`}
-                onClick={() => { setSelectedLibCat(cat); setTipoFilter('all') }}
-              >
+              <button className={`${styles.libNavItem} ${selectedLibCat?.id === cat.id ? styles.libNavActive : ''}`}
+                onClick={() => setSelectedLibCat(cat)}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>
                 <span className={styles.libNavName}>{cat.name}</span>
-                <span
-                  className={styles.libMenuBtn}
-                  onClick={e => { e.stopPropagation(); setCatMenu(catMenu === cat.id ? null : cat.id) }}
-                >
+                <span className={styles.libMenuBtn}
+                  onClick={e => { e.stopPropagation(); setCatMenu(catMenu === cat.id ? null : cat.id) }}>
                   <MoreHorizontal size={13} />
                 </span>
               </button>
@@ -353,20 +323,19 @@ export default function BibliotecaSection({ user, store: appStore }) {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className={styles.libMain}>
         <div className={styles.section}>
           <div className={styles.topbar}>
             <div className={styles.titleArea}>
               <h1 className={styles.title}>
-                {selectedLibCat ? `${selectedLibCat.icon} ${selectedLibCat.name}` : 'Todos'}
+                {selectedLibCat ? `${selectedLibCat.icon} ${selectedLibCat.name}` : 'Todos os livros'}
               </h1>
-              <span className={styles.viewCount}>{filtered.length} item{filtered.length !== 1 ? 's' : ''}</span>
+              <span className={styles.viewCount}>{filtered.length} livro{filtered.length !== 1 ? 's' : ''}</span>
             </div>
             <div className={styles.controls}>
               <div className={styles.searchWrap}>
                 <Search size={14} className={styles.searchIcon} />
-                <input className={styles.search} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input className={styles.search} placeholder="Buscar livros..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
               <select className={styles.filterSelect} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                 <option value="all">Todos os status</option>
@@ -376,18 +345,8 @@ export default function BibliotecaSection({ user, store: appStore }) {
                 <button className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('grid')} title="Grade"><LayoutGrid size={16} /></button>
                 <button className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('list')} title="Lista"><List size={16} /></button>
               </div>
-              <button className={styles.addBtn} onClick={openAdd}><Plus size={15} /> Adicionar</button>
+              <button className={styles.addBtn} onClick={openAdd}><Plus size={15} /> Adicionar livro</button>
             </div>
-          </div>
-
-          {/* Tipo filter bar */}
-          <div className={styles.tipoFilter}>
-            <button className={`${styles.tipoBtn} ${tipoFilter === 'all' ? styles.tipoBtnActive : ''}`} onClick={() => setTipoFilter('all')}>Todos</button>
-            {TIPOS.map(t => (
-              <button key={t.value} className={`${styles.tipoBtn} ${tipoFilter === t.value ? styles.tipoBtnActive : ''}`} onClick={() => setTipoFilter(t.value)}>
-                {t.label}
-              </button>
-            ))}
           </div>
 
           {store.loading ? (
@@ -395,8 +354,8 @@ export default function BibliotecaSection({ user, store: appStore }) {
           ) : filtered.length === 0 ? (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>📚</div>
-              <p>{store.books.length === 0 ? 'Sua biblioteca está vazia' : 'Nenhum item encontrado'}</p>
-              {store.books.length === 0 && <button className={styles.emptyBtn} onClick={openAdd}>+ Adicionar primeiro item</button>}
+              <p>{store.books.length === 0 ? 'Sua biblioteca está vazia' : 'Nenhum livro encontrado'}</p>
+              {store.books.length === 0 && <button className={styles.emptyBtn} onClick={openAdd}>+ Adicionar primeiro livro</button>}
             </div>
           ) : viewMode === 'grid' ? (
             <div className={styles.grid}>
@@ -427,11 +386,10 @@ export default function BibliotecaSection({ user, store: appStore }) {
           ) : (
             <div className={styles.listView}>
               <div className={styles.listHeader}>
-                <span>Capa</span><span>Título</span><span>Autor</span><span>Categoria</span><span>Tipo</span><span>Status</span><span>Avaliação</span><span></span>
+                <span>Capa</span><span>Título</span><span>Autor</span><span>Categoria</span><span>Status</span><span>Avaliação</span><span></span>
               </div>
               {filtered.map(book => {
                 const status = STATUS_OPTS.find(s => s.value === book.status)
-                const tipo = TIPOS.find(t => t.value === (book.tipo || 'livro'))
                 return (
                   <div key={book.id} className={styles.listRow}>
                     <div className={styles.listCover} onClick={() => openDetail(book)}>
@@ -440,7 +398,6 @@ export default function BibliotecaSection({ user, store: appStore }) {
                     <span className={styles.listTitle} onClick={() => openDetail(book)}>{book.title}</span>
                     <span className={styles.listCell}>{book.author || '—'}</span>
                     <span className={styles.listCell}>{book.category || '—'}</span>
-                    <span className={styles.listCell}>{tipo?.label || '—'}</span>
                     <span className={styles.listStatus} style={{ color: status?.color }}>{status?.label}</span>
                     <span className={styles.listCell}><StarDisplay value={book.rating} size={12} /></span>
                     <div className={styles.listActions}>
@@ -456,7 +413,6 @@ export default function BibliotecaSection({ user, store: appStore }) {
         </div>
       </div>
 
-      {/* Category form modal */}
       {catModal && (
         <div className={styles.detailBg} onClick={e => { if (e.target === e.currentTarget) setCatModal(null) }}>
           <div className={styles.catModalBox}>
@@ -466,21 +422,13 @@ export default function BibliotecaSection({ user, store: appStore }) {
             </div>
             <div className={styles.formBody}>
               <Field label="Nome">
-                <input
-                  placeholder="Ex: Romance, Terror, GL..."
-                  value={catForm.name}
-                  onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))}
-                  autoFocus
-                  onKeyDown={e => e.key === 'Enter' && saveCat()}
-                />
+                <input placeholder="Ex: Romance, Terror, GL..." value={catForm.name}
+                  onChange={e => setCatForm(p => ({ ...p, name: e.target.value }))} autoFocus
+                  onKeyDown={e => e.key === 'Enter' && saveCat()} />
               </Field>
               <Field label="Ícone (emoji)">
-                <input
-                  placeholder="Ex: 📚"
-                  value={catForm.icon}
-                  onChange={e => setCatForm(p => ({ ...p, icon: e.target.value }))}
-                  maxLength={2}
-                />
+                <input placeholder="Ex: 📚" value={catForm.icon}
+                  onChange={e => setCatForm(p => ({ ...p, icon: e.target.value }))} maxLength={2} />
               </Field>
             </div>
             <div className={styles.formFooter}>
@@ -492,22 +440,12 @@ export default function BibliotecaSection({ user, store: appStore }) {
       )}
 
       {modal === 'detail' && selectedBook && (
-        <BookDetailModal
-          book={selectedBook}
-          onClose={closeModal}
-          onEdit={book => { setSelectedBook(book); setModal('form') }}
-          onDelete={handleDelete}
-        />
+        <BookDetailModal book={selectedBook} onClose={closeModal}
+          onEdit={book => { setSelectedBook(book); setModal('form') }} onDelete={handleDelete} />
       )}
-
       {modal === 'form' && (
-        <BookFormModal
-          initial={selectedBook}
-          onClose={closeModal}
-          onSave={handleSave}
-          uploadCover={store.uploadCover}
-          categories={libCats}
-        />
+        <BookFormModal initial={selectedBook} onClose={closeModal}
+          onSave={handleSave} uploadCover={store.uploadCover} categories={libCats} />
       )}
     </div>
   )

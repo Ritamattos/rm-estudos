@@ -70,14 +70,16 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusCha
         </div>
       </div>
 
-      <button
-        className={styles.statusBadge}
-        style={{ background: statusObj.color + '22', color: statusObj.color, borderColor: statusObj.color + '44' }}
-        onClick={cycleStatus}
-        title="Clique para mudar status"
-      >
-        {statusObj.label}
-      </button>
+      {item.status && (
+        <button
+          className={styles.statusBadge}
+          style={{ background: statusObj.color + '22', color: statusObj.color, borderColor: statusObj.color + '44' }}
+          onClick={cycleStatus}
+          title="Clique para mudar status"
+        >
+          {statusObj.label}
+        </button>
+      )}
 
       {item.description && <p className={styles.desc}>{item.description}</p>}
 

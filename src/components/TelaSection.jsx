@@ -4,7 +4,7 @@ import { useMediaStore } from '../hooks/useMediaStore'
 import styles from './TelaSection.module.css'
 
 const STATUS_OPTS = [
-  { value: 'quero_assistir', label: 'Quero assistir', color: '#94a3b8' },
+  { value: 'quero_assistir', label: 'Quero assistir', color: '#ef4444' },
   { value: 'assistindo',     label: 'Assistindo',     color: '#f59e0b' },
   { value: 'assistido',      label: 'Assistido',      color: '#4ade80' },
 ]

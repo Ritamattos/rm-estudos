@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, Play } from 'lucide-react'
 import { useMediaStore } from '../hooks/useMediaStore'
 import styles from './TelaSection.module.css'
 
@@ -473,6 +473,17 @@ export default function TelaSection({ user, store: appStore }) {
                     <div className={styles.cardInfo}>
                       <p className={styles.cardTitle}>{item.title}</p>
                       {item.genre && <p className={styles.cardGenre}>{item.genre}</p>}
+                      {item.link && (
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.cardWatchBtn}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Play size={10} fill="white" strokeWidth={0} /> Assistir Agora
+                        </a>
+                      )}
                     </div>
                   </div>
                 )

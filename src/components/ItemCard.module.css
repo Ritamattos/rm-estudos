@@ -32,8 +32,8 @@
   margin: -4px 0 2px;
   display: block;
 }
-.cover169 { aspect-ratio: 16 / 9; }
-.cover11  { aspect-ratio: 1 / 1; }
+.cover169 { aspect-ratio: 16 / 9; max-height: 160px; }
+.cover11  { aspect-ratio: 1 / 1;  max-height: 200px; }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .headerLeft { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }

@@ -36,12 +36,12 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusCha
   const noteHtml = item.conteudo_nota
   const notePlain = item.content
 
-  const coverClass = item.proporcao_capa === '1:1' ? styles.cover11 : styles.cover169
-
   return (
     <div className={`${styles.card} ${styles[effectiveType] || ''}`}>
       {item.cover_url && (
-        <img src={item.cover_url} alt={item.title} className={`${styles.cover} ${coverClass}`} />
+        <div className={styles.coverArea}>
+          <img src={item.cover_url} alt={item.title} className={styles.cover} />
+        </div>
       )}
 
       <div className={styles.header}>

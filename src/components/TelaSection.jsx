@@ -295,6 +295,7 @@ export default function TelaSection({ user, store: appStore }) {
   const [genreFilter, setGenreFilter] = useState('all')
   const [modal, setModal] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   const genres = [...new Set(store.media.map(m => m.genre).filter(Boolean))].sort()
 
@@ -363,14 +364,26 @@ export default function TelaSection({ user, store: appStore }) {
     setCatMenu(null)
   }
 
+  function handleContextMenu(e, item) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, item })
+  }
+
+  async function handlePin(item) {
+    await store.updateMedia(item.id, { pinned: !item.pinned })
+  }
+
   const counts = {
     quero_assistir: store.media.filter(m => m.status === 'quero_assistir').length,
     assistindo:     store.media.filter(m => m.status === 'assistindo').length,
     assistido:      store.media.filter(m => m.status === 'assistido').length,
   }
 
+  const sorted = [...filtered].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+
   return (
-    <div className={styles.wrapper} onClick={() => setCatMenu(null)}>
+    <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
       <aside className={styles.libSidebar}>
         <div className={styles.libSidebarHeader}>
@@ -483,12 +496,14 @@ export default function TelaSection({ user, store: appStore }) {
             </div>
           ) : viewMode === 'grid' ? (
             <div className={styles.grid}>
-              {filtered.map(item => {
+              {sorted.map(item => {
                 const status = STATUS_OPTS.find(s => s.value === item.status)
                 const type = TYPE_OPTS.find(t => t.value === item.type)
                 return (
-                  <div key={item.id} className={styles.card} onClick={() => openDetail(item)}>
-                    <div className={styles.cardCover}>
+                  <div key={item.id} className={styles.card}
+                    onClick={() => openDetail(item)}
+                    onContextMenu={e => handleContextMenu(e, item)}>
+                    <div className={`${styles.cardCover} ${item.pinned ? styles.cardCoverPinned : ''}`}>
                       {item.cover_url
                         ? <img src={item.cover_url} alt={item.title} />
                         : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
@@ -534,7 +549,7 @@ export default function TelaSection({ user, store: appStore }) {
               <div className={styles.listHeader}>
                 <span>Capa</span><span>Título</span><span>Tipo</span><span>Gênero</span><span>Plataforma</span><span>Status</span><span>Avaliação</span><span></span>
               </div>
-              {filtered.map(item => {
+              {sorted.map(item => {
                 const status = STATUS_OPTS.find(s => s.value === item.status)
                 const type = TYPE_OPTS.find(t => t.value === item.type)
                 return (
@@ -607,6 +622,23 @@ export default function TelaSection({ user, store: appStore }) {
           uploadCover={store.uploadCover}
           categories={telaCats}
         />
+      )}
+
+      {ctxMenu && (
+        <>
+          <div className={styles.ctxOverlay} onClick={() => setCtxMenu(null)} />
+          <div className={styles.ctxMenu} style={{ top: ctxMenu.y, left: ctxMenu.x }}>
+            <button onClick={() => { handlePin(ctxMenu.item); setCtxMenu(null) }}>
+              {ctxMenu.item.pinned ? '📌 Desafixar' : '📌 Fixar'}
+            </button>
+            <button onClick={() => { openEdit(ctxMenu.item); setCtxMenu(null) }}>
+              ✏️ Editar
+            </button>
+            <button className={styles.ctxDanger} onClick={() => { handleDelete(ctxMenu.item.id); setCtxMenu(null) }}>
+              🗑️ Excluir
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

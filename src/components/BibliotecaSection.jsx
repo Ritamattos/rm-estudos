@@ -217,6 +217,7 @@ export default function BibliotecaSection({ user, store: appStore }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [modal, setModal] = useState(null)
   const [selectedBook, setSelectedBook] = useState(null)
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   const filtered = store.books.filter(b => {
     if (selectedLibCat && b.category !== selectedLibCat.name) return false
@@ -278,14 +279,26 @@ export default function BibliotecaSection({ user, store: appStore }) {
     setCatMenu(null)
   }
 
+  function handleContextMenu(e, book) {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, item: book })
+  }
+
+  async function handlePin(book) {
+    await store.updateBook(book.id, { pinned: !book.pinned })
+  }
+
   const counts = {
     quero_ler: store.books.filter(b => b.status === 'quero_ler').length,
     lendo:     store.books.filter(b => b.status === 'lendo').length,
     lido:      store.books.filter(b => b.status === 'lido').length,
   }
 
+  const sorted = [...filtered].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+
   return (
-    <div className={styles.wrapper} onClick={() => setCatMenu(null)}>
+    <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
       <aside className={styles.libSidebar}>
         <div className={styles.libSidebarHeader}>
@@ -374,11 +387,13 @@ export default function BibliotecaSection({ user, store: appStore }) {
             </div>
           ) : viewMode === 'grid' ? (
             <div className={styles.grid}>
-              {filtered.map(book => {
+              {sorted.map(book => {
                 const status = STATUS_OPTS.find(s => s.value === book.status)
                 return (
-                  <div key={book.id} className={styles.card} onClick={() => openDetail(book)}>
-                    <div className={styles.cardCover}>
+                  <div key={book.id} className={styles.card}
+                    onClick={() => openDetail(book)}
+                    onContextMenu={e => handleContextMenu(e, book)}>
+                    <div className={`${styles.cardCover} ${book.pinned ? styles.cardCoverPinned : ''}`}>
                       {book.cover_url
                         ? <img src={book.cover_url} alt={book.title} />
                         : <div className={styles.cardCoverPlaceholder}>📚</div>
@@ -419,7 +434,7 @@ export default function BibliotecaSection({ user, store: appStore }) {
               <div className={styles.listHeader}>
                 <span>Capa</span><span>Título</span><span>Autor</span><span>Categoria</span><span>Status</span><span>Avaliação</span><span></span>
               </div>
-              {filtered.map(book => {
+              {sorted.map(book => {
                 const status = STATUS_OPTS.find(s => s.value === book.status)
                 return (
                   <div key={book.id} className={styles.listRow}>
@@ -477,6 +492,23 @@ export default function BibliotecaSection({ user, store: appStore }) {
       {modal === 'form' && (
         <BookFormModal initial={selectedBook} onClose={closeModal}
           onSave={handleSave} uploadCover={store.uploadCover} categories={libCats} />
+      )}
+
+      {ctxMenu && (
+        <>
+          <div className={styles.ctxOverlay} onClick={() => setCtxMenu(null)} />
+          <div className={styles.ctxMenu} style={{ top: ctxMenu.y, left: ctxMenu.x }}>
+            <button onClick={() => { handlePin(ctxMenu.item); setCtxMenu(null) }}>
+              {ctxMenu.item.pinned ? '📌 Desafixar' : '📌 Fixar'}
+            </button>
+            <button onClick={() => { openEdit(ctxMenu.item); setCtxMenu(null) }}>
+              ✏️ Editar
+            </button>
+            <button className={styles.ctxDanger} onClick={() => { handleDelete(ctxMenu.item.id); setCtxMenu(null) }}>
+              🗑️ Excluir
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

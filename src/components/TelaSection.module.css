@@ -330,6 +330,11 @@
   z-index: 2;
 }
 
+.cardCoverPinned {
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 1px var(--purple), 0 4px 12px rgba(139,92,246,0.2);
+}
+
 .cardCountry {
   position: absolute;
   top: 6px;
@@ -825,3 +830,37 @@
   text-decoration: underline;
   font-size: 12px;
 }
+
+/* ── Context menu ── */
+.ctxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.ctxMenu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  animation: slideUp 0.1s ease;
+}
+.ctxMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text2);
+  transition: all 0.15s;
+  text-align: left;
+}
+.ctxMenu button:hover { background: var(--bg3); color: var(--text); }
+.ctxDanger { color: var(--danger) !important; }
+.ctxDanger:hover { background: var(--danger-dim) !important; color: var(--danger) !important; }

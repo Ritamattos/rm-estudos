@@ -403,6 +403,34 @@
   text-overflow: ellipsis;
 }
 
+.cardLinkBtns {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.cardReadBtn, .cardBuyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  line-height: 1;
+  transition: all 0.15s;
+  white-space: nowrap;
+  color: white;
+}
+
+.cardReadBtn { background: #3b82f6; }
+.cardReadBtn:hover { background: #2563eb; transform: translateY(-1px); }
+
+.cardBuyBtn { background: #22c55e; }
+.cardBuyBtn:hover { background: #16a34a; transform: translateY(-1px); }
+
 /* ── List view ── */
 .listView {
   flex: 1;
@@ -662,6 +690,38 @@
   box-shadow: 0 4px 14px rgba(139,92,246,0.3);
 }
 .openBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+
+.readBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: #3b82f6;
+  color: white;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+}
+.readBtn:hover { background: #2563eb; transform: translateY(-1px); }
+
+.buyBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: #22c55e;
+  color: white;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  box-shadow: 0 4px 14px rgba(34,197,94,0.3);
+}
+.buyBtn:hover { background: #16a34a; transform: translateY(-1px); }
 
 .detailEditBtn {
   display: flex;

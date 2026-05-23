@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, BookOpen, ShoppingCart } from 'lucide-react'
 import { useBookStore } from '../hooks/useBookStore'
 import styles from './BibliotecaSection.module.css'
 
@@ -82,7 +82,17 @@ function BookDetailModal({ book, onClose, onEdit, onDelete }) {
               </div>
             )}
             <div className={styles.detailActions}>
-              {book.link && (
+              {book.link_read && (
+                <a href={book.link_read} target="_blank" rel="noopener noreferrer" className={styles.readBtn}>
+                  <BookOpen size={15} /> Ler Agora
+                </a>
+              )}
+              {book.link_buy && (
+                <a href={book.link_buy} target="_blank" rel="noopener noreferrer" className={styles.buyBtn}>
+                  <ShoppingCart size={15} /> Comprar Agora
+                </a>
+              )}
+              {!book.link_read && !book.link_buy && book.link && (
                 <a href={book.link} target="_blank" rel="noopener noreferrer" className={styles.openBtn}>
                   <ExternalLink size={15} /> Abrir
                 </a>
@@ -104,7 +114,7 @@ function BookDetailModal({ book, onClose, onEdit, onDelete }) {
 function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   const [form, setForm] = useState({
     title: '', author: '', category: '',
-    status: 'quero_ler', link: '', rating: null, notes: '', cover_url: '',
+    status: 'quero_ler', link: '', link_read: '', link_buy: '', rating: null, notes: '', cover_url: '',
     ...initial,
   })
   const [uploading, setUploading] = useState(false)
@@ -160,8 +170,11 @@ function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
               </select>
             </Field>
           </div>
-          <Field label="Link (Google Drive ou URL)">
-            <input placeholder="https://..." value={form.link} onChange={f('link')} />
+          <Field label="Link para leitura (Google Drive, site de leitura...)">
+            <input placeholder="https://..." value={form.link_read} onChange={f('link_read')} />
+          </Field>
+          <Field label="Link para compra (Amazon, livraria...)">
+            <input placeholder="https://..." value={form.link_buy} onChange={f('link_buy')} />
           </Field>
           <Field label="Avaliação">
             <StarRating value={form.rating} onChange={v => setForm(p => ({ ...p, rating: v }))} />
@@ -227,6 +240,8 @@ export default function BibliotecaSection({ user, store: appStore }) {
       category: form.category?.trim() || '',
       status: form.status,
       link: form.link?.trim() || '',
+      link_read: form.link_read?.trim() || '',
+      link_buy: form.link_buy?.trim() || '',
       rating: form.rating || null,
       notes: form.notes?.trim() || '',
       cover_url: form.cover_url?.trim() || '',
@@ -378,6 +393,22 @@ export default function BibliotecaSection({ user, store: appStore }) {
                     <div className={styles.cardInfo}>
                       <p className={styles.cardTitle}>{book.title}</p>
                       {book.author && <p className={styles.cardAuthor}>{book.author}</p>}
+                      {(book.link_read || book.link_buy) && (
+                        <div className={styles.cardLinkBtns}>
+                          {book.link_read && (
+                            <a href={book.link_read} target="_blank" rel="noopener noreferrer"
+                              className={styles.cardReadBtn} onClick={e => e.stopPropagation()}>
+                              <BookOpen size={10} /> Ler Agora
+                            </a>
+                          )}
+                          {book.link_buy && (
+                            <a href={book.link_buy} target="_blank" rel="noopener noreferrer"
+                              className={styles.cardBuyBtn} onClick={e => e.stopPropagation()}>
+                              <ShoppingCart size={10} /> Comprar
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )

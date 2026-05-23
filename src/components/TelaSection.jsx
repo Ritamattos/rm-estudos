@@ -21,6 +21,34 @@ const PLATFORM_OPTS = [
   'Globoplay', 'YouTube', 'Crunchyroll', 'Paramount+', 'Star+', 'Mubi', 'Outro',
 ]
 
+const COUNTRY_OPTS = [
+  { value: '🇧🇷', label: '🇧🇷 Brasil' },
+  { value: '🇺🇸', label: '🇺🇸 EUA' },
+  { value: '🇬🇧', label: '🇬🇧 Reino Unido' },
+  { value: '🇯🇵', label: '🇯🇵 Japão' },
+  { value: '🇰🇷', label: '🇰🇷 Coreia do Sul' },
+  { value: '🇫🇷', label: '🇫🇷 França' },
+  { value: '🇪🇸', label: '🇪🇸 Espanha' },
+  { value: '🇮🇹', label: '🇮🇹 Itália' },
+  { value: '🇩🇪', label: '🇩🇪 Alemanha' },
+  { value: '🇦🇺', label: '🇦🇺 Austrália' },
+  { value: '🇨🇦', label: '🇨🇦 Canadá' },
+  { value: '🇲🇽', label: '🇲🇽 México' },
+  { value: '🇦🇷', label: '🇦🇷 Argentina' },
+  { value: '🇵🇹', label: '🇵🇹 Portugal' },
+  { value: '🇨🇳', label: '🇨🇳 China' },
+  { value: '🇮🇳', label: '🇮🇳 Índia' },
+  { value: '🇷🇺', label: '🇷🇺 Rússia' },
+  { value: '🇸🇪', label: '🇸🇪 Suécia' },
+  { value: '🇩🇰', label: '🇩🇰 Dinamarca' },
+  { value: '🇳🇴', label: '🇳🇴 Noruega' },
+  { value: '🇹🇷', label: '🇹🇷 Turquia' },
+  { value: '🇹🇭', label: '🇹🇭 Tailândia' },
+  { value: '🇮🇱', label: '🇮🇱 Israel' },
+  { value: '🇿🇦', label: '🇿🇦 África do Sul' },
+  { value: '🇨🇴', label: '🇨🇴 Colômbia' },
+]
+
 const GENRE_SUGGESTIONS = [
   'Ação', 'Aventura', 'Comédia', 'Drama', 'Terror', 'Suspense',
   'Ficção Científica', 'Fantasia', 'Romance', 'Animação', 'Documentário',
@@ -131,7 +159,7 @@ function MediaDetailModal({ item, onClose, onEdit, onDelete }) {
 
 function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   const [form, setForm] = useState({
-    title: '', type: 'filme', genre: '', platform: '',
+    title: '', type: 'filme', genre: '', platform: '', country: '',
     status: 'quero_assistir', link: '', rating: null, notes: '', cover_url: '',
     category: '',
     ...initial,
@@ -215,6 +243,12 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
               </datalist>
             </Field>
           </div>
+          <Field label="País de origem">
+            <select value={form.country || ''} onChange={f('country')}>
+              <option value="">— Selecionar país —</option>
+              {COUNTRY_OPTS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </Field>
           <Field label="Link (opcional)">
             <input placeholder="https://..." value={form.link} onChange={f('link')} />
           </Field>
@@ -287,6 +321,7 @@ export default function TelaSection({ user, store: appStore }) {
       type: form.type,
       genre: form.genre?.trim() || '',
       platform: form.platform?.trim() || '',
+      country: form.country || '',
       status: form.status,
       link: form.link?.trim() || '',
       rating: form.rating || null,
@@ -459,6 +494,8 @@ export default function TelaSection({ user, store: appStore }) {
                         : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
                       }
                       <div className={styles.cardStatusBar} style={{ background: status?.color }} />
+                      {item.country && <span className={styles.cardCountry}>{item.country}</span>}
+                      {item.platform && <span className={styles.cardPlatform}>{item.platform}</span>}
                       <div className={styles.cardOverlay}>
                         <div className={styles.cardBadges}>
                           <span className={styles.cardType}>{type?.icon} {type?.label}</span>
@@ -468,9 +505,6 @@ export default function TelaSection({ user, store: appStore }) {
                         </div>
                         {item.rating && <StarDisplay value={item.rating} size={12} />}
                       </div>
-                      {item.platform && (
-                        <span className={styles.cardPlatform}>{item.platform}</span>
-                      )}
                     </div>
                     <div className={styles.cardInfo}>
                       <p className={styles.cardTitle}>{item.title}</p>

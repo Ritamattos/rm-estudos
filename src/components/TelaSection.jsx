@@ -294,10 +294,12 @@ export default function TelaSection({ user, store: appStore }) {
       cover_url: form.cover_url?.trim() || '',
       category: form.category?.trim() || '',
     }
-    if (selectedItem?.id) {
-      await store.updateMedia(selectedItem.id, payload)
-    } else {
-      await store.addMedia(payload)
+    const result = selectedItem?.id
+      ? await store.updateMedia(selectedItem.id, payload)
+      : await store.addMedia(payload)
+    if (result?.error) {
+      alert(`Erro ao salvar: ${result.error.message}`)
+      return
     }
     closeModal()
   }

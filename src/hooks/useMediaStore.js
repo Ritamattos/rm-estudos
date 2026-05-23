@@ -28,18 +28,26 @@ export function useMediaStore(user) {
       sort_order: media.length,
       ...item,
     })
-    if (insertErr) { console.error('[addMedia] insert error:', insertErr); return }
+    if (insertErr) {
+      console.error('[addMedia] insert error:', insertErr)
+      return { error: insertErr }
+    }
     const { data: refreshed, error: loadErr } = await supabase.from('rm_media').select('*').eq('user_id', user.id).order('sort_order')
     if (loadErr) console.error('[addMedia] load error:', loadErr)
     setMedia(refreshed || [])
+    return { error: null }
   }, [user, media])
 
   const updateMedia = useCallback(async (id, fields) => {
     const { error: updateErr } = await supabase.from('rm_media').update(fields).eq('id', id)
-    if (updateErr) { console.error('[updateMedia] update error:', updateErr); return }
+    if (updateErr) {
+      console.error('[updateMedia] update error:', updateErr)
+      return { error: updateErr }
+    }
     const { data: refreshed, error: loadErr } = await supabase.from('rm_media').select('*').eq('user_id', user.id).order('sort_order')
     if (loadErr) console.error('[updateMedia] load error:', loadErr)
     setMedia(refreshed || [])
+    return { error: null }
   }, [user])
 
   const deleteMedia = useCallback(async (id) => {

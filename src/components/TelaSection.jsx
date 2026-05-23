@@ -22,31 +22,31 @@ const PLATFORM_OPTS = [
 ]
 
 const COUNTRY_OPTS = [
-  { value: '🇧🇷', label: '🇧🇷 Brasil' },
-  { value: '🇺🇸', label: '🇺🇸 EUA' },
-  { value: '🇬🇧', label: '🇬🇧 Reino Unido' },
-  { value: '🇯🇵', label: '🇯🇵 Japão' },
-  { value: '🇰🇷', label: '🇰🇷 Coreia do Sul' },
-  { value: '🇫🇷', label: '🇫🇷 França' },
-  { value: '🇪🇸', label: '🇪🇸 Espanha' },
-  { value: '🇮🇹', label: '🇮🇹 Itália' },
-  { value: '🇩🇪', label: '🇩🇪 Alemanha' },
-  { value: '🇦🇺', label: '🇦🇺 Austrália' },
-  { value: '🇨🇦', label: '🇨🇦 Canadá' },
-  { value: '🇲🇽', label: '🇲🇽 México' },
-  { value: '🇦🇷', label: '🇦🇷 Argentina' },
-  { value: '🇵🇹', label: '🇵🇹 Portugal' },
-  { value: '🇨🇳', label: '🇨🇳 China' },
-  { value: '🇮🇳', label: '🇮🇳 Índia' },
-  { value: '🇷🇺', label: '🇷🇺 Rússia' },
-  { value: '🇸🇪', label: '🇸🇪 Suécia' },
-  { value: '🇩🇰', label: '🇩🇰 Dinamarca' },
-  { value: '🇳🇴', label: '🇳🇴 Noruega' },
-  { value: '🇹🇷', label: '🇹🇷 Turquia' },
-  { value: '🇹🇭', label: '🇹🇭 Tailândia' },
-  { value: '🇮🇱', label: '🇮🇱 Israel' },
-  { value: '🇿🇦', label: '🇿🇦 África do Sul' },
-  { value: '🇨🇴', label: '🇨🇴 Colômbia' },
+  { value: 'Brasil',        flag: '🇧🇷' },
+  { value: 'EUA',           flag: '🇺🇸' },
+  { value: 'Reino Unido',   flag: '🇬🇧' },
+  { value: 'Japão',         flag: '🇯🇵' },
+  { value: 'Coreia do Sul', flag: '🇰🇷' },
+  { value: 'França',        flag: '🇫🇷' },
+  { value: 'Espanha',       flag: '🇪🇸' },
+  { value: 'Itália',        flag: '🇮🇹' },
+  { value: 'Alemanha',      flag: '🇩🇪' },
+  { value: 'Austrália',     flag: '🇦🇺' },
+  { value: 'Canadá',        flag: '🇨🇦' },
+  { value: 'México',        flag: '🇲🇽' },
+  { value: 'Argentina',     flag: '🇦🇷' },
+  { value: 'Portugal',      flag: '🇵🇹' },
+  { value: 'China',         flag: '🇨🇳' },
+  { value: 'Índia',         flag: '🇮🇳' },
+  { value: 'Rússia',        flag: '🇷🇺' },
+  { value: 'Suécia',        flag: '🇸🇪' },
+  { value: 'Dinamarca',     flag: '🇩🇰' },
+  { value: 'Noruega',       flag: '🇳🇴' },
+  { value: 'Turquia',       flag: '🇹🇷' },
+  { value: 'Tailândia',     flag: '🇹🇭' },
+  { value: 'Israel',        flag: '🇮🇱' },
+  { value: 'África do Sul', flag: '🇿🇦' },
+  { value: 'Colômbia',      flag: '🇨🇴' },
 ]
 
 const GENRE_SUGGESTIONS = [
@@ -246,7 +246,7 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
           <Field label="País de origem">
             <select value={form.country || ''} onChange={f('country')}>
               <option value="">— Selecionar país —</option>
-              {COUNTRY_OPTS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {COUNTRY_OPTS.map(c => <option key={c.value} value={c.value}>{c.flag} {c.value}</option>)}
             </select>
           </Field>
           <Field label="Link (opcional)">
@@ -494,7 +494,11 @@ export default function TelaSection({ user, store: appStore }) {
                         : <div className={styles.cardCoverPlaceholder}>{type?.icon || '🎬'}</div>
                       }
                       <div className={styles.cardStatusBar} style={{ background: status?.color }} />
-                      {item.country && <span className={styles.cardCountry}>{item.country}</span>}
+                      {item.country && (
+                        <span className={styles.cardCountry}>
+                          {COUNTRY_OPTS.find(c => c.value === item.country)?.flag ?? item.country}
+                        </span>
+                      )}
                       {item.platform && <span className={styles.cardPlatform}>{item.platform}</span>}
                       <div className={styles.cardOverlay}>
                         <div className={styles.cardBadges}>

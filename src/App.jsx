@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Search, BookOpen, Briefcase, Library, Clapperboard } from 'lucide-react'
+import { Plus, Search, BookOpen, Briefcase, Library, Clapperboard, Tag } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
 import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import ItemCard from './components/ItemCard'
+import KanbanBoard from './components/KanbanBoard'
 import Modal from './components/Modal'
 import NoteEditorModal from './components/NoteEditorModal'
 import BibliotecaSection from './components/BibliotecaSection'
@@ -64,6 +65,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
   const [coverUploading, setCoverUploading] = useState(false)
@@ -86,6 +88,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
   }, [isDark])
+
+  useEffect(() => {
+    if (user && !isSpecialSection) {
+      store.initDefaultTags(workspace)
+    }
+  }, [user, workspace])
 
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
 
@@ -132,11 +140,27 @@ export default function App() {
       item_date: form.item_date?.trim() || '',
       source_url: form.source_url?.trim() || '',
     }
+
+    let itemId
     if (form.editId) {
       await store.updateItem(form.editId, payload)
+      itemId = form.editId
     } else {
-      await store.addItem(payload)
+      const newItem = await store.addItem(payload)
+      itemId = newItem?.id
     }
+
+    if (itemId) {
+      const currentTagIds = store.itemTags.filter(it => it.item_id === itemId).map(it => it.tag_id)
+      const newTagIds = form.selectedTags || []
+      const toAdd = newTagIds.filter(tid => !currentTagIds.includes(tid))
+      const toRemove = currentTagIds.filter(tid => !newTagIds.includes(tid))
+      await Promise.all([
+        ...toAdd.map(tid => store.addItemTag(itemId, tid)),
+        ...toRemove.map(tid => store.removeItemTag(itemId, tid)),
+      ])
+    }
+
     closeModal()
   }
 
@@ -163,7 +187,16 @@ export default function App() {
     e.target.value = ''
   }
 
+  function toggleTagFilter(tagId) {
+    setTagFilter(prev =>
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    )
+  }
+
   const cats = store.categories.filter(c => c.workspace === workspace)
+  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
+  const isKanbanView = !isSpecialSection && !!selectedCat && !selectedSub
+  const workspaceTags = store.tags.filter(t => t.workspace === workspace)
 
   const filtered = store.items.filter(i => {
     if (i.workspace !== workspace) return false
@@ -174,6 +207,10 @@ export default function App() {
       const eff = i.tipo || i.type
       if (typeFilter === 'nota') { if (eff !== 'nota' && eff !== 'note') return false }
       else if (eff !== typeFilter) return false
+    }
+    if (tagFilter.length > 0) {
+      const tagsForItem = store.itemTags.filter(it => it.item_id === i.id).map(it => it.tag_id)
+      if (!tagFilter.some(tid => tagsForItem.includes(tid))) return false
     }
     if (search) {
       const q = search.toLowerCase()
@@ -194,7 +231,6 @@ export default function App() {
       : 'Todos'
 
   const subsForCat = store.subcategories.filter(s => s.cat_id === form.cat_id)
-  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
   const currentTipo = form.tipo || 'nota'
 
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
@@ -209,8 +245,8 @@ export default function App() {
           workspace={workspace}
           selectedCat={selectedCat}
           selectedSub={selectedSub}
-          onSelectCat={id => { setSelectedCat(id); setSelectedSub(null) }}
-          onSelectSub={(catId, subId) => { setSelectedCat(catId); setSelectedSub(subId) }}
+          onSelectCat={id => { setSelectedCat(id); setSelectedSub(null); setTagFilter([]) }}
+          onSelectSub={(catId, subId) => { setSelectedCat(catId); setSelectedSub(subId); setTagFilter([]) }}
           onAddCat={() => openModal('cat', { workspace })}
           onEditCat={cat => openModal('cat', { editId: cat.id, name: cat.name, icon: cat.icon })}
           onDeleteCat={id => {
@@ -245,6 +281,7 @@ export default function App() {
                 setSelectedSub(null)
                 setStatusFilter('all')
                 setTypeFilter('all')
+                setTagFilter([])
               }}
             >
               {w.icon} {w.label}
@@ -267,6 +304,22 @@ export default function App() {
           <BibliotecaSection user={user} store={store} />
         ) : workspace === 'tela' ? (
           <TelaSection user={user} store={store} />
+        ) : isKanbanView ? (
+          <>
+            <div className={styles.topbar}>
+              <div>
+                <h1 className={styles.viewTitle}>{viewTitle}</h1>
+                <span className={styles.viewCount}>Quadro Kanban</span>
+              </div>
+            </div>
+            <KanbanBoard
+              categoryId={selectedCat}
+              cards={store.kanbanCards.filter(k => k.category_id === selectedCat)}
+              onAdd={store.addKanbanCard}
+              onMove={(id, status) => store.updateKanbanCard(id, { status })}
+              onDelete={store.deleteKanbanCard}
+            />
+          </>
         ) : (
           <>
             <div className={styles.topbar}>
@@ -283,6 +336,11 @@ export default function App() {
                   <option value="all">Todos os tipos</option>
                   {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
+                {workspaceTags.length > 0 && (
+                  <button className={styles.tagsManageBtn} onClick={() => openModal('tags')}>
+                    <Tag size={13} /> Tags
+                  </button>
+                )}
                 <button className={styles.addBtn} onClick={() => openModal('item', { tipo: 'nota', status: null, proporcao_capa: '16:9', cat_id: selectedCat, sub_id: selectedSub })}>
                   <Plus size={15} /> Novo item
                 </button>
@@ -308,6 +366,29 @@ export default function App() {
               ))}
             </div>
 
+            {workspaceTags.length > 0 && (
+              <div className={styles.tagFilterBar}>
+                {workspaceTags.map(tag => {
+                  const active = tagFilter.includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      className={`${styles.tagFilterBtn} ${active ? styles.tagFilterBtnActive : ''}`}
+                      style={active ? { background: tag.color + '22', color: tag.color, borderColor: tag.color + '55' } : {}}
+                      onClick={() => toggleTagFilter(tag.id)}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+                {tagFilter.length > 0 && (
+                  <button className={styles.tagFilterClear} onClick={() => setTagFilter([])}>
+                    Limpar filtro
+                  </button>
+                )}
+              </div>
+            )}
+
             {store.loading ? (
               <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
             ) : filtered.length === 0 ? (
@@ -326,7 +407,18 @@ export default function App() {
                     item={item}
                     cat={store.categories.find(c => c.id === item.cat_id)}
                     sub={store.subcategories.find(s => s.id === item.sub_id)}
-                    onEdit={item => openModal('item', { editId: item.id, ...item, tipo: resolveEditTipo(item) })}
+                    itemTags={
+                      store.itemTags
+                        .filter(it => it.item_id === item.id)
+                        .map(it => store.tags.find(t => t.id === it.tag_id))
+                        .filter(Boolean)
+                    }
+                    onEdit={item => openModal('item', {
+                      editId: item.id,
+                      ...item,
+                      tipo: resolveEditTipo(item),
+                      selectedTags: store.itemTags.filter(it => it.item_id === item.id).map(it => it.tag_id),
+                    })}
                     onDelete={id => { if (confirm('Excluir item?')) store.deleteItem(id) }}
                     onStatusChange={(id, status) => store.updateItem(id, { status })}
                     onOpenNote={item => setNoteItem(item)}
@@ -459,6 +551,98 @@ export default function App() {
                 </button>
             }
           </Field>
+
+          {workspaceTags.length > 0 && (
+            <Field label="Tags">
+              <div className={styles.tagToggleRow}>
+                {workspaceTags.map(tag => {
+                  const isSelected = (form.selectedTags || []).includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`${styles.tagToggleBtn} ${isSelected ? styles.tagToggleBtnActive : ''}`}
+                      style={isSelected ? { background: tag.color + '33', color: tag.color, borderColor: tag.color + '66' } : {}}
+                      onClick={() => {
+                        const current = form.selectedTags || []
+                        setForm(prev => ({
+                          ...prev,
+                          selectedTags: isSelected
+                            ? current.filter(id => id !== tag.id)
+                            : [...current, tag.id],
+                        }))
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </Field>
+          )}
+        </Modal>
+      )}
+
+      {modal === 'tags' && (
+        <Modal title="Gerenciar Tags" onClose={closeModal} noFooter>
+          <div className={styles.tagsModalBody}>
+            {workspaceTags.length === 0 ? (
+              <p className={styles.tagsEmpty}>Nenhuma tag criada ainda.</p>
+            ) : (
+              <div className={styles.tagsList}>
+                {workspaceTags.map(tag => (
+                  <div key={tag.id} className={styles.tagsListItem}>
+                    <span
+                      className={styles.tagsListPill}
+                      style={{ background: tag.color + '22', color: tag.color, border: `1px solid ${tag.color}44` }}
+                    >
+                      {tag.name}
+                    </span>
+                    <button
+                      className={styles.tagsDeleteBtn}
+                      onClick={() => { if (confirm(`Excluir tag "${tag.name}"?`)) store.deleteTag(tag.id) }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.tagAddSection}>
+              <span className={styles.fieldLabel}>Nova tag</span>
+              <div className={styles.tagAddRow}>
+                <input
+                  className={styles.tagNameInput}
+                  placeholder="Nome da tag"
+                  value={form.tagName || ''}
+                  onChange={f('tagName')}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter' && form.tagName?.trim()) {
+                      await store.addTag(form.tagName.trim(), form.tagColor || '#6366f1', workspace)
+                      setForm(p => ({ ...p, tagName: '' }))
+                    }
+                  }}
+                />
+                <input
+                  type="color"
+                  className={styles.tagColorInput}
+                  value={form.tagColor || '#6366f1'}
+                  onChange={f('tagColor')}
+                />
+                <button
+                  className={styles.tagAddBtn}
+                  onClick={async () => {
+                    if (!form.tagName?.trim()) return
+                    await store.addTag(form.tagName.trim(), form.tagColor || '#6366f1', workspace)
+                    setForm(p => ({ ...p, tagName: '' }))
+                  }}
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          </div>
         </Modal>
       )}
 

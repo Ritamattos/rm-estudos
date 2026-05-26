@@ -14,7 +14,7 @@ const STATUS_OPTS = [
 ]
 const STATUS_VALUES = STATUS_OPTS.map(s => s.value)
 
-export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusChange, onOpenNote }) {
+export default function ItemCard({ item, cat, sub, itemTags, onEdit, onDelete, onStatusChange, onOpenNote }) {
   const [expanded, setExpanded] = useState(false)
 
   const effectiveType = item.tipo || item.type
@@ -69,6 +69,20 @@ export default function ItemCard({ item, cat, sub, onEdit, onDelete, onStatusCha
           <button className={`${styles.iconBtn} ${styles.danger}`} onClick={() => onDelete(item.id)}><Trash2 size={13} /></button>
         </div>
       </div>
+
+      {itemTags && itemTags.length > 0 && (
+        <div className={styles.itemTagsRow}>
+          {itemTags.map(tag => (
+            <span
+              key={tag.id}
+              className={styles.itemTagPill}
+              style={{ background: tag.color + '22', color: tag.color, borderColor: tag.color + '44' }}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {item.status && (
         <button

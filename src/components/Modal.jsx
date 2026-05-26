@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import styles from './Modal.module.css'
 
-export default function Modal({ title, onClose, onSave, children, saveLabel = 'Salvar' }) {
+export default function Modal({ title, onClose, onSave, children, saveLabel = 'Salvar', noFooter = false }) {
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h)
@@ -16,10 +16,12 @@ export default function Modal({ title, onClose, onSave, children, saveLabel = 'S
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
         <div className={styles.body}>{children}</div>
-        <div className={styles.footer}>
-          <button className={styles.cancel} onClick={onClose}>Cancelar</button>
-          <button className={styles.save} onClick={onSave}>{saveLabel}</button>
-        </div>
+        {!noFooter && (
+          <div className={styles.footer}>
+            <button className={styles.cancel} onClick={onClose}>Cancelar</button>
+            <button className={styles.save} onClick={onSave}>{saveLabel}</button>
+          </div>
+        )}
       </div>
     </div>
   )

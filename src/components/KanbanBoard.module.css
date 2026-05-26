@@ -1,0 +1,173 @@
+.board {
+  display: flex;
+  gap: 16px;
+  padding: 1.5rem 2rem 2rem;
+  align-items: flex-start;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.col {
+  flex: 1;
+  min-width: 260px;
+  max-width: 360px;
+  background: var(--bg2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.colOver {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 1px var(--purple), 0 4px 16px rgba(139,92,246,0.12);
+}
+
+.colHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.colDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.colTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-display);
+  flex: 1;
+}
+
+.colCount {
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--bg3);
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+
+.colCards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  min-height: 80px;
+}
+
+.kCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: grab;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.kCard:hover {
+  border-color: var(--border2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.kCard:active { cursor: grabbing; }
+
+.kCardDragging {
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+
+.kCardTitle {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.kCardDelete {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--text3);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  opacity: 0;
+}
+
+.kCard:hover .kCardDelete { opacity: 1; }
+.kCardDelete:hover { background: var(--danger-dim); color: var(--danger); }
+
+.addForm {
+  background: var(--bg3);
+  border-radius: var(--radius);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+}
+
+.addInput {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.addInput:focus { outline: none; border-color: var(--purple); }
+
+.addActions {
+  display: flex;
+  gap: 6px;
+}
+
+.addConfirm {
+  padding: 6px 14px;
+  background: var(--purple);
+  color: white;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.addConfirm:hover { background: var(--purple2); }
+
+.addCancel {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.addCancel:hover { background: var(--bg3); color: var(--text2); }
+
+.colAddBtn {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text3);
+  border: 1px dashed var(--border2);
+  transition: all 0.15s;
+  text-align: center;
+}
+.colAddBtn:hover { background: var(--bg3); color: var(--purple-light); border-color: var(--purple); border-style: solid; }

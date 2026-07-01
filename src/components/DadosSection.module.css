@@ -143,6 +143,78 @@
 
 .barLabel { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
 
+.monthPicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthPill {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--card-bg);
+  transition: all 0.15s;
+}
+.monthPill:hover { border-color: var(--purple); }
+.monthPillActive {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: white;
+}
+
+.monthPickerAction {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--purple);
+}
+.monthPickerAction:hover { text-decoration: underline; }
+
+.lineChartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.lineCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lineSvg {
+  width: 100%;
+  height: 90px;
+  overflow: visible;
+}
+
+.lineLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+.lineLabels span { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
+
+.metricName { font-weight: 600; color: var(--text); }
+.cellValue { font-weight: 600; color: var(--text); }
+
+.changeGood, .changeBad, .changeNeutral {
+  font-size: 11px;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.changeGood { color: var(--success); }
+.changeBad { color: var(--danger); }
+.changeNeutral { color: var(--text3); }
+
 .tableWrap { overflow-x: auto; }
 
 .table {

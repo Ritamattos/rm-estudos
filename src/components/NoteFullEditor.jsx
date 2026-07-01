@@ -63,7 +63,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
     const { from, to, empty } = editor.state.selection
     const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, ' ')
     const prevHref = editor.getAttributes('link').href || ''
-    setLinkModal({ hasManualSelection: hadManualSelection, text: selectedText, url: prevHref || 'https://' })
+    setLinkModal({ hasManualSelection: hadManualSelection, text: selectedText, url: prevHref })
   }
 
   function applyLink() {

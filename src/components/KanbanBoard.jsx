@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Pencil } from 'lucide-react'
+import Modal from './Modal'
 import styles from './KanbanBoard.module.css'
 
 const COLS = [
@@ -7,11 +9,13 @@ const COLS = [
   { id: 'estudado',  label: 'Estudado',  color: '#4ade80' },
 ]
 
-export default function KanbanBoard({ categoryId, cards, onAdd, onMove, onDelete }) {
+export default function KanbanBoard({ categoryId, cards, onAdd, onMove, onEdit, onDelete }) {
   const [dragId, setDragId] = useState(null)
   const [addingCol, setAddingCol] = useState(null)
   const [newTitle, setNewTitle] = useState('')
   const [dragOverCol, setDragOverCol] = useState(null)
+  const [editingCard, setEditingCard] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
 
   function handleDragStart(e, cardId) {
     setDragId(cardId)
@@ -45,6 +49,17 @@ export default function KanbanBoard({ categoryId, cards, onAdd, onMove, onDelete
     setAddingCol(null)
   }
 
+  function openEdit(card) {
+    setEditingCard(card)
+    setEditTitle(card.title)
+  }
+
+  async function submitEdit() {
+    if (!editTitle.trim() || !editingCard) return
+    await onEdit(editingCard.id, editTitle.trim())
+    setEditingCard(null)
+  }
+
   return (
     <div className={styles.board}>
       {COLS.map(col => {
@@ -72,11 +87,20 @@ export default function KanbanBoard({ categoryId, cards, onAdd, onMove, onDelete
                   draggable
                   onDragStart={e => handleDragStart(e, card.id)}
                   onDragEnd={handleDragEnd}
+                  onClick={() => openEdit(card)}
                 >
                   <span className={styles.kCardTitle}>{card.title}</span>
                   <button
+                    className={styles.kCardEdit}
+                    onClick={e => { e.stopPropagation(); openEdit(card) }}
+                    title="Editar"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
                     className={styles.kCardDelete}
-                    onClick={() => {
+                    onClick={e => {
+                      e.stopPropagation()
                       if (confirm('Remover este card?')) onDelete(card.id)
                     }}
                     title="Remover"
@@ -123,6 +147,18 @@ export default function KanbanBoard({ categoryId, cards, onAdd, onMove, onDelete
           </div>
         )
       })}
+
+      {editingCard && (
+        <Modal title="Editar card" onClose={() => setEditingCard(null)} onSave={submitEdit}>
+          <input
+            autoFocus
+            value={editTitle}
+            onChange={e => setEditTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitEdit() }}
+            placeholder="Título do card"
+          />
+        </Modal>
+      )}
     </div>
   )
 }

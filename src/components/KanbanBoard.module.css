@@ -95,6 +95,7 @@
   flex: 1;
 }
 
+.kCardEdit,
 .kCardDelete {
   flex-shrink: 0;
   width: 20px;
@@ -110,7 +111,9 @@
   opacity: 0;
 }
 
+.kCard:hover .kCardEdit,
 .kCard:hover .kCardDelete { opacity: 1; }
+.kCardEdit:hover { background: var(--bg4); color: var(--purple-light); }
 .kCardDelete:hover { background: var(--danger-dim); color: var(--danger); }
 
 .addForm {

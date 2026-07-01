@@ -1,0 +1,133 @@
+.wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.backBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.backBtn:hover { background: var(--bg3); color: var(--text); }
+.backBtn:disabled { opacity: 0.6; cursor: default; }
+
+.titleInput {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 8px 4px !important;
+}
+.titleInput:focus { box-shadow: none !important; }
+
+.dateInput {
+  width: auto;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.saveBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 18px;
+  background: var(--purple); color: white;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 600;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  flex-shrink: 0;
+}
+.saveBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.saveBtn:disabled { opacity: 0.7; cursor: default; transform: none; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.toolbar button:hover { background: var(--bg3); color: var(--text); }
+.toolbar button.active { background: var(--purple-dim2); color: var(--purple-light); }
+.toolbar button:disabled { opacity: 0.5; cursor: default; }
+
+.sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border2);
+  margin: 0 6px;
+}
+
+.contentArea {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.editor {
+  width: 100%;
+  max-width: 760px;
+}
+
+.editor :global(.ProseMirror) {
+  outline: none;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  min-height: 60vh;
+}
+
+.editor :global(.ProseMirror p) { margin: 0 0 0.85em; }
+.editor :global(.ProseMirror h1) { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin: 0.8em 0 0.4em; letter-spacing: -0.02em; }
+.editor :global(.ProseMirror h2) { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin: 0.8em 0 0.4em; letter-spacing: -0.02em; }
+.editor :global(.ProseMirror h3) { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0.8em 0 0.4em; }
+.editor :global(.ProseMirror ul), .editor :global(.ProseMirror ol) { padding-left: 1.4em; margin: 0 0 0.85em; }
+.editor :global(.ProseMirror li) { margin: 0.25em 0; }
+.editor :global(.ProseMirror a) { color: var(--purple-light); text-decoration: underline; }
+.editor :global(.ProseMirror img) { max-width: 100%; border-radius: var(--radius); margin: 0.5em 0; display: block; }
+.editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: 'Comece a escrever...';
+  color: var(--text3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

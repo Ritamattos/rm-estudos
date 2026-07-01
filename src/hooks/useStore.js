@@ -13,6 +13,7 @@ export function useStore(user) {
   const [categories, setCategories] = useState([])
   const [subcategories, setSubcategories] = useState([])
   const [items, setItems] = useState([])
+  const [notes, setNotes] = useState([])
   const [kanbanCards, setKanbanCards] = useState([])
   const [tags, setTags] = useState([])
   const [itemTags, setItemTags] = useState([])
@@ -29,6 +30,7 @@ export function useStore(user) {
       { data: cats },
       { data: subs },
       { data: its },
+      { data: nts },
       { data: kards },
       { data: tgs },
       { data: itgs },
@@ -36,6 +38,7 @@ export function useStore(user) {
       supabase.from('rm_categories').select('*').eq('user_id', user.id).order('sort_order'),
       supabase.from('rm_subcategories').select('*').eq('user_id', user.id).order('sort_order'),
       supabase.from('rm_items').select('*').eq('user_id', user.id).order('sort_order'),
+      supabase.from('rm_notes').select('*').eq('user_id', user.id).order('sort_order'),
       supabase.from('rm_kanban_cards').select('*').eq('user_id', user.id).order('sort_order'),
       supabase.from('rm_tags').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('rm_item_tags').select('*'),
@@ -43,6 +46,7 @@ export function useStore(user) {
     setCategories(cats || [])
     setSubcategories(subs || [])
     setItems(its || [])
+    setNotes(nts || [])
     setKanbanCards(kards || [])
     setTags(tgs || [])
     setItemTags(itgs || [])
@@ -111,6 +115,38 @@ export function useStore(user) {
     await supabase.from('rm_items').delete().eq('id', id)
     setItems(prev => prev.filter(i => i.id !== id))
     setItemTags(prev => prev.filter(it => it.item_id !== id))
+  }, [])
+
+  // ── Notes ────────────────────────────────────────────────────────────────────
+
+  const addNote = useCallback(async (note) => {
+    const subNotes = notes.filter(n => n.sub_id === note.sub_id)
+    const { data } = await supabase.from('rm_notes').insert({
+      user_id: user.id, sort_order: subNotes.length, ...note
+    }).select().single()
+    if (data) setNotes(prev => [...prev, data])
+    return data
+  }, [user, notes])
+
+  const updateNote = useCallback(async (id, fields) => {
+    const payload = { ...fields, updated_at: new Date().toISOString() }
+    await supabase.from('rm_notes').update(payload).eq('id', id)
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...payload } : n))
+  }, [])
+
+  const deleteNote = useCallback(async (id) => {
+    await supabase.from('rm_notes').delete().eq('id', id)
+    setNotes(prev => prev.filter(n => n.id !== id))
+  }, [])
+
+  const reorderNotes = useCallback(async (orderedIds) => {
+    setNotes(prev => {
+      const order = new Map(orderedIds.map((id, idx) => [id, idx]))
+      return prev.map(n => order.has(n.id) ? { ...n, sort_order: order.get(n.id) } : n)
+    })
+    await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from('rm_notes').update({ sort_order: idx }).eq('id', id)
+    ))
   }, [])
 
   // ── Kanban Cards ─────────────────────────────────────────────────────────────
@@ -186,10 +222,11 @@ export function useStore(user) {
   }, [user])
 
   return {
-    categories, subcategories, items, kanbanCards, tags, itemTags, loading,
+    categories, subcategories, items, notes, kanbanCards, tags, itemTags, loading,
     addCategory, updateCategory, deleteCategory,
     addSubcategory, updateSubcategory, deleteSubcategory,
     addItem, updateItem, deleteItem,
+    addNote, updateNote, deleteNote, reorderNotes,
     addKanbanCard, updateKanbanCard, deleteKanbanCard,
     addTag, deleteTag,
     addItemTag, removeItemTag,

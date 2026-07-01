@@ -8,6 +8,7 @@ import ItemCard from './components/ItemCard'
 import KanbanBoard from './components/KanbanBoard'
 import Modal from './components/Modal'
 import NoteEditorModal from './components/NoteEditorModal'
+import NotesSection from './components/NotesSection'
 import BibliotecaSection from './components/BibliotecaSection'
 import TelaSection from './components/TelaSection'
 import styles from './App.module.css'
@@ -196,6 +197,7 @@ export default function App() {
   const cats = store.categories.filter(c => c.workspace === workspace)
   const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
   const isKanbanView = !isSpecialSection && !!selectedCat && !selectedSub
+  const isNotesView = !isSpecialSection && !!selectedSub
   const workspaceTags = store.tags.filter(t => t.workspace === workspace)
 
   const filtered = store.items.filter(i => {
@@ -317,9 +319,18 @@ export default function App() {
               cards={store.kanbanCards.filter(k => k.category_id === selectedCat)}
               onAdd={store.addKanbanCard}
               onMove={(id, status) => store.updateKanbanCard(id, { status })}
+              onEdit={(id, title) => store.updateKanbanCard(id, { title })}
               onDelete={store.deleteKanbanCard}
             />
           </>
+        ) : isNotesView ? (
+          <NotesSection
+            store={store}
+            workspace={workspace}
+            catId={selectedCat}
+            subId={selectedSub}
+            title={viewTitle}
+          />
         ) : (
           <>
             <div className={styles.topbar}>

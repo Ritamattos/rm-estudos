@@ -56,10 +56,12 @@ function Field({ label, children }) {
   return <div className={styles.field}><label className={styles.fieldLabel}>{label}</label>{children}</div>
 }
 
+const THEME_KEY = 'rm-estudos-theme'
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [isDark, setIsDark] = useState(true)
+  const [isDark, setIsDark] = useState(() => localStorage.getItem(THEME_KEY) !== 'light')
   const [workspace, setWorkspace] = useState('marketing')
   const [selectedCat, setSelectedCat] = useState(null)
   const [selectedSub, setSelectedSub] = useState(null)
@@ -88,6 +90,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light')
   }, [isDark])
 
   useEffect(() => {

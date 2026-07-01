@@ -37,6 +37,12 @@ export default function NoteFullEditor({ note, store, onClose }) {
 
   function openLinkModal() {
     if (!editor) return
+    // If the cursor sits inside an existing link with no active selection,
+    // expand the selection to the whole link so we update it in place
+    // instead of inserting new text next to it.
+    if (editor.isActive('link')) {
+      editor.chain().extendMarkRange('link').run()
+    }
     const { from, to, empty } = editor.state.selection
     const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, ' ')
     const prevHref = editor.getAttributes('link').href || ''

@@ -13,12 +13,6 @@
 
 .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-.sortSelect {
-  padding: 9px 12px; background: var(--bg2);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  color: var(--text); font-size: 13px; width: auto;
-}
-
 .addBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 9px 18px;

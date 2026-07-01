@@ -3,12 +3,6 @@ import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
 import NoteFullEditor from './NoteFullEditor'
 import styles from './NotesSection.module.css'
 
-const SORT_OPTS = [
-  { value: 'recent', label: 'Mais recente' },
-  { value: 'oldest', label: 'Mais antiga' },
-  { value: 'manual', label: 'Manual' },
-]
-
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -20,23 +14,14 @@ function formatDate(d) {
 }
 
 export default function NotesSection({ store, workspace, catId, subId, title }) {
-  const [sortMode, setSortMode] = useState('recent')
   const [activeNote, setActiveNote] = useState(null)
   const [dragId, setDragId] = useState(null)
 
   const notes = store.notes.filter(n => n.sub_id === subId)
 
   const sorted = useMemo(() => {
-    const arr = [...notes]
-    if (sortMode === 'recent') {
-      arr.sort((a, b) => (b.note_date || '').localeCompare(a.note_date || '') || (b.created_at || '').localeCompare(a.created_at || ''))
-    } else if (sortMode === 'oldest') {
-      arr.sort((a, b) => (a.note_date || '').localeCompare(b.note_date || '') || (a.created_at || '').localeCompare(b.created_at || ''))
-    } else {
-      arr.sort((a, b) => a.sort_order - b.sort_order)
-    }
-    return arr
-  }, [notes, sortMode])
+    return [...notes].sort((a, b) => a.sort_order - b.sort_order)
+  }, [notes])
 
   function handleDragStart(e, id) {
     setDragId(id)
@@ -81,9 +66,6 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
           <span className={styles.viewCount}>{notes.length} nota{notes.length !== 1 ? 's' : ''}</span>
         </div>
         <div className={styles.actions}>
-          <select className={styles.sortSelect} value={sortMode} onChange={e => setSortMode(e.target.value)}>
-            {SORT_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
           <button className={styles.addBtn} onClick={createNote}>
             <Plus size={15} /> Nova nota
           </button>
@@ -102,13 +84,13 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
             <div
               key={note.id}
               className={`${styles.row} ${dragId === note.id ? styles.rowDragging : ''}`}
-              draggable={sortMode === 'manual'}
+              draggable
               onDragStart={e => handleDragStart(e, note.id)}
               onDragOver={e => e.preventDefault()}
               onDrop={e => handleDrop(e, note.id)}
               onClick={() => setActiveNote(note)}
             >
-              {sortMode === 'manual' && <GripVertical size={14} className={styles.grip} />}
+              <GripVertical size={14} className={styles.grip} />
               <div className={styles.rowMain}>
                 <span className={styles.rowTitle}>{note.title || 'Sem título'}</span>
                 <span className={styles.rowDate}>{formatDate(note.note_date)}</span>

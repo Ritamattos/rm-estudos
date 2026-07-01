@@ -13,11 +13,11 @@ import AtividadesSection from './components/AtividadesSection'
 import styles from './App.module.css'
 
 const WORKSPACES = [
+  { id: 'atividades',  label: 'Atividades',  icon: <ClipboardList size={15} /> },
   { id: 'marketing',   label: 'Marketing',   icon: <Briefcase size={15} /> },
   { id: 'pessoal',     label: 'Pessoal',     icon: <BookOpen size={15} /> },
   { id: 'biblioteca',  label: 'Biblioteca',  icon: <Library size={15} /> },
   { id: 'tela',        label: 'Cinemateca',  icon: <Clapperboard size={15} /> },
-  { id: 'atividades',  label: 'Atividades',  icon: <ClipboardList size={15} /> },
 ]
 
 const SUB_TYPES = [

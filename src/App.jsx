@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Briefcase, Library, Clapperboard } from 'lucide-react'
+import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
 import Login from './components/Login'
@@ -9,13 +9,15 @@ import Modal from './components/Modal'
 import NotesSection from './components/NotesSection'
 import BibliotecaSection from './components/BibliotecaSection'
 import TelaSection from './components/TelaSection'
+import AtividadesSection from './components/AtividadesSection'
 import styles from './App.module.css'
 
 const WORKSPACES = [
-  { id: 'marketing',  label: 'Marketing',  icon: <Briefcase size={15} /> },
-  { id: 'pessoal',    label: 'Pessoal',    icon: <BookOpen size={15} /> },
-  { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={15} /> },
-  { id: 'tela',       label: 'Cinemateca', icon: <Clapperboard size={15} /> },
+  { id: 'marketing',   label: 'Marketing',   icon: <Briefcase size={15} /> },
+  { id: 'pessoal',     label: 'Pessoal',     icon: <BookOpen size={15} /> },
+  { id: 'biblioteca',  label: 'Biblioteca',  icon: <Library size={15} /> },
+  { id: 'tela',        label: 'Cinemateca',  icon: <Clapperboard size={15} /> },
+  { id: 'atividades',  label: 'Atividades',  icon: <ClipboardList size={15} /> },
 ]
 
 const SUB_TYPES = [
@@ -95,7 +97,7 @@ export default function App() {
   }
 
   const cats = store.categories.filter(c => c.workspace === workspace)
-  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela'
+  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela' || workspace === 'atividades'
 
   // No more "show everything" view: always resolve to a real category so
   // the workspace never lands in an unfiltered state. Falls back to null
@@ -186,6 +188,8 @@ export default function App() {
           <BibliotecaSection user={user} store={store} />
         ) : workspace === 'tela' ? (
           <TelaSection user={user} store={store} />
+        ) : workspace === 'atividades' ? (
+          <AtividadesSection user={user} />
         ) : store.loading ? (
           <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
         ) : cats.length === 0 ? (

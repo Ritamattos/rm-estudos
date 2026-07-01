@@ -14,6 +14,16 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// TipTap's Link mark becomes "inclusive" whenever autolink is on, meaning
+// text typed right after a link silently keeps inheriting the link mark.
+// Force it back off so finishing a link and continuing to type produces
+// plain text again.
+const NonBleedingLink = Link.extend({
+  inclusive() {
+    return false
+  },
+})
+
 export default function NoteFullEditor({ note, store, onClose }) {
   const [title, setTitle] = useState(note.title || '')
   const [date, setDate] = useState(note.note_date || todayISO())
@@ -25,7 +35,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Link.configure({
+      NonBleedingLink.configure({
         openOnClick: true,
         autolink: true,
         HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
@@ -37,32 +47,43 @@ export default function NoteFullEditor({ note, store, onClose }) {
 
   function openLinkModal() {
     if (!editor) return
-    // If the cursor sits inside an existing link with no active selection,
-    // expand the selection to the whole link so we update it in place
-    // instead of inserting new text next to it.
-    if (editor.isActive('link')) {
+    // A manual selection means the user picked the exact text they want
+    // as the link's label — keep it as-is and only ask for the URL.
+    const hadManualSelection = !editor.state.selection.empty
+    const isEditingLink = editor.isActive('link')
+
+    // If the cursor sits inside an existing link with no manual selection,
+    // expand the selection to the whole link so applying the modal
+    // replaces that link's text+href together, instead of inserting new
+    // text next to it (which duplicated the URL) or leaving it unrenameable.
+    if (isEditingLink && !hadManualSelection) {
       editor.chain().extendMarkRange('link').run()
     }
+
     const { from, to, empty } = editor.state.selection
     const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, ' ')
     const prevHref = editor.getAttributes('link').href || ''
-    setLinkModal({ hasSelection: !empty, text: selectedText, url: prevHref || 'https://' })
+    setLinkModal({ hasManualSelection: hadManualSelection, text: selectedText, url: prevHref || 'https://' })
   }
 
   function applyLink() {
     if (!editor || !linkModal) return
+    const { from, to } = editor.state.selection
     const url = linkModal.url.trim()
     if (!url) {
-      if (linkModal.hasSelection) editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
       setLinkModal(null)
       return
     }
     const finalUrl = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
-    if (linkModal.hasSelection) {
+    if (linkModal.hasManualSelection) {
+      // Keep the exact text the user selected; just (re)apply the mark.
       editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
     } else {
+      // Fresh insert at the cursor, or replacing an existing link's
+      // text+href together (range covers the whole link in that case).
       const text = linkModal.text.trim() || finalUrl
-      editor.chain().focus().insertContent({
+      editor.chain().focus().insertContentAt({ from, to }, {
         type: 'text',
         text,
         marks: [{ type: 'link', attrs: { href: finalUrl } }],
@@ -188,12 +209,12 @@ export default function NoteFullEditor({ note, store, onClose }) {
 
       {linkModal && (
         <Modal
-          title={linkModal.hasSelection ? 'Editar link' : 'Inserir link'}
+          title={linkModal.hasManualSelection ? 'Editar link' : 'Inserir link'}
           onClose={() => setLinkModal(null)}
           onSave={applyLink}
           saveLabel="Inserir"
         >
-          {!linkModal.hasSelection && (
+          {!linkModal.hasManualSelection && (
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Texto do link</label>
               <input
@@ -207,7 +228,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
           <div className={styles.field}>
             <label className={styles.fieldLabel}>URL</label>
             <input
-              autoFocus={linkModal.hasSelection}
+              autoFocus={linkModal.hasManualSelection}
               placeholder="https://..."
               value={linkModal.url}
               onChange={e => setLinkModal(m => ({ ...m, url: e.target.value }))}

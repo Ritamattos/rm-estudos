@@ -18,6 +18,7 @@ export function useStore(user) {
   const [tags, setTags] = useState([])
   const [itemTags, setItemTags] = useState([])
   const [loading, setLoading] = useState(true)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -25,7 +26,10 @@ export function useStore(user) {
   }, [user])
 
   async function loadAll() {
-    setLoading(true)
+    // Only the very first fetch should block the UI. Later reloads (e.g.
+    // triggered by an auth token refresh) happen quietly in the
+    // background so they don't unmount whatever's currently open.
+    if (!hasLoadedOnce) setLoading(true)
     const [
       { data: cats },
       { data: subs },
@@ -51,6 +55,7 @@ export function useStore(user) {
     setTags(tgs || [])
     setItemTags(itgs || [])
     setLoading(false)
+    setHasLoadedOnce(true)
   }
 
   // ── Categories ──────────────────────────────────────────────────────────────

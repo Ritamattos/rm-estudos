@@ -49,8 +49,17 @@ export default function App() {
       setUser(session?.user ?? null)
       setAuthLoading(false)
     })
+    // Supabase re-validates the session (and fires this callback with a
+    // brand-new user object) every time the tab regains visibility, even
+    // when it's still the same user. Only update state when the user
+    // actually changes, so that doesn't cascade into a full data reload
+    // and unmount whatever's currently open (e.g. a note being edited).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null)
+      setUser(prev => {
+        const nextId = session?.user?.id ?? null
+        const prevId = prev?.id ?? null
+        return nextId === prevId ? prev : (session?.user ?? null)
+      })
     })
     return () => subscription.unsubscribe()
   }, [])

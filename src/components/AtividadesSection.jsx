@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle } from 'lucide-react'
+import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle, BarChart3 } from 'lucide-react'
 import { useAtividadesStore } from '../hooks/useAtividadesStore'
 import TestesBoard from './TestesBoard'
 import TestArchiveList from './TestArchiveList'
 import DiarioList from './DiarioList'
+import DadosSection from './DadosSection'
 import styles from './AtividadesSection.module.css'
 
 const TESTES_VIEWS = [
@@ -48,10 +49,19 @@ export default function AtividadesSection({ user }) {
         >
           <CalendarCheck size={15} /> Diário
         </button>
+
+        <button
+          className={`${styles.navItem} ${section === 'dados' ? styles.navItemActive : ''}`}
+          onClick={() => setSection('dados')}
+        >
+          <BarChart3 size={15} /> Dados
+        </button>
       </aside>
 
       <div className={styles.content}>
-        {store.loading ? (
+        {section === 'dados' ? (
+          <DadosSection user={user} />
+        ) : store.loading ? (
           <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
         ) : section === 'testes' ? (
           testesView === 'board' ? (

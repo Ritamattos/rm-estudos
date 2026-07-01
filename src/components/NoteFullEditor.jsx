@@ -229,7 +229,6 @@ export default function NoteFullEditor({ note, store, onClose }) {
             <label className={styles.fieldLabel}>URL</label>
             <input
               autoFocus={linkModal.hasManualSelection}
-              placeholder="https://..."
               value={linkModal.url}
               onChange={e => setLinkModal(m => ({ ...m, url: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') applyLink() }}

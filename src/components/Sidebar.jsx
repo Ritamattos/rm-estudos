@@ -40,12 +40,6 @@ export default function Sidebar({
           <button className={styles.addBtn} onClick={e => { e.stopPropagation(); onAddCat() }}><Plus size={12} /></button>
         </div>
 
-        <div className={`${styles.item} ${!selectedCat ? styles.active : ''}`}
-          onClick={e => { e.stopPropagation(); onSelectCat(null) }}>
-          <span className={styles.itemIcon}>◈</span>
-          <span className={styles.itemName}>Todos</span>
-        </div>
-
         {cats.map(cat => {
           const subs = getSubs(cat.id)
           const isExpanded = expanded[cat.id]

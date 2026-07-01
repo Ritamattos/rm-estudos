@@ -219,8 +219,29 @@ export default function BibliotecaSection({ user, store: appStore }) {
   const [selectedBook, setSelectedBook] = useState(null)
   const [ctxMenu, setCtxMenu] = useState(null)
 
+  // No more "show everything" view: always resolve to a real category.
+  const effectiveLibCat = selectedLibCat && libCats.some(c => c.id === selectedLibCat.id)
+    ? selectedLibCat
+    : (libCats[0] || null)
+
+  useEffect(() => {
+    if ((effectiveLibCat?.id || null) !== (selectedLibCat?.id || null)) {
+      setSelectedLibCat(effectiveLibCat)
+    }
+  }, [effectiveLibCat?.id])
+
+  // Books with no category (or a category that no longer matches any
+  // real category) would become invisible now that there's no "Todos"
+  // view — fold them into the first category so they stay reachable.
+  useEffect(() => {
+    if (!libCats.length) return
+    const validNames = new Set(libCats.map(c => c.name))
+    const orphans = store.books.filter(b => !b.category || !validNames.has(b.category))
+    orphans.forEach(b => store.updateBook(b.id, { category: libCats[0].name }))
+  }, [libCats.length, store.books])
+
   const filtered = store.books.filter(b => {
-    if (selectedLibCat && b.category !== selectedLibCat.name) return false
+    if (effectiveLibCat && b.category !== effectiveLibCat.name) return false
     if (statusFilter !== 'all' && b.status !== statusFilter) return false
     if (search) {
       const q = search.toLowerCase()
@@ -312,14 +333,9 @@ export default function BibliotecaSection({ user, store: appStore }) {
         </div>
 
         <nav className={styles.libNavList}>
-          <button className={`${styles.libNavItem} ${!selectedLibCat ? styles.libNavActive : ''}`}
-            onClick={() => setSelectedLibCat(null)}>
-            <span className={styles.libNavIcon}>◈</span>
-            <span className={styles.libNavName}>Todos</span>
-          </button>
           {libCats.map(cat => (
             <div key={cat.id} className={styles.libNavItemWrap}>
-              <button className={`${styles.libNavItem} ${selectedLibCat?.id === cat.id ? styles.libNavActive : ''}`}
+              <button className={`${styles.libNavItem} ${effectiveLibCat?.id === cat.id ? styles.libNavActive : ''}`}
                 onClick={() => setSelectedLibCat(cat)}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>
                 <span className={styles.libNavName}>{cat.name}</span>
@@ -353,10 +369,22 @@ export default function BibliotecaSection({ user, store: appStore }) {
 
       <div className={styles.libMain}>
         <div className={styles.section}>
+          {libCats.length === 0 ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}>📚</div>
+              <p>Crie uma categoria para começar</p>
+              {appStore && (
+                <button className={styles.emptyBtn} onClick={() => { setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
+                  + Nova categoria
+                </button>
+              )}
+            </div>
+          ) : (
+          <>
           <div className={styles.topbar}>
             <div className={styles.titleArea}>
               <h1 className={styles.title}>
-                {selectedLibCat ? `${selectedLibCat.icon} ${selectedLibCat.name}` : 'Todos os livros'}
+                {effectiveLibCat?.icon} {effectiveLibCat?.name}
               </h1>
               <span className={styles.viewCount}>{filtered.length} livro{filtered.length !== 1 ? 's' : ''}</span>
             </div>
@@ -455,6 +483,8 @@ export default function BibliotecaSection({ user, store: appStore }) {
                 )
               })}
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

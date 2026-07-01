@@ -299,8 +299,29 @@ export default function TelaSection({ user, store: appStore }) {
 
   const genres = [...new Set(store.media.map(m => m.genre).filter(Boolean))].sort()
 
+  // No more "show everything" view: always resolve to a real category.
+  const effectiveTelaCat = selectedTelaCat && telaCats.some(c => c.id === selectedTelaCat.id)
+    ? selectedTelaCat
+    : (telaCats[0] || null)
+
+  useEffect(() => {
+    if ((effectiveTelaCat?.id || null) !== (selectedTelaCat?.id || null)) {
+      setSelectedTelaCat(effectiveTelaCat)
+    }
+  }, [effectiveTelaCat?.id])
+
+  // Media with no category (or one that no longer matches any real
+  // category) would become invisible now that there's no "Todos" view —
+  // fold them into the first category so they stay reachable.
+  useEffect(() => {
+    if (!telaCats.length) return
+    const validNames = new Set(telaCats.map(c => c.name))
+    const orphans = store.media.filter(m => !m.category || !validNames.has(m.category))
+    orphans.forEach(m => store.updateMedia(m.id, { category: telaCats[0].name }))
+  }, [telaCats.length, store.media])
+
   const filtered = store.media.filter(m => {
-    if (selectedTelaCat && m.category !== selectedTelaCat.name) return false
+    if (effectiveTelaCat && m.category !== effectiveTelaCat.name) return false
     if (statusFilter !== 'all' && m.status !== statusFilter) return false
     if (typeFilter !== 'all' && m.type !== typeFilter) return false
     if (genreFilter !== 'all' && m.genre !== genreFilter) return false
@@ -397,14 +418,9 @@ export default function TelaSection({ user, store: appStore }) {
         </div>
 
         <nav className={styles.libNavList}>
-          <button className={`${styles.libNavItem} ${!selectedTelaCat ? styles.libNavActive : ''}`}
-            onClick={() => setSelectedTelaCat(null)}>
-            <span className={styles.libNavIcon}>◈</span>
-            <span className={styles.libNavName}>Todos</span>
-          </button>
           {telaCats.map(cat => (
             <div key={cat.id} className={styles.libNavItemWrap}>
-              <button className={`${styles.libNavItem} ${selectedTelaCat?.id === cat.id ? styles.libNavActive : ''}`}
+              <button className={`${styles.libNavItem} ${effectiveTelaCat?.id === cat.id ? styles.libNavActive : ''}`}
                 onClick={() => setSelectedTelaCat(cat)}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>
                 <span className={styles.libNavName}>{cat.name}</span>
@@ -438,10 +454,22 @@ export default function TelaSection({ user, store: appStore }) {
 
       <div className={styles.libMain}>
         <div className={styles.section}>
+          {telaCats.length === 0 ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}>🎬</div>
+              <p>Crie uma categoria para começar</p>
+              {appStore && (
+                <button className={styles.emptyBtn} onClick={() => { setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
+                  + Nova categoria
+                </button>
+              )}
+            </div>
+          ) : (
+          <>
           <div className={styles.topbar}>
             <div className={styles.titleArea}>
               <h1 className={styles.title}>
-                {selectedTelaCat ? `${selectedTelaCat.icon} ${selectedTelaCat.name}` : 'Cinemateca'}
+                {effectiveTelaCat?.icon} {effectiveTelaCat?.name}
               </h1>
               <div className={styles.statsRow}>
                 {STATUS_OPTS.map(s => (
@@ -575,6 +603,8 @@ export default function TelaSection({ user, store: appStore }) {
                 )
               })}
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

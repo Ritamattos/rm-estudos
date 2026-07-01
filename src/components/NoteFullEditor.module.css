@@ -123,7 +123,7 @@
 .editor :global(.ProseMirror ul), .editor :global(.ProseMirror ol) { padding-left: 1.4em; margin: 0 0 0.85em; }
 .editor :global(.ProseMirror li) { margin: 0.25em 0; }
 .editor :global(.ProseMirror a) { color: var(--purple-light); text-decoration: underline; }
-.editor :global(.ProseMirror img) { max-width: 100%; border-radius: var(--radius); margin: 0.5em 0; display: block; }
+.editor :global(.ProseMirror img) { max-width: 100%; border-radius: var(--radius); display: block; }
 .editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
   content: 'Comece a escrever...';
   color: var(--text3);
@@ -131,3 +131,33 @@
   height: 0;
   pointer-events: none;
 }
+
+.editor :global(.rm-resizable-image) {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  margin: 0.5em 0;
+}
+.editor :global(.rm-resizable-image img) {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+.editor :global(.rm-resize-handle) {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  background: var(--purple);
+  border: 2px solid var(--bg);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.editor :global(.rm-resizable-image:hover .rm-resize-handle) { opacity: 1; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.fieldLabel { font-size: 12px; color: var(--text2); font-weight: 500; }

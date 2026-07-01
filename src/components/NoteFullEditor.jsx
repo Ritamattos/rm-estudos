@@ -1,12 +1,13 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
 import {
   ArrowLeft, Check, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, Link as LinkIcon, Image as ImageIcon,
 } from 'lucide-react'
+import ResizableImage from './ResizableImage'
+import Modal from './Modal'
 import styles from './NoteFullEditor.module.css'
 
 function todayISO() {
@@ -18,32 +19,51 @@ export default function NoteFullEditor({ note, store, onClose }) {
   const [date, setDate] = useState(note.note_date || todayISO())
   const [saving, setSaving] = useState(false)
   const [uploadingImg, setUploadingImg] = useState(false)
+  const [linkModal, setLinkModal] = useState(null)
   const imgInputRef = useRef()
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       Link.configure({
-        openOnClick: false,
+        openOnClick: true,
         autolink: true,
         HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
       }),
-      Image,
+      ResizableImage,
     ],
     content: note.content || '',
   })
 
-  const setLink = useCallback(() => {
+  function openLinkModal() {
     if (!editor) return
-    const prev = editor.getAttributes('link').href
-    const url = window.prompt('URL do link', prev || 'https://')
-    if (url === null) return
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    const { from, to, empty } = editor.state.selection
+    const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, ' ')
+    const prevHref = editor.getAttributes('link').href || ''
+    setLinkModal({ hasSelection: !empty, text: selectedText, url: prevHref || 'https://' })
+  }
+
+  function applyLink() {
+    if (!editor || !linkModal) return
+    const url = linkModal.url.trim()
+    if (!url) {
+      if (linkModal.hasSelection) editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      setLinkModal(null)
       return
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-  }, [editor])
+    const finalUrl = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
+    if (linkModal.hasSelection) {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+    } else {
+      const text = linkModal.text.trim() || finalUrl
+      editor.chain().focus().insertContent({
+        type: 'text',
+        text,
+        marks: [{ type: 'link', attrs: { href: finalUrl } }],
+      }).run()
+    }
+    setLinkModal(null)
+  }
 
   async function handleImagePick(e) {
     const file = e.target.files[0]
@@ -138,7 +158,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
         <button
           type="button"
           className={editor?.isActive('link') ? styles.active : ''}
-          onClick={setLink}
+          onClick={openLinkModal}
           title="Link"
         ><LinkIcon size={15} /></button>
         <button
@@ -159,6 +179,37 @@ export default function NoteFullEditor({ note, store, onClose }) {
       <div className={styles.contentArea}>
         <EditorContent editor={editor} className={styles.editor} />
       </div>
+
+      {linkModal && (
+        <Modal
+          title={linkModal.hasSelection ? 'Editar link' : 'Inserir link'}
+          onClose={() => setLinkModal(null)}
+          onSave={applyLink}
+          saveLabel="Inserir"
+        >
+          {!linkModal.hasSelection && (
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Texto do link</label>
+              <input
+                autoFocus
+                placeholder="Nome que vai aparecer"
+                value={linkModal.text}
+                onChange={e => setLinkModal(m => ({ ...m, text: e.target.value }))}
+              />
+            </div>
+          )}
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>URL</label>
+            <input
+              autoFocus={linkModal.hasSelection}
+              placeholder="https://..."
+              value={linkModal.url}
+              onChange={e => setLinkModal(m => ({ ...m, url: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') applyLink() }}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

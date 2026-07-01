@@ -6,6 +6,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getGoogleAccessToken } from '../_shared/google-auth.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/drive.readonly',
@@ -109,6 +110,10 @@ function parseConsolidado(rows: any[][]) {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -121,7 +126,7 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: 'unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
     const userId = userData.user.id
@@ -218,11 +223,13 @@ Deno.serve(async (req) => {
       results.push({ month: monthNumber, name: monthName, offers: offers.length })
     }
 
-    return new Response(JSON.stringify({ synced: results }), { headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ synced: results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })

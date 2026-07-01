@@ -6,6 +6,10 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function thisMonthISO() {
+  return todayISO().slice(0, 7)
+}
+
 function formatDateHeader(dateStr) {
   const today = todayISO()
   if (dateStr === today) return 'Hoje'
@@ -21,6 +25,12 @@ function isOverdue(activity) {
   return activity.status !== 'concluido' && activity.activity_date < todayISO()
 }
 
+const FILTER_MODES = [
+  { value: 'dia',       label: 'Dia' },
+  { value: 'intervalo', label: 'Intervalo' },
+  { value: 'mes',       label: 'Mês' },
+]
+
 export default function DiarioList({ store }) {
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -28,14 +38,38 @@ export default function DiarioList({ store }) {
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
 
+  const [filterMode, setFilterMode] = useState('dia')
+  const [filterDate, setFilterDate] = useState(todayISO())
+  const [rangeStart, setRangeStart] = useState(todayISO())
+  const [rangeEnd, setRangeEnd] = useState(todayISO())
+  const [filterMonth, setFilterMonth] = useState(thisMonthISO())
+
+  function goToday() {
+    setFilterMode('dia')
+    setFilterDate(todayISO())
+  }
+
+  const filtered = useMemo(() => {
+    return store.dailyActivities.filter(a => {
+      if (filterMode === 'dia') return a.activity_date === filterDate
+      if (filterMode === 'intervalo') {
+        const start = rangeStart <= rangeEnd ? rangeStart : rangeEnd
+        const end = rangeStart <= rangeEnd ? rangeEnd : rangeStart
+        return a.activity_date >= start && a.activity_date <= end
+      }
+      // mes
+      return a.activity_date.slice(0, 7) === filterMonth
+    })
+  }, [store.dailyActivities, filterMode, filterDate, rangeStart, rangeEnd, filterMonth])
+
   const groups = useMemo(() => {
     const byDate = {}
-    for (const a of store.dailyActivities) {
+    for (const a of filtered) {
       if (!byDate[a.activity_date]) byDate[a.activity_date] = []
       byDate[a.activity_date].push(a)
     }
     return Object.keys(byDate).sort().map(date => ({ date, items: byDate[date] }))
-  }, [store.dailyActivities])
+  }, [filtered])
 
   async function submitAdd() {
     if (!newTitle.trim()) return
@@ -67,12 +101,42 @@ export default function DiarioList({ store }) {
         <div>
           <h1 className={styles.title}>Diário</h1>
           <span className={styles.subtitle}>
-            {store.dailyActivities.length} atividade{store.dailyActivities.length !== 1 ? 's' : ''}
+            {filtered.length} atividade{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
         <button className={styles.addBtn} onClick={() => setAdding(true)}>
           <Plus size={15} /> Nova atividade
         </button>
+      </div>
+
+      <div className={styles.filterBar}>
+        <div className={styles.filterModes}>
+          {FILTER_MODES.map(m => (
+            <button
+              key={m.value}
+              className={`${styles.filterModeBtn} ${filterMode === m.value ? styles.filterModeBtnActive : ''}`}
+              onClick={() => setFilterMode(m.value)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {filterMode === 'dia' && (
+          <input type="date" className={styles.filterInput} value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+        )}
+        {filterMode === 'intervalo' && (
+          <div className={styles.filterRange}>
+            <input type="date" className={styles.filterInput} value={rangeStart} onChange={e => setRangeStart(e.target.value)} />
+            <span className={styles.filterRangeSep}>até</span>
+            <input type="date" className={styles.filterInput} value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} />
+          </div>
+        )}
+        {filterMode === 'mes' && (
+          <input type="month" className={styles.filterInput} value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+        )}
+
+        <button className={styles.todayBtn} onClick={goToday}>Hoje</button>
       </div>
 
       {adding && (
@@ -100,7 +164,7 @@ export default function DiarioList({ store }) {
         {groups.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>◆</div>
-            <p>Nenhuma atividade ainda</p>
+            <p>Nenhuma atividade neste período</p>
           </div>
         ) : (
           groups.map(group => (

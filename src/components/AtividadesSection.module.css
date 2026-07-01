@@ -40,6 +40,31 @@
 .navItem:hover { background: var(--bg3); color: var(--text); }
 .navItemActive { background: var(--purple-dim2); color: var(--purple-light); font-weight: 600; }
 
+.subGroup {
+  margin-left: 18px;
+  padding-left: 10px;
+  border-left: 1.5px solid var(--border);
+  margin-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  color: var(--text3);
+  font-size: 12.5px;
+  font-weight: 400;
+  transition: all 0.15s;
+  text-align: left;
+}
+.subItem:hover { background: var(--bg3); color: var(--text2); }
+.subItemActive { background: var(--purple-dim); color: var(--purple-light); font-weight: 600; }
+
 .content {
   flex: 1;
   min-width: 0;

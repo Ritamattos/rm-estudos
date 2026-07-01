@@ -32,6 +32,64 @@
 }
 .addBtn:hover { background: var(--purple2); transform: translateY(-1px); }
 
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2rem 1rem;
+  flex-wrap: wrap;
+}
+
+.filterModes {
+  display: flex;
+  gap: 2px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+.filterModeBtn {
+  padding: 6px 13px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text3);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filterModeBtn:hover { color: var(--text2); }
+.filterModeBtnActive { background: var(--purple); color: white; font-weight: 600; }
+
+.filterInput {
+  width: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+
+.filterRange {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.filterRangeSep { font-size: 12px; color: var(--text3); }
+
+.todayBtn {
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--purple-light);
+  border: 1px solid var(--border2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.todayBtn:hover { background: var(--purple-dim); border-color: var(--purple); }
+
 .addForm {
   display: flex;
   align-items: center;

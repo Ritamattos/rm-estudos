@@ -53,6 +53,25 @@
 }
 .closeBtn:hover { background: var(--bg4); color: var(--text); }
 
+.statusRow {
+  display: flex;
+  gap: 6px;
+  padding: 10px 1.25rem 0;
+  flex-shrink: 0;
+}
+
+.statusBtn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  transition: all 0.15s;
+}
+.statusBtn:hover { background: var(--bg3); color: var(--text); }
+.statusBtnActive { font-weight: 700; }
+
 .toolbar {
   display: flex;
   align-items: center;

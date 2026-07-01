@@ -47,23 +47,25 @@ export default function NoteFullEditor({ note, store, onClose }) {
 
   function openLinkModal() {
     if (!editor) return
-    // A manual selection means the user picked the exact text they want
-    // as the link's label — keep it as-is and only ask for the URL.
-    const hadManualSelection = !editor.state.selection.empty
     const isEditingLink = editor.isActive('link')
+    // A manual selection of plain (non-link) text means the user picked
+    // the exact text they want as the label — keep it as-is and only ask
+    // for the URL. Editing an existing link always shows both fields
+    // (whether the cursor was just placed inside it or part of it was
+    // selected) so the name can be changed too, not just the URL.
+    const hideNameField = !editor.state.selection.empty && !isEditingLink
 
-    // If the cursor sits inside an existing link with no manual selection,
-    // expand the selection to the whole link so applying the modal
-    // replaces that link's text+href together, instead of inserting new
-    // text next to it (which duplicated the URL) or leaving it unrenameable.
-    if (isEditingLink && !hadManualSelection) {
+    if (isEditingLink) {
+      // Expand to cover the whole link so applying the modal replaces
+      // its text+href together, instead of inserting new text next to it
+      // (which duplicated the URL) or leaving it unrenameable.
       editor.chain().extendMarkRange('link').run()
     }
 
     const { from, to, empty } = editor.state.selection
     const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, ' ')
     const prevHref = editor.getAttributes('link').href || ''
-    setLinkModal({ hasManualSelection: hadManualSelection, text: selectedText, url: prevHref })
+    setLinkModal({ isEditingLink, hideNameField, text: selectedText, url: prevHref })
   }
 
   function applyLink() {
@@ -76,7 +78,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
       return
     }
     const finalUrl = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
-    if (linkModal.hasManualSelection) {
+    if (linkModal.hideNameField) {
       // Keep the exact text the user selected; just (re)apply the mark.
       editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
     } else {
@@ -209,12 +211,12 @@ export default function NoteFullEditor({ note, store, onClose }) {
 
       {linkModal && (
         <Modal
-          title={linkModal.hasManualSelection ? 'Editar link' : 'Inserir link'}
+          title={linkModal.isEditingLink || linkModal.hideNameField ? 'Editar link' : 'Inserir link'}
           onClose={() => setLinkModal(null)}
           onSave={applyLink}
-          saveLabel="Inserir"
+          saveLabel={linkModal.isEditingLink || linkModal.hideNameField ? 'Salvar' : 'Inserir'}
         >
-          {!linkModal.hasManualSelection && (
+          {!linkModal.hideNameField && (
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Texto do link</label>
               <input
@@ -228,7 +230,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
           <div className={styles.field}>
             <label className={styles.fieldLabel}>URL</label>
             <input
-              autoFocus={linkModal.hasManualSelection}
+              autoFocus={linkModal.hideNameField}
               value={linkModal.url}
               onChange={e => setLinkModal(m => ({ ...m, url: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') applyLink() }}

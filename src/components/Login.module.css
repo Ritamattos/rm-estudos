@@ -110,6 +110,40 @@
 }
 .toggle button { color: var(--purple-light); font-weight: 500; text-decoration: underline; }
 
+.googleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px;
+  background: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.googleBtn:hover { background: #f7f8f8; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.googleBtn:disabled { opacity: 0.6; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 1.1rem 0;
+  color: var(--text3);
+  font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+
 .methodToggle {
   display: flex;
   gap: 4px;

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, Play } from 'lucide-react'
 import { useMediaStore } from '../hooks/useMediaStore'
+import { useDragReorder } from '../hooks/useDragReorder'
 import styles from './TelaSection.module.css'
 
 const STATUS_OPTS = [
@@ -282,7 +283,11 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
 
 export default function TelaSection({ user, store: appStore }) {
   const store = useMediaStore(user)
-  const telaCats = appStore ? appStore.categories.filter(c => c.workspace === 'tela') : []
+  const telaCats = appStore
+    ? appStore.categories.filter(c => c.workspace === 'tela').sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    : []
+  const telaCatIds = telaCats.map(c => c.id)
+  const { draggingId, overId, dragStart, dragOver, dragEnd, drop } = useDragReorder()
 
   const [selectedTelaCat, setSelectedTelaCat] = useState(null)
   const [catMenu, setCatMenu] = useState(null)
@@ -419,7 +424,13 @@ export default function TelaSection({ user, store: appStore }) {
 
         <nav className={styles.libNavList}>
           {telaCats.map(cat => (
-            <div key={cat.id} className={styles.libNavItemWrap}>
+            <div key={cat.id}
+              className={`${styles.libNavItemWrap} ${draggingId === cat.id ? styles.dragging : ''} ${overId === cat.id ? styles.dragOver : ''}`}
+              draggable
+              onDragStart={e => dragStart(e, cat.id)}
+              onDragOver={e => dragOver(e, cat.id)}
+              onDrop={e => drop(e, cat.id, telaCatIds, appStore?.reorderCategories)}
+              onDragEnd={dragEnd}>
               <button className={`${styles.libNavItem} ${effectiveTelaCat?.id === cat.id ? styles.libNavActive : ''}`}
                 onClick={() => setSelectedTelaCat(cat)}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>

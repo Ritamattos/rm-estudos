@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, BookOpen, ShoppingCart } from 'lucide-react'
 import { useBookStore } from '../hooks/useBookStore'
+import { useDragReorder } from '../hooks/useDragReorder'
 import styles from './BibliotecaSection.module.css'
 
 const STATUS_OPTS = [
@@ -206,7 +207,11 @@ function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
 
 export default function BibliotecaSection({ user, store: appStore }) {
   const store = useBookStore(user)
-  const libCats = appStore ? appStore.categories.filter(c => c.workspace === 'biblioteca') : []
+  const libCats = appStore
+    ? appStore.categories.filter(c => c.workspace === 'biblioteca').sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    : []
+  const libCatIds = libCats.map(c => c.id)
+  const { draggingId, overId, dragStart, dragOver, dragEnd, drop } = useDragReorder()
 
   const [selectedLibCat, setSelectedLibCat] = useState(null)
   const [catMenu, setCatMenu] = useState(null)
@@ -334,7 +339,13 @@ export default function BibliotecaSection({ user, store: appStore }) {
 
         <nav className={styles.libNavList}>
           {libCats.map(cat => (
-            <div key={cat.id} className={styles.libNavItemWrap}>
+            <div key={cat.id}
+              className={`${styles.libNavItemWrap} ${draggingId === cat.id ? styles.dragging : ''} ${overId === cat.id ? styles.dragOver : ''}`}
+              draggable
+              onDragStart={e => dragStart(e, cat.id)}
+              onDragOver={e => dragOver(e, cat.id)}
+              onDrop={e => drop(e, cat.id, libCatIds, appStore?.reorderCategories)}
+              onDragEnd={dragEnd}>
               <button className={`${styles.libNavItem} ${effectiveLibCat?.id === cat.id ? styles.libNavActive : ''}`}
                 onClick={() => setSelectedLibCat(cat)}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>

@@ -80,6 +80,16 @@ export function useStore(user) {
     setKanbanCards(prev => prev.filter(k => k.category_id !== id))
   }, [])
 
+  const reorderCategories = useCallback(async (orderedIds) => {
+    setCategories(prev => {
+      const order = new Map(orderedIds.map((id, idx) => [id, idx]))
+      return prev.map(c => order.has(c.id) ? { ...c, sort_order: order.get(c.id) } : c)
+    })
+    await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from('rm_categories').update({ sort_order: idx }).eq('id', id)
+    ))
+  }, [])
+
   // ── Subcategories ────────────────────────────────────────────────────────────
 
   const addSubcategory = useCallback(async (name, icon, type, catId) => {
@@ -99,6 +109,16 @@ export function useStore(user) {
     await supabase.from('rm_subcategories').delete().eq('id', id)
     setSubcategories(prev => prev.filter(s => s.id !== id))
     setItems(prev => prev.map(i => i.sub_id === id ? { ...i, sub_id: null } : i))
+  }, [])
+
+  const reorderSubcategories = useCallback(async (orderedIds) => {
+    setSubcategories(prev => {
+      const order = new Map(orderedIds.map((id, idx) => [id, idx]))
+      return prev.map(s => order.has(s.id) ? { ...s, sort_order: order.get(s.id) } : s)
+    })
+    await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from('rm_subcategories').update({ sort_order: idx }).eq('id', id)
+    ))
   }, [])
 
   // ── Items ────────────────────────────────────────────────────────────────────
@@ -228,8 +248,8 @@ export function useStore(user) {
 
   return {
     categories, subcategories, items, notes, kanbanCards, tags, itemTags, loading,
-    addCategory, updateCategory, deleteCategory,
-    addSubcategory, updateSubcategory, deleteSubcategory,
+    addCategory, updateCategory, deleteCategory, reorderCategories,
+    addSubcategory, updateSubcategory, deleteSubcategory, reorderSubcategories,
     addItem, updateItem, deleteItem,
     addNote, updateNote, deleteNote, reorderNotes,
     addKanbanCard, updateKanbanCard, deleteKanbanCard,

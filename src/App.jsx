@@ -150,6 +150,8 @@ export default function App() {
               if (selectedSub === id) setSelectedSub(null)
             }
           }}
+          onReorderCategories={store.reorderCategories}
+          onReorderSubcategories={(catId, ids) => store.reorderSubcategories(ids)}
           onLogout={() => supabase.auth.signOut()}
           isDark={isDark}
           onToggleTheme={() => setIsDark(!isDark)}

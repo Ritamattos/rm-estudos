@@ -78,6 +78,8 @@
 }
 .item:hover { background: var(--bg3); }
 .item.active { background: var(--purple-dim); color: var(--purple-light); }
+.item.dragging { opacity: 0.4; }
+.item.dragOver { box-shadow: inset 0 2px 0 var(--purple); }
 
 .subGroup {
   margin-left: 18px;
@@ -101,6 +103,8 @@
 }
 .subItem:hover { background: var(--bg3); color: var(--text2); }
 .subItem.active { background: var(--purple-dim); color: var(--purple-light); }
+.subItem.dragging { opacity: 0.4; }
+.subItem.dragOver { box-shadow: inset 0 2px 0 var(--purple); }
 
 .chevronBtn {
   width: 14px;

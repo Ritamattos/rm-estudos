@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight } from 'lucide-react'
+import { useDragReorder } from '../hooks/useDragReorder'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({
@@ -8,13 +9,17 @@ export default function Sidebar({
   onSelectCat, onSelectSub,
   onAddCat, onEditCat, onDeleteCat,
   onAddSub, onEditSub, onDeleteSub,
+  onReorderCategories, onReorderSubcategories,
   onLogout, isDark, onToggleTheme
 }) {
   const [menu, setMenu] = useState(null)
   const [subMenu, setSubMenu] = useState(null)
   const [expanded, setExpanded] = useState({})
+  const { draggingId, overId, dragStart, dragOver, dragEnd, drop } = useDragReorder()
 
-  const cats = categories.filter(c => c.workspace === workspace)
+  const byOrder = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  const cats = categories.filter(c => c.workspace === workspace).sort(byOrder)
+  const catIds = cats.map(c => c.id)
 
   function toggleExpand(catId, e) {
     e.stopPropagation()
@@ -22,7 +27,7 @@ export default function Sidebar({
   }
 
   function getSubs(catId) {
-    return subcategories.filter(s => s.cat_id === catId)
+    return subcategories.filter(s => s.cat_id === catId).sort(byOrder)
   }
 
   function closeMenus() { setMenu(null); setSubMenu(null) }
@@ -42,12 +47,18 @@ export default function Sidebar({
 
         {cats.map(cat => {
           const subs = getSubs(cat.id)
+          const subIds = subs.map(s => s.id)
           const isExpanded = expanded[cat.id]
           const isActive = selectedCat === cat.id && !selectedSub
 
           return (
             <div key={cat.id}>
-              <div className={`${styles.item} ${isActive ? styles.active : ''}`}
+              <div className={`${styles.item} ${isActive ? styles.active : ''} ${draggingId === cat.id ? styles.dragging : ''} ${overId === cat.id ? styles.dragOver : ''}`}
+                draggable
+                onDragStart={e => dragStart(e, cat.id)}
+                onDragOver={e => dragOver(e, cat.id)}
+                onDrop={e => drop(e, cat.id, catIds, onReorderCategories)}
+                onDragEnd={dragEnd}
                 onClick={e => { e.stopPropagation(); onSelectCat(cat.id) }}>
                 <button
                   className={`${styles.chevronBtn} ${isExpanded ? styles.chevronOpen : ''} ${subs.length === 0 ? styles.chevronHidden : ''}`}
@@ -78,7 +89,12 @@ export default function Sidebar({
                 <div className={styles.subGroup}>
                   {subs.map(sub => (
                     <div key={sub.id}
-                      className={`${styles.subItem} ${selectedSub === sub.id ? styles.active : ''}`}
+                      className={`${styles.subItem} ${selectedSub === sub.id ? styles.active : ''} ${draggingId === sub.id ? styles.dragging : ''} ${overId === sub.id ? styles.dragOver : ''}`}
+                      draggable
+                      onDragStart={e => dragStart(e, sub.id)}
+                      onDragOver={e => dragOver(e, sub.id)}
+                      onDrop={e => drop(e, sub.id, subIds, ids => onReorderSubcategories(cat.id, ids))}
+                      onDragEnd={dragEnd}
                       onClick={e => { e.stopPropagation(); onSelectSub(cat.id, sub.id) }}>
                       <span className={styles.itemIcon}>{sub.icon}</span>
                       <span className={styles.itemName}>{sub.name}</span>

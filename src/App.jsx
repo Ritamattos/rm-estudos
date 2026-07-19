@@ -3,6 +3,7 @@ import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList } from 'lucid
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
 import Login from './components/Login'
+import ResetPassword from './components/ResetPassword'
 import Sidebar from './components/Sidebar'
 import KanbanBoard from './components/KanbanBoard'
 import Modal from './components/Modal'
@@ -120,6 +121,7 @@ export default function App() {
     ? store.subcategories.find(s => s.id === selectedSub)?.name
     : cats.find(c => c.id === effectiveCat)?.name
 
+  if (window.location.pathname === '/reset-password') return <ResetPassword />
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
   if (!user) return <Login />
 

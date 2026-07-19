@@ -38,6 +38,7 @@ const THEME_KEY = 'rm-estudos-theme'
 export default function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [isRecovery, setIsRecovery] = useState(false)
   const [isDark, setIsDark] = useState(() => localStorage.getItem(THEME_KEY) !== 'light')
   const [workspace, setWorkspace] = useState('marketing')
   const [selectedCat, setSelectedCat] = useState(null)
@@ -57,7 +58,13 @@ export default function App() {
     // when it's still the same user. Only update state when the user
     // actually changes, so that doesn't cascade into a full data reload
     // and unmount whatever's currently open (e.g. a note being edited).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // A recovery link normally redirects straight to /reset-password,
+      // but if that redirect ever falls back to the bare site root (e.g.
+      // a misconfigured Supabase redirect allow-list), this still catches
+      // the recovery session before it silently logs the user into the
+      // app without making them set a new password.
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
       setUser(prev => {
         const nextId = session?.user?.id ?? null
         const prevId = prev?.id ?? null
@@ -121,7 +128,7 @@ export default function App() {
     ? store.subcategories.find(s => s.id === selectedSub)?.name
     : cats.find(c => c.id === effectiveCat)?.name
 
-  if (window.location.pathname === '/reset-password') return <ResetPassword />
+  if (window.location.pathname === '/reset-password' || isRecovery) return <ResetPassword />
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
   if (!user) return <Login />
 

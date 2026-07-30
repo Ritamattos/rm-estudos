@@ -14,11 +14,23 @@ function sanitizeFilename(name) {
 // into a canvas, then slices that canvas across as many A4 pages as needed.
 export async function exportNoteToPdf(element, title) {
   element.classList.add('rm-pdf-export')
+  // Neutralize any height/overflow constraint the element (or an inline style)
+  // might carry, so html2canvas measures and renders the note's full content
+  // height instead of whatever fits in the on-screen viewport.
+  const prevOverflow = element.style.overflow
+  const prevHeight = element.style.height
+  const prevMaxHeight = element.style.maxHeight
+  element.style.overflow = 'visible'
+  element.style.height = 'auto'
+  element.style.maxHeight = 'none'
   try {
+    const fullHeight = element.scrollHeight
     const canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: '#ffffff',
       useCORS: true,
+      height: fullHeight,
+      windowHeight: fullHeight,
     })
 
     const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -63,6 +75,9 @@ export async function exportNoteToPdf(element, title) {
 
     pdf.save(`${sanitizeFilename(title)}.pdf`)
   } finally {
+    element.style.overflow = prevOverflow
+    element.style.height = prevHeight
+    element.style.maxHeight = prevMaxHeight
     element.classList.remove('rm-pdf-export')
   }
 }

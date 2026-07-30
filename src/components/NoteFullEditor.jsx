@@ -146,7 +146,12 @@ export default function NoteFullEditor({ note, store, onClose }) {
     if (!contentAreaRef.current || exportingPdf) return
     setExportingPdf(true)
     try {
-      await exportNoteToPdf(contentAreaRef.current, title.trim() || 'Sem título')
+      // contentAreaRef itself scrolls (overflow-y: auto) and is clipped to the
+      // viewport, so capturing it would only grab what's visible on screen.
+      // Its .editor child has no height constraint and lays out to the note's
+      // full content height, so that's the node html2canvas needs to capture.
+      const captureTarget = contentAreaRef.current.querySelector(`.${styles.editor}`) || contentAreaRef.current
+      await exportNoteToPdf(captureTarget, title.trim() || 'Sem título')
     } finally {
       setExportingPdf(false)
     }

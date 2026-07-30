@@ -86,13 +86,37 @@ export default function DadosSection({ user }) {
   const { months, offers, expenses, loading, syncing, syncError, sync } = useFinancialStore(user)
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [compareSelected, setCompareSelected] = useState([])
+  const [viewAll, setViewAll] = useState(false)
 
   const sortedMonths = useMemo(() => [...months].sort((a, b) => a.month_number - b.month_number), [months])
+
+  // Totals across every synced month. ROI/ROAS are recalculated from the
+  // summed values (not averaged per-month), per how the business defines
+  // an overall ROI/ROAS.
+  const totals = useMemo(() => {
+    if (sortedMonths.length === 0) return null
+    const sum = key => sortedMonths.reduce((acc, m) => acc + (m[key] || 0), 0)
+    const receita_total = sum('receita_total')
+    const investido_ads = sum('investido_ads')
+    const lucro_bruto = sum('lucro_bruto')
+    const lucro_liquido = sum('lucro_liquido')
+    const despesas_fixas = sum('despesas_fixas')
+    const despesas_variaveis = sum('despesas_variaveis')
+    return {
+      receita_total, investido_ads, lucro_bruto, lucro_liquido, despesas_fixas, despesas_variaveis,
+      roi: investido_ads ? lucro_bruto / investido_ads : null,
+      roas: investido_ads ? receita_total / investido_ads : null,
+    }
+  }, [sortedMonths])
 
   const compareMonths = useMemo(
     () => sortedMonths.filter(m => compareSelected.includes(m.month_number)),
     [sortedMonths, compareSelected],
   )
+
+  // In "Total Geral" mode the evolution charts/table reuse all synced
+  // months automatically instead of the manual month-picker selection.
+  const effectiveCompareMonths = viewAll ? sortedMonths : compareMonths
 
   function toggleCompareMonth(monthNumber) {
     setCompareSelected(sel =>
@@ -131,11 +155,27 @@ export default function DadosSection({ user }) {
         <div>
           <h1 className={styles.title}>Dados</h1>
           <span className={styles.subtitle}>
-            {current ? `Sincronizado ${new Date(current.synced_at).toLocaleString('pt-BR')}` : 'Nenhum mês sincronizado ainda'}
+            {viewAll
+              ? (sortedMonths.length > 0
+                ? `Total acumulado de ${sortedMonths.length} ${sortedMonths.length === 1 ? 'mês sincronizado' : 'meses sincronizados'}`
+                : 'Nenhum mês sincronizado ainda')
+              : (current ? `Sincronizado ${new Date(current.synced_at).toLocaleString('pt-BR')}` : 'Nenhum mês sincronizado ainda')}
           </span>
         </div>
         <div className={styles.controls}>
-          {sortedMonths.length > 0 && (
+          <div className={styles.viewToggle}>
+            <button
+              type="button"
+              className={!viewAll ? styles.viewToggleActive : ''}
+              onClick={() => setViewAll(false)}
+            >Mês</button>
+            <button
+              type="button"
+              className={viewAll ? styles.viewToggleActive : ''}
+              onClick={() => setViewAll(true)}
+            >Ver todos os meses</button>
+          </div>
+          {!viewAll && sortedMonths.length > 0 && (
             <select
               className={styles.monthSelect}
               value={selectedMonth ?? ''}
@@ -155,39 +195,76 @@ export default function DadosSection({ user }) {
 
       {syncError && <div className={styles.syncError}>Erro ao sincronizar: {syncError}</div>}
 
-      {!current ? (
+      {(viewAll ? sortedMonths.length === 0 : !current) ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}>◆</div>
           <p>Nenhum dado sincronizado ainda. Verifique se há planilhas na pasta configurada.</p>
         </div>
       ) : (
         <div className={styles.content}>
-          <div className={styles.cards}>
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>Receita Total</span>
-              <span className={styles.cardValue}>{currency(current.receita_total)}</span>
+          {viewAll ? (
+            <div className={styles.cards}>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Receita Total</span>
+                <span className={styles.cardValue}>{currency(totals.receita_total)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Lucro Bruto</span>
+                <span className={styles.cardValue}>{currency(totals.lucro_bruto)}</span>
+              </div>
+              <div className={`${styles.card} ${styles.cardHighlight}`}>
+                <span className={styles.cardLabel}>Lucro Líquido</span>
+                <span className={styles.cardValue}>{currency(totals.lucro_liquido)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Investido em Ads</span>
+                <span className={styles.cardValue}>{currency(totals.investido_ads)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Despesas Fixas</span>
+                <span className={styles.cardValue}>{currency(totals.despesas_fixas)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Despesas Variáveis</span>
+                <span className={styles.cardValue}>{currency(totals.despesas_variaveis)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>ROI Geral</span>
+                <span className={styles.cardValue}>{percent(totals.roi)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>ROAS Geral</span>
+                <span className={styles.cardValue}>{multiplier(totals.roas)}</span>
+              </div>
             </div>
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>Lucro Bruto</span>
-              <span className={styles.cardValue}>{currency(current.lucro_bruto)}</span>
+          ) : (
+            <div className={styles.cards}>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Receita Total</span>
+                <span className={styles.cardValue}>{currency(current.receita_total)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Lucro Bruto</span>
+                <span className={styles.cardValue}>{currency(current.lucro_bruto)}</span>
+              </div>
+              <div className={`${styles.card} ${styles.cardHighlight}`}>
+                <span className={styles.cardLabel}>Lucro Líquido</span>
+                <span className={styles.cardValue}>{currency(current.lucro_liquido)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>Investido em Ads</span>
+                <span className={styles.cardValue}>{currency(current.investido_ads)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>ROI</span>
+                <span className={styles.cardValue}>{percent(current.roi)}</span>
+              </div>
+              <div className={styles.card}>
+                <span className={styles.cardLabel}>ROAS</span>
+                <span className={styles.cardValue}>{multiplier(current.roas)}</span>
+              </div>
             </div>
-            <div className={`${styles.card} ${styles.cardHighlight}`}>
-              <span className={styles.cardLabel}>Lucro Líquido</span>
-              <span className={styles.cardValue}>{currency(current.lucro_liquido)}</span>
-            </div>
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>Investido em Ads</span>
-              <span className={styles.cardValue}>{currency(current.investido_ads)}</span>
-            </div>
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>ROI</span>
-              <span className={styles.cardValue}>{percent(current.roi)}</span>
-            </div>
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>ROAS</span>
-              <span className={styles.cardValue}>{multiplier(current.roas)}</span>
-            </div>
-          </div>
+          )}
 
           {sortedMonths.length > 1 && (
             <div className={styles.section}>
@@ -201,7 +278,7 @@ export default function DadosSection({ user }) {
                         key={m.month_number}
                         className={styles.barCol}
                         title={`${m.month_name}: ${currency(m.lucro_liquido)}`}
-                        onClick={() => setSelectedMonth(m.month_number)}
+                        onClick={() => { setSelectedMonth(m.month_number); setViewAll(false) }}
                       >
                         <div
                           className={`${styles.bar} ${m.month_number === selectedMonth ? styles.barActive : ''}`}
@@ -220,7 +297,7 @@ export default function DadosSection({ user }) {
                         key={m.month_number}
                         className={styles.barCol}
                         title={`${m.month_name}: ${percent(m.roi)}`}
-                        onClick={() => setSelectedMonth(m.month_number)}
+                        onClick={() => { setSelectedMonth(m.month_number); setViewAll(false) }}
                       >
                         <div
                           className={`${styles.bar} ${styles.barAlt} ${m.month_number === selectedMonth ? styles.barActive : ''}`}
@@ -239,28 +316,32 @@ export default function DadosSection({ user }) {
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}><TrendingUp size={15} /> Comparação detalhada</h2>
 
-              <div className={styles.monthPicker}>
-                {sortedMonths.map(m => (
-                  <button
-                    key={m.month_number}
-                    className={`${styles.monthPill} ${compareSelected.includes(m.month_number) ? styles.monthPillActive : ''}`}
-                    onClick={() => toggleCompareMonth(m.month_number)}
-                  >
-                    {m.month_name}
+              {viewAll ? (
+                <p className={styles.emptyHint}>Mostrando a evolução de todos os {sortedMonths.length} meses sincronizados.</p>
+              ) : (
+                <div className={styles.monthPicker}>
+                  {sortedMonths.map(m => (
+                    <button
+                      key={m.month_number}
+                      className={`${styles.monthPill} ${compareSelected.includes(m.month_number) ? styles.monthPillActive : ''}`}
+                      onClick={() => toggleCompareMonth(m.month_number)}
+                    >
+                      {m.month_name}
+                    </button>
+                  ))}
+                  <button className={styles.monthPickerAction} onClick={toggleCompareAll}>
+                    {compareSelected.length === sortedMonths.length ? 'Limpar seleção' : 'Selecionar todos'}
                   </button>
-                ))}
-                <button className={styles.monthPickerAction} onClick={toggleCompareAll}>
-                  {compareSelected.length === sortedMonths.length ? 'Limpar seleção' : 'Selecionar todos'}
-                </button>
-              </div>
+                </div>
+              )}
 
-              {compareMonths.length < 2 ? (
+              {effectiveCompareMonths.length < 2 ? (
                 <p className={styles.emptyHint}>Selecione 2 ou mais meses acima para comparar a evolução em detalhe.</p>
               ) : (
                 <>
                   <div className={styles.lineChartsGrid}>
                     {CHART_METRICS.map(metric => (
-                      <LineChartCard key={metric.key} metric={metric} months={compareMonths} />
+                      <LineChartCard key={metric.key} metric={metric} months={effectiveCompareMonths} />
                     ))}
                   </div>
 
@@ -269,16 +350,16 @@ export default function DadosSection({ user }) {
                       <thead>
                         <tr>
                           <th>Métrica</th>
-                          {compareMonths.map(m => <th key={m.month_number}>{m.month_name}</th>)}
+                          {effectiveCompareMonths.map(m => <th key={m.month_number}>{m.month_name}</th>)}
                         </tr>
                       </thead>
                       <tbody>
                         {TABLE_METRICS.map(metric => (
                           <tr key={metric.key}>
                             <td className={styles.metricName}>{metric.label}</td>
-                            {compareMonths.map((m, i) => {
+                            {effectiveCompareMonths.map((m, i) => {
                               const curr = m[metric.key]
-                              const prev = i > 0 ? compareMonths[i - 1][metric.key] : null
+                              const prev = i > 0 ? effectiveCompareMonths[i - 1][metric.key] : null
                               const change = i > 0 ? computeChange(curr, prev) : null
                               return (
                                 <td key={m.month_number}>
@@ -301,6 +382,7 @@ export default function DadosSection({ user }) {
             </div>
           )}
 
+          {!viewAll && current && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Ofertas — {current.month_name}</h2>
             {monthOffers.length === 0 ? (
@@ -330,7 +412,9 @@ export default function DadosSection({ user }) {
               </div>
             )}
           </div>
+          )}
 
+          {!viewAll && current && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Despesas — {current.month_name}</h2>
             <div className={styles.expensesRow}>
@@ -376,6 +460,7 @@ export default function DadosSection({ user }) {
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
     </div>

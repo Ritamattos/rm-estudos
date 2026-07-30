@@ -30,6 +30,27 @@
   color: var(--text2);
 }
 
+.viewToggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.viewToggle button {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  color: var(--text2);
+  background: var(--bg2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.viewToggle button:hover { color: var(--text); }
+.viewToggle button + button { border-left: 1px solid var(--border); }
+.viewToggleActive {
+  background: var(--purple);
+  color: white;
+}
+
 .syncBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 16px;

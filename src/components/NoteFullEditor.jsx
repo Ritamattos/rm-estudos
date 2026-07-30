@@ -1,14 +1,25 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
+import Highlight from '@tiptap/extension-highlight'
 import {
   ArrowLeft, Check, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, Link as LinkIcon, Image as ImageIcon,
+  Highlighter, FileDown,
 } from 'lucide-react'
 import ResizableImage from './ResizableImage'
 import Modal from './Modal'
 import styles from './NoteFullEditor.module.css'
+import { exportNoteToPdf } from '../lib/exportNotePdf'
+
+const HIGHLIGHT_COLORS = [
+  { label: 'Amarelo', value: '#fef08a' },
+  { label: 'Verde', value: '#bbf7d0' },
+  { label: 'Azul', value: '#bfdbfe' },
+  { label: 'Rosa', value: '#fbcfe8' },
+  { label: 'Laranja', value: '#fed7aa' },
+]
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -28,9 +39,13 @@ export default function NoteFullEditor({ note, store, onClose }) {
   const [title, setTitle] = useState(note.title || '')
   const [date, setDate] = useState(note.note_date || todayISO())
   const [saving, setSaving] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [uploadingImg, setUploadingImg] = useState(false)
   const [linkModal, setLinkModal] = useState(null)
+  const [highlightOpen, setHighlightOpen] = useState(false)
   const imgInputRef = useRef()
+  const highlightRef = useRef()
+  const contentAreaRef = useRef()
 
   const editor = useEditor({
     extensions: [
@@ -41,9 +56,21 @@ export default function NoteFullEditor({ note, store, onClose }) {
         HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
       }),
       ResizableImage,
+      Highlight.configure({ multicolor: true }),
     ],
     content: note.content || '',
   })
+
+  useEffect(() => {
+    if (!highlightOpen) return
+    function handleClick(e) {
+      if (highlightRef.current && !highlightRef.current.contains(e.target)) {
+        setHighlightOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [highlightOpen])
 
   function openLinkModal() {
     if (!editor) return
@@ -115,6 +142,16 @@ export default function NoteFullEditor({ note, store, onClose }) {
     onClose()
   }
 
+  async function handleExportPdf() {
+    if (!contentAreaRef.current || exportingPdf) return
+    setExportingPdf(true)
+    try {
+      await exportNoteToPdf(contentAreaRef.current, title.trim() || 'Sem título')
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
@@ -133,6 +170,9 @@ export default function NoteFullEditor({ note, store, onClose }) {
           value={date}
           onChange={e => setDate(e.target.value)}
         />
+        <button className={styles.pdfBtn} onClick={handleExportPdf} disabled={exportingPdf} title="Exportar PDF">
+          <FileDown size={15} /> {exportingPdf ? 'Exportando...' : 'Exportar PDF'}
+        </button>
         <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
           <Check size={15} /> {saving ? 'Salvando...' : 'Salvar'}
         </button>
@@ -184,6 +224,41 @@ export default function NoteFullEditor({ note, store, onClose }) {
           title="Lista numerada"
         ><ListOrdered size={15} /></button>
         <div className={styles.sep} />
+        <div className={styles.highlightWrap} ref={highlightRef}>
+          <button
+            type="button"
+            className={editor?.isActive('highlight') ? styles.active : ''}
+            onClick={() => setHighlightOpen(o => !o)}
+            title="Marca-texto"
+          ><Highlighter size={15} /></button>
+          {highlightOpen && (
+            <div className={styles.highlightPopover}>
+              {HIGHLIGHT_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className={styles.colorSwatch}
+                  style={{ background: c.value }}
+                  title={c.label}
+                  onClick={() => {
+                    editor.chain().focus().setHighlight({ color: c.value }).run()
+                    setHighlightOpen(false)
+                  }}
+                />
+              ))}
+              <button
+                type="button"
+                className={styles.colorSwatchClear}
+                title="Remover destaque"
+                onClick={() => {
+                  editor.chain().focus().unsetHighlight().run()
+                  setHighlightOpen(false)
+                }}
+              >✕</button>
+            </div>
+          )}
+        </div>
+        <div className={styles.sep} />
         <button
           type="button"
           className={editor?.isActive('link') ? styles.active : ''}
@@ -205,7 +280,7 @@ export default function NoteFullEditor({ note, store, onClose }) {
         />
       </div>
 
-      <div className={styles.contentArea}>
+      <div className={styles.contentArea} ref={contentAreaRef}>
         <EditorContent editor={editor} className={styles.editor} />
       </div>
 

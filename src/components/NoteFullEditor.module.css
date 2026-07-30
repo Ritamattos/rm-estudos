@@ -67,6 +67,20 @@
 .saveBtn:hover { background: var(--purple2); transform: translateY(-1px); }
 .saveBtn:disabled { opacity: 0.7; cursor: default; transform: none; }
 
+.pdfBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pdfBtn:hover { background: var(--bg3); color: var(--text); }
+.pdfBtn:disabled { opacity: 0.6; cursor: default; }
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -94,6 +108,42 @@
   background: var(--border2);
   margin: 0 6px;
 }
+
+.highlightWrap { position: relative; }
+
+.highlightPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 20;
+}
+
+.colorSwatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  transition: transform 0.15s;
+}
+.colorSwatch:hover { transform: scale(1.15); }
+
+.colorSwatchClear {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text2);
+  font-size: 11px;
+}
+.colorSwatchClear:hover { background: var(--bg3); color: var(--text); }
 
 .contentArea {
   flex: 1;
@@ -124,6 +174,7 @@
 .editor :global(.ProseMirror li) { margin: 0.25em 0; }
 .editor :global(.ProseMirror a) { color: var(--purple-light); text-decoration: underline; }
 .editor :global(.ProseMirror img) { max-width: 100%; border-radius: var(--radius); display: block; }
+.editor :global(.ProseMirror mark) { border-radius: 2px; padding: 0 1px; }
 .editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
   content: 'Comece a escrever...';
   color: var(--text3);
@@ -161,3 +212,15 @@
 
 .field { display: flex; flex-direction: column; gap: 5px; }
 .fieldLabel { font-size: 12px; color: var(--text2); font-weight: 500; }
+
+/* Applied only while html2canvas is capturing the note for PDF export, so
+   the exported document reads as a clean printable page regardless of the
+   app's current (possibly dark) theme. */
+:global(.rm-pdf-export) {
+  background: #ffffff !important;
+}
+:global(.rm-pdf-export) :global(.ProseMirror) {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+:global(.rm-pdf-export) :global(.ProseMirror a) { color: #6d28d9 !important; }

@@ -46,30 +46,69 @@ export async function exportNoteToPdf(element, title) {
     const cursorY = margin + titleLines.length * 22 + 12
 
     const imgWidth = pageWidth - margin * 2
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
     const pxPerPt = canvas.width / imgWidth
+    const totalHeightPx = canvas.height
 
-    let renderedHeightPt = 0
+    // A hard pixel-height slice can land inside a text line's ascender/descender,
+    // cutting it in half across the page break. Rows between lines (and between
+    // paragraphs) render as flat background color, so before committing to a cut
+    // we scan a small window just above the ideal boundary for the nearest such
+    // blank row and break there instead.
+    const sourceCtx = canvas.getContext('2d')
+    const bg = [255, 255, 255]
+    const bgTolerance = 8
+    const maxBackScanPx = Math.round(pxPerPt * 48) // ~48pt: comfortably more than one line + paragraph gap
+
+    function isRowBlank(y) {
+      const row = sourceCtx.getImageData(0, y, canvas.width, 1).data
+      for (let i = 0; i < row.length; i += 16) { // sample every 4th pixel — plenty to catch any glyph
+        if (
+          Math.abs(row[i] - bg[0]) > bgTolerance ||
+          Math.abs(row[i + 1] - bg[1]) > bgTolerance ||
+          Math.abs(row[i + 2] - bg[2]) > bgTolerance
+        ) return false
+      }
+      return true
+    }
+
+    function findSafeCutPx(idealEndPx, rangeStartPx) {
+      const start = Math.min(totalHeightPx, Math.round(idealEndPx))
+      const limit = Math.max(rangeStartPx + 1, start - maxBackScanPx)
+      for (let y = start; y >= limit; y--) {
+        if (isRowBlank(y)) return y
+      }
+      return start // no blank row nearby (e.g. inside an image) — fall back to the hard cut
+    }
+
+    let renderedPx = 0
     let firstSlice = true
-    while (renderedHeightPt < imgHeight) {
-      const availableHeightPt = firstSlice ? pageHeight - cursorY - margin : pageHeight - margin * 2
-      const sliceHeightPt = Math.min(availableHeightPt, imgHeight - renderedHeightPt)
-      const sliceHeightPx = sliceHeightPt * pxPerPt
+    while (renderedPx < totalHeightPx - 0.5) {
+      const availablePt = firstSlice ? pageHeight - cursorY - margin : pageHeight - margin * 2
+      const availablePx = availablePt * pxPerPt
+      const remainingPx = totalHeightPx - renderedPx
+
+      const sliceEndPx = availablePx >= remainingPx
+        ? totalHeightPx // last page: take the rest as-is, nothing to protect against
+        : findSafeCutPx(renderedPx + availablePx, renderedPx)
+
+      const sliceHeightPx = sliceEndPx - renderedPx
+      if (sliceHeightPx <= 0) break
 
       const sliceCanvas = document.createElement('canvas')
       sliceCanvas.width = canvas.width
       sliceCanvas.height = sliceHeightPx
       sliceCanvas.getContext('2d').drawImage(
         canvas,
-        0, renderedHeightPt * pxPerPt, canvas.width, sliceHeightPx,
+        0, renderedPx, canvas.width, sliceHeightPx,
         0, 0, canvas.width, sliceHeightPx,
       )
 
       if (!firstSlice) pdf.addPage()
       const y = firstSlice ? cursorY : margin
+      const sliceHeightPt = sliceHeightPx / pxPerPt
       pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, y, imgWidth, sliceHeightPt)
 
-      renderedHeightPt += sliceHeightPt
+      renderedPx = sliceEndPx
       firstSlice = false
     }
 

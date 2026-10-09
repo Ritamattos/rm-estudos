@@ -1,0 +1,317 @@
+.wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  --mm-node-bg: #ffffff;
+  --mm-node-text: #1e1b2e;
+  --mm-shadow: 0 2px 8px rgba(30, 27, 46, 0.08), 0 1px 2px rgba(30, 27, 46, 0.06);
+}
+:global([data-theme="dark"]) .wrap {
+  --mm-node-bg: #1c1c27;
+  --mm-node-text: #f0eeff;
+  --mm-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.backBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.backBtn:hover { background: var(--bg3); color: var(--text); }
+.backBtn:disabled { opacity: 0.6; cursor: default; }
+
+.exportBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.exportBtn:hover { background: var(--bg3); color: var(--text); }
+.exportBtn:disabled { opacity: 0.6; cursor: default; }
+
+.titleInput {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  background: transparent !important;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 8px 4px !important;
+}
+.titleInput:focus { box-shadow: none !important; }
+
+.saveBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 18px;
+  background: var(--purple); color: white;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 600;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  flex-shrink: 0;
+}
+.saveBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.saveBtn:disabled { opacity: 0.7; cursor: default; transform: none; }
+
+.canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  touch-action: none;
+}
+.canvas :global(.react-flow) {
+  --xy-background-color: var(--bg);
+  --xy-background-pattern-color: var(--border2);
+}
+.canvas :global(.react-flow__edge-path) { stroke-linecap: round; }
+
+/* ── Nodes ─────────────────────────────────────────────────────────────── */
+
+.node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 280px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: var(--mm-node-bg);
+  color: var(--mm-node-text);
+  border: 2px solid color-mix(in srgb, var(--node-color) 55%, transparent);
+  box-shadow: var(--mm-shadow);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.node:hover { border-color: var(--node-color); }
+
+.rootNode {
+  border-radius: 24px;
+  max-width: 320px;
+  padding: 11px 22px;
+  background: var(--node-color);
+  border-color: var(--node-color);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--node-color) 35%, transparent);
+}
+
+.nodeSelected {
+  border-color: var(--node-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 30%, transparent), var(--mm-shadow);
+}
+.rootNode.nodeSelected {
+  box-shadow: 0 0 0 3px var(--mm-node-bg), 0 0 0 5px var(--node-color);
+}
+
+.nodeText {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-width: 1ch;
+}
+
+.handle {
+  opacity: 0;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border: none !important;
+  pointer-events: none;
+}
+
+/* Inline editing: hidden ::after mirrors the text so the grid cell (and the
+   textarea filling it) grows with the content. */
+.inputGrow {
+  display: grid;
+  min-width: 4ch;
+}
+.inputGrow::after {
+  content: attr(data-value) ' ';
+  white-space: pre-wrap;
+  word-break: break-word;
+  visibility: hidden;
+}
+.inputGrow::after,
+.nodeInput {
+  grid-area: 1 / 1 / 2 / 2;
+  font: inherit;
+  line-height: inherit;
+}
+.nodeInput {
+  resize: none;
+  overflow: hidden;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  outline: none;
+  border-radius: 0 !important;
+}
+
+/* Collapse/expand indicator (Whimsical-style circle on the right edge). */
+.toggle {
+  position: absolute;
+  right: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--mm-node-bg);
+  border: 2px solid var(--node-color);
+  color: var(--node-color);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 2;
+}
+.node:hover .toggle,
+.nodeSelected .toggle,
+.toggleCollapsed { opacity: 1; }
+.toggle:hover { transform: translateY(-50%) scale(1.12); }
+.toggleCollapsed {
+  background: var(--node-color);
+  color: #ffffff;
+}
+.rootNode .toggle { border-color: var(--mm-node-bg); }
+
+.addBtn {
+  position: absolute;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--node-color);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.15s;
+  z-index: 3;
+}
+.addBtn:hover { transform: scale(1.15); }
+.addChild { right: -38px; top: calc(50% - 11px); }
+.addChildFar { right: -44px; }
+.addSibling { bottom: -12px; left: calc(50% - 11px); width: 20px; height: 20px; }
+
+@media (hover: none) {
+  .toggle { opacity: 1; }
+}
+
+/* ── Panels / toolbar ──────────────────────────────────────────────────── */
+
+.zoomPanel {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.zoomPanel button {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  color: var(--text2);
+}
+.zoomPanel button:hover { background: var(--bg3); color: var(--text); }
+
+.hint {
+  font-size: 12px;
+  color: var(--text3);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+}
+
+.nodeToolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  max-width: calc(100% - 24px);
+  overflow-x: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+}
+.nodeToolbar > button:not(.swatch) {
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 10px;
+  color: var(--text2);
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nodeToolbar > button:not(.swatch):hover { background: var(--bg3); color: var(--text); }
+.nodeToolbar > button.danger:hover { background: var(--danger-dim); color: var(--danger); }
+
+.swatch {
+  width: 22px; height: 22px;
+  margin: 0 2px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: transform 0.15s;
+}
+.swatch:hover { transform: scale(1.15); }
+.swatchActive { box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--text2); }
+
+.sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border2);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .header { padding: 10px 12px; gap: 8px; }
+  .titleInput { font-size: 17px; }
+  .backBtn, .exportBtn { padding: 8px 10px; }
+  .saveBtn { padding: 9px 12px; }
+  .btnLabel { display: none; }
+  .hint { display: none; }
+  .nodeToolbar { bottom: 12px; }
+}

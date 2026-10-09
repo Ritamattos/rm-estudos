@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Pencil, Trash2, GripVertical, FileText, Network } from 'lucide-react'
 import NoteFullEditor from './NoteFullEditor'
+import MindMapEditor from './MindMapEditor'
+import Modal from './Modal'
+import { emptyMap, serializeMap } from '../lib/mindmap'
 import styles from './NotesSection.module.css'
 
 function todayISO() {
@@ -16,6 +19,7 @@ function formatDate(d) {
 export default function NotesSection({ store, workspace, catId, subId, title }) {
   const [activeNote, setActiveNote] = useState(null)
   const [dragId, setDragId] = useState(null)
+  const [pickType, setPickType] = useState(false)
 
   const notes = store.notes.filter(n => n.sub_id === subId)
 
@@ -40,12 +44,33 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
     setDragId(null)
   }
 
-  async function createNote() {
+  async function createNote(type) {
+    setPickType(false)
+    const isMap = type === 'mindmap'
+    const noteTitle = isMap ? 'Novo mapa mental' : 'Nova nota'
     const note = await store.addNote({
-      workspace, cat_id: catId, sub_id: subId,
-      title: 'Nova nota', content: '', note_date: todayISO(),
+      workspace, cat_id: catId, sub_id: subId, note_date: todayISO(), title: noteTitle,
+      // note_type is only sent for maps so plain notes keep relying on the
+      // column default ('note').
+      ...(isMap
+        ? { note_type: 'mindmap', content: serializeMap(emptyMap(noteTitle)) }
+        : { content: '' }),
     })
     if (note) setActiveNote(note)
+    else if (isMap) alert('Não foi possível criar o mapa. A migration 012 já foi executada no Supabase?')
+  }
+
+  const mapCount = notes.filter(n => n.note_type === 'mindmap').length
+  const noteCount = notes.length - mapCount
+
+  if (activeNote?.note_type === 'mindmap') {
+    return (
+      <MindMapEditor
+        note={activeNote}
+        store={store}
+        onClose={() => setActiveNote(null)}
+      />
+    )
   }
 
   if (activeNote) {
@@ -63,10 +88,13 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
       <div className={styles.topbar}>
         <div>
           <h1 className={styles.viewTitle}>{title}</h1>
-          <span className={styles.viewCount}>{notes.length} nota{notes.length !== 1 ? 's' : ''}</span>
+          <span className={styles.viewCount}>
+            {noteCount} nota{noteCount !== 1 ? 's' : ''}
+            {mapCount > 0 && ` · ${mapCount} mapa${mapCount !== 1 ? 's' : ''}`}
+          </span>
         </div>
         <div className={styles.actions}>
-          <button className={styles.addBtn} onClick={createNote}>
+          <button className={styles.addBtn} onClick={() => setPickType(true)}>
             <Plus size={15} /> Nova nota
           </button>
         </div>
@@ -76,7 +104,7 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
         <div className={styles.empty}>
           <div className={styles.emptyIcon}>◆</div>
           <p>Nenhuma nota aqui ainda</p>
-          <button className={styles.emptyBtn} onClick={createNote}>+ Criar primeira nota</button>
+          <button className={styles.emptyBtn} onClick={() => setPickType(true)}>+ Criar primeira nota</button>
         </div>
       ) : (
         <div className={styles.list}>
@@ -91,6 +119,9 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
               onClick={() => setActiveNote(note)}
             >
               <GripVertical size={14} className={styles.grip} />
+              {note.note_type === 'mindmap'
+                ? <Network size={15} className={`${styles.typeIcon} ${styles.typeIconMap}`} aria-label="Mapa mental" />
+                : <FileText size={15} className={styles.typeIcon} aria-label="Nota" />}
               <div className={styles.rowMain}>
                 <span className={styles.rowTitle}>{note.title || 'Sem título'}</span>
                 <span className={styles.rowDate}>{formatDate(note.note_date)}</span>
@@ -101,7 +132,10 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
                 </button>
                 <button
                   className={`${styles.iconBtn} ${styles.danger}`}
-                  onClick={e => { e.stopPropagation(); if (confirm('Excluir nota?')) store.deleteNote(note.id) }}
+                  onClick={e => {
+                    e.stopPropagation()
+                    if (confirm(note.note_type === 'mindmap' ? 'Excluir mapa mental?' : 'Excluir nota?')) store.deleteNote(note.id)
+                  }}
                   title="Excluir"
                 >
                   <Trash2 size={13} />
@@ -110,6 +144,23 @@ export default function NotesSection({ store, workspace, catId, subId, title }) 
             </div>
           ))}
         </div>
+      )}
+
+      {pickType && (
+        <Modal title="Criar novo" onClose={() => setPickType(false)} noFooter>
+          <div className={styles.typePicker}>
+            <button className={styles.typeOption} onClick={() => createNote('note')}>
+              <FileText size={26} />
+              <span className={styles.typeOptionTitle}>Nota</span>
+              <span className={styles.typeOptionDesc}>Texto com formatação, imagens e links</span>
+            </button>
+            <button className={styles.typeOption} onClick={() => createNote('mindmap')}>
+              <Network size={26} />
+              <span className={styles.typeOptionTitle}>Mapa mental</span>
+              <span className={styles.typeOptionDesc}>Ideias em árvore, com ramos e cores</span>
+            </button>
+          </div>
+        </Modal>
       )}
     </>
   )

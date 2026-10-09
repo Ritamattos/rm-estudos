@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
-function sanitizeFilename(name) {
+export function sanitizeFilename(name) {
   const clean = name
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[\\/:*?"<>|]+/g, '')

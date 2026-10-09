@@ -10,6 +10,7 @@ import {
 import {
   MINDMAP_COLORS, createNode, parseMap, serializeMap, findNode, findParent,
   updateNode, removeNode, insertChild, countDescendants, layoutMap, toFlow,
+  recolorBranch, levelOf,
 } from '../lib/mindmap'
 import { exportMindMapPng, exportMindMapPdf } from '../lib/exportMindMap'
 import styles from './MindMapEditor.module.css'
@@ -79,12 +80,12 @@ const MindNode = memo(function MindNode({ id, data }) {
   const ctx = useContext(MapCtx)
   const selected = ctx.selectedId === id
   const editing = ctx.editingId === id
-  const { text, color, isRoot, childCount, hiddenCount, collapsed } = data
+  const { text, color, onColor, textColor, depth, isRoot, childCount, hiddenCount, collapsed } = data
 
   return (
     <div
-      className={`${styles.node} ${isRoot ? styles.rootNode : ''} ${selected ? styles.nodeSelected : ''}`}
-      style={{ '--node-color': color }}
+      className={`${styles.node} ${LEVEL_CLASS[levelOf(depth)]} ${selected ? styles.nodeSelected : ''}`}
+      style={{ '--node-color': color, '--node-on': onColor, ...(textColor ? { color: textColor } : null) }}
       onDoubleClick={e => { e.stopPropagation(); ctx.startEdit(id) }}
     >
       <Handle type="target" position={Position.Left} className={styles.handle} isConnectable={false} />
@@ -135,6 +136,15 @@ const MindNode = memo(function MindNode({ id, data }) {
 
 const nodeTypes = { mind: MindNode }
 
+const LEVEL_CLASS = [styles.rootNode, styles.level1, styles.level2, styles.level3, styles.level4]
+
+const isPhone = () => window.innerWidth < 640
+
+// On phones, fitting a whole map on open shrinks the text to illegible
+// sizes, so the map opens at a readable zoom anchored on the central node
+// instead ("Ajustar à tela" still shows everything on demand).
+const PHONE_ZOOM = 0.8
+
 function currentTheme() {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
@@ -148,6 +158,7 @@ function MindMapCanvas({ note, store, onClose }) {
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
   const [exporting, setExporting] = useState(null)
+  const [panel, setPanel] = useState(null) // open toolbar popover: 'color' | null
   const wrapRef = useRef()
   const mapRef = useRef(map)
   mapRef.current = map
@@ -244,7 +255,11 @@ function MindMapCanvas({ note, store, onClose }) {
   }, [setRoot, selectedId])
 
   const setColor = useCallback((id, color) => {
-    setRoot(r => updateNode(r, id, n => ({ ...n, color })))
+    setRoot(r => recolorBranch(r, id, color))
+  }, [setRoot])
+
+  const setTextColor = useCallback((id, mode) => {
+    setRoot(r => updateNode(r, id, n => ({ ...n, textColor: mode })))
   }, [setRoot])
 
   const startEdit = useCallback(id => {
@@ -283,7 +298,7 @@ function MindMapCanvas({ note, store, onClose }) {
       else if (e.key === 'Enter') { e.preventDefault(); addSibling(selectedId) }
       else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteNode(selectedId) }
       else if (e.key === 'F2' || e.key === ' ') { e.preventDefault(); startEdit(selectedId) }
-      else if (e.key === 'Escape') setSelectedId(null)
+      else if (e.key === 'Escape') { setSelectedId(null); setPanel(null) }
       else if (e.key === 'ArrowLeft') {
         const p = findParent(r, selectedId)
         if (p) { e.preventDefault(); setSelectedId(p.id) }
@@ -300,6 +315,19 @@ function MindMapCanvas({ note, store, onClose }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selectedId, editingId, addChild, addSibling, deleteNode, startEdit])
+
+  useEffect(() => {
+    if (!selectedId) setPanel(null)
+  }, [selectedId])
+
+  const didInitView = useRef(false)
+  useEffect(() => {
+    if (didInitView.current || !isPhone() || !wrapRef.current || !sizes.has(root.id)) return
+    didInitView.current = true
+    const p = positions.get(root.id)
+    const h = wrapRef.current.clientHeight
+    rf.setViewport({ x: 16 - p.x * PHONE_ZOOM, y: h / 2 - (p.y + p.height / 2) * PHONE_ZOOM, zoom: PHONE_ZOOM })
+  }, [positions, sizes, root.id, rf])
 
   // Keep the node being edited on screen (new nodes can land off-canvas).
   useEffect(() => {
@@ -351,7 +379,9 @@ function MindMapCanvas({ note, store, onClose }) {
   }
 
   const selectedNode = selectedId ? findNode(root, selectedId) : null
-  const selectedColor = selectedNode ? nodes.find(n => n.id === selectedId)?.data.color : null
+  const selectedData = selectedNode ? nodes.find(n => n.id === selectedId)?.data : null
+  const selectedColor = selectedData?.color || null
+  const selectedTextMode = selectedData?.textColorMode || 'auto'
 
   return (
     <div className={styles.wrap}>
@@ -389,7 +419,7 @@ function MindMapCanvas({ note, store, onClose }) {
             onNodeClick={(_, n) => { if (n.id !== editingId) setEditingId(null); setSelectedId(n.id) }}
             onPaneClick={() => { setSelectedId(null); setEditingId(null) }}
             colorMode={currentTheme()}
-            fitView
+            fitView={!isPhone()}
             fitViewOptions={FIT_OPTIONS}
             minZoom={0.1}
             maxZoom={2.5}
@@ -429,16 +459,15 @@ function MindMapCanvas({ note, store, onClose }) {
               <Pencil size={14} />
             </button>
             <div className={styles.sep} />
-            {MINDMAP_COLORS.map(c => (
-              <button
-                key={c.value}
-                type="button"
-                className={`${styles.swatch} ${selectedColor === c.value ? styles.swatchActive : ''}`}
-                style={{ background: c.value }}
-                title={c.label}
-                onClick={() => setColor(selectedNode.id, c.value)}
-              />
-            ))}
+            <button
+              type="button"
+              className={panel === 'color' ? styles.toolActive : ''}
+              onClick={() => setPanel(p => (p === 'color' ? null : 'color'))}
+              title="Cor"
+            >
+              <span className={styles.colorDot} style={{ background: selectedColor }} />
+              <span className={styles.btnLabel}>Cor</span>
+            </button>
             {selectedNode.id !== root.id && (
               <>
                 <div className={styles.sep} />
@@ -450,6 +479,46 @@ function MindMapCanvas({ note, store, onClose }) {
                 ><Trash2 size={14} /></button>
               </>
             )}
+          </div>
+        )}
+
+        {selectedNode && !editingId && panel === 'color' && (
+          <div className={styles.popover} onPointerDown={e => e.stopPropagation()}>
+            <div className={styles.popoverLabel}>Cor do ramo</div>
+            <div className={styles.swatchGrid}>
+              {MINDMAP_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className={`${styles.swatch} ${selectedColor === c.value ? styles.swatchActive : ''}`}
+                  style={{ background: c.value }}
+                  title={c.label}
+                  onClick={() => setColor(selectedNode.id, c.value)}
+                />
+              ))}
+            </div>
+            <label className={styles.customColor} title="Escolher qualquer cor">
+              <input
+                type="color"
+                value={/^#[0-9a-f]{6}$/i.test(selectedColor || '') ? selectedColor : '#8b5cf6'}
+                onChange={e => setColor(selectedNode.id, e.target.value)}
+              />
+              <span>Cor personalizada</span>
+              {!MINDMAP_COLORS.some(c => c.value === selectedColor) && (
+                <span className={styles.customValue}>{selectedColor}</span>
+              )}
+            </label>
+            <div className={styles.popoverLabel}>Cor do texto</div>
+            <div className={styles.segmented}>
+              {[['auto', 'Automática'], ['dark', 'Escura'], ['light', 'Clara']].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={selectedTextMode === mode ? styles.segActive : ''}
+                  onClick={() => setTextColor(selectedNode.id, mode)}
+                >{label}</button>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -2,20 +2,34 @@
 //
 // A map is stored in rm_notes.content as JSON:
 //   { version: 1, root: Node }
-//   Node = { id, text, color|null, collapsed, children: Node[] }
-// `color: null` means "inherit from parent", so recoloring a branch
-// recolors every descendant that wasn't explicitly given its own color.
+//   Node = {
+//     id, text, children: Node[],
+//     color: string|null     — null = inherit from parent
+//     collapsed: boolean
+//     textColor?: 'auto'|'light'|'dark'   (default 'auto')
+//     emoji?: string                      (default none)
+//     link?: string                       (default none)
+//   }
+// Optional fields were added later; older maps simply lack them and fall
+// back to the defaults wherever they're read.
 
 export const MINDMAP_COLORS = [
   { label: 'Roxo', value: '#8b5cf6' },
   { label: 'Azul', value: '#3b82f6' },
+  { label: 'Ciano', value: '#06b6d4' },
   { label: 'Verde', value: '#10b981' },
+  { label: 'Lima', value: '#84cc16' },
   { label: 'Amarelo', value: '#f59e0b' },
+  { label: 'Laranja', value: '#f97316' },
   { label: 'Vermelho', value: '#ef4444' },
   { label: 'Rosa', value: '#ec4899' },
+  { label: 'Cinza', value: '#64748b' },
 ]
 
 const DEFAULT_COLOR = MINDMAP_COLORS[0].value
+
+export const TEXT_DARK = '#1e1b2e'
+export const TEXT_LIGHT = '#ffffff'
 
 export function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
@@ -39,6 +53,31 @@ export function parseMap(content, title) {
 
 export function serializeMap(map) {
   return JSON.stringify(map)
+}
+
+// ── Colors ──────────────────────────────────────────────────────────────────
+
+function hexToRgb(hex) {
+  let h = (hex || '').replace('#', '')
+  if (h.length === 3) h = h.split('').map(c => c + c).join('')
+  const n = parseInt(h, 16)
+  if (Number.isNaN(n) || h.length !== 6) return null
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function luminance([r, g, b]) {
+  const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+}
+
+// Text color for a solid background. Prefers white (the established look on
+// saturated fills) as long as it reaches 3:1 — the WCAG bar for large/bold
+// text — and switches to dark on light fills like yellow or lime.
+export function readableOn(hex) {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return TEXT_LIGHT
+  const contrastWithWhite = 1.05 / (luminance(rgb) + 0.05)
+  return contrastWithWhite >= 3 ? TEXT_LIGHT : TEXT_DARK
 }
 
 // ── Tree helpers (all immutable) ────────────────────────────────────────────
@@ -96,6 +135,29 @@ export function countDescendants(node) {
   return node.children.reduce((n, c) => n + 1 + countDescendants(c), 0)
 }
 
+function clearColors(node) {
+  return { ...node, color: null, children: node.children.map(clearColors) }
+}
+
+// Recoloring a branch makes the whole branch (descendants + their links)
+// follow the new color, dropping any per-node colors below it. Recoloring a
+// descendant afterwards still works and, in turn, carries its own branch.
+// The central node is the exception: its first-level branches keep their
+// own colors, as in Whimsical.
+export function recolorBranch(root, id, color) {
+  if (id === root.id) return { ...root, color }
+  return updateNode(root, id, n => ({ ...clearColors(n), color }))
+}
+
+// Moves a node (with its subtree) to the end of another parent's children.
+// No-op when the target is the node itself or inside its own subtree.
+export function moveNode(root, id, newParentId, color) {
+  if (id === root.id) return root
+  const node = findNode(root, id)
+  if (!node || findNode(node, newParentId)) return root
+  return insertChild(removeNode(root, id), newParentId, { ...node, color })
+}
+
 // ── Layout ──────────────────────────────────────────────────────────────────
 // Classic right-growing mind map: each node's children are stacked
 // vertically and centered on the parent, so subtrees never overlap.
@@ -105,33 +167,48 @@ export function countDescendants(node) {
 const H_GAP = 64
 const V_GAP = 14
 
+// Mirrors the per-level typography in MindMapEditor.module.css; only used to
+// estimate a node's size before it's rendered and measured.
+const LEVELS = [
+  { font: 20, weight: 600, padX: 26, padY: 13, max: 340 },
+  { font: 17, weight: 700, padX: 20, padY: 10, max: 300 },
+  { font: 16, weight: 500, padX: 17, padY: 8, max: 280 },
+  { font: 15, weight: 500, padX: 15, padY: 7, max: 280 },
+  { font: 14.5, weight: 500, padX: 14, padY: 6, max: 280 },
+]
+export const levelOf = depth => Math.min(depth, LEVELS.length - 1)
+
 let measureCtx = null
-function estimateSize(text, isRoot) {
+function estimateSize(n, depth) {
+  const lv = LEVELS[levelOf(depth)]
   if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
-  measureCtx.font = `${isRoot ? 600 : 500} ${isRoot ? 16 : 14}px Outfit, sans-serif`
-  const w = Math.min(measureCtx.measureText(text || ' ').width, isRoot ? 280 : 240)
-  return { width: Math.ceil(w) + (isRoot ? 44 : 36), height: isRoot ? 46 : 38 }
+  measureCtx.font = `${lv.weight} ${lv.font}px Outfit, sans-serif`
+  let w = measureCtx.measureText(n.text || ' ').width
+  if (n.emoji) w += lv.font * 1.5
+  if (n.link) w += 24
+  w = Math.min(w, lv.max - lv.padX * 2)
+  return { width: Math.ceil(w) + lv.padX * 2 + 4, height: Math.ceil(lv.font * 1.35) + lv.padY * 2 + 4 }
 }
 
 export function layoutMap(root, sizes) {
   const positions = new Map()
 
-  const sizeOf = (n, isRoot) => sizes.get(n.id) || estimateSize(n.text, isRoot)
+  const sizeOf = (n, depth) => sizes.get(n.id) || estimateSize(n, depth)
   const visibleChildren = n => (n.collapsed ? [] : n.children)
 
   const heights = new Map()
-  function measure(n, isRoot) {
-    const { height } = sizeOf(n, isRoot)
+  function measure(n, depth) {
+    const { height } = sizeOf(n, depth)
     const kids = visibleChildren(n)
     let kidsH = 0
-    kids.forEach((c, i) => { kidsH += measure(c, false) + (i ? V_GAP : 0) })
+    kids.forEach((c, i) => { kidsH += measure(c, depth + 1) + (i ? V_GAP : 0) })
     const h = Math.max(height, kidsH)
     heights.set(n.id, h)
     return h
   }
 
-  function place(n, x, top, isRoot) {
-    const { width, height } = sizeOf(n, isRoot)
+  function place(n, x, top, depth) {
+    const { width, height } = sizeOf(n, depth)
     const h = heights.get(n.id)
     const cy = top + h / 2
     positions.set(n.id, { x, y: cy - height / 2, width, height })
@@ -141,14 +218,22 @@ export function layoutMap(root, sizes) {
     kids.forEach((c, i) => { kidsH += heights.get(c.id) + (i ? V_GAP : 0) })
     let y = cy - kidsH / 2
     for (const c of kids) {
-      place(c, x + width + H_GAP, y, false)
+      place(c, x + width + H_GAP, y, depth + 1)
       y += heights.get(c.id) + V_GAP
     }
   }
 
-  measure(root, true)
-  place(root, 0, 0, true)
+  measure(root, 0)
+  place(root, 0, 0, 0)
   return positions
+}
+
+function resolveTextColor(n, color, isRoot) {
+  if (n.textColor === 'light') return TEXT_LIGHT
+  if (n.textColor === 'dark') return TEXT_DARK
+  // 'auto': the root sits on a solid fill; other nodes use the theme's text
+  // color over their pastel fill (handled in CSS).
+  return isRoot ? readableOn(color) : null
 }
 
 // Walks the visible tree producing React Flow nodes/edges.
@@ -162,11 +247,17 @@ export function toFlow(root, positions) {
       id: n.id,
       type: 'mind',
       position: { x: pos.x, y: pos.y },
-      draggable: false,
+      draggable: depth > 0,
       selectable: false,
       data: {
         text: n.text,
         color,
+        onColor: readableOn(color),
+        textColor: resolveTextColor(n, color, depth === 0),
+        textColorMode: n.textColor || 'auto',
+        emoji: n.emoji || '',
+        link: n.link || '',
+        depth,
         isRoot: depth === 0,
         childCount: n.children.length,
         hiddenCount: n.collapsed ? countDescendants(n) : 0,

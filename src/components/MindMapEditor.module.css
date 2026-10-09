@@ -93,36 +93,46 @@
 
 /* ── Nodes ─────────────────────────────────────────────────────────────── */
 
+/* Soft fill: a pastel of the node's own color, with the full color as the
+   border. Light theme mixes toward white; dark theme mixes toward the
+   canvas so the fill reads as a tinted dark surface and text stays light. */
 .node {
+  --mm-fill: color-mix(in srgb, var(--node-color) 16%, #ffffff);
+  --mm-stroke: color-mix(in srgb, var(--node-color) 70%, #ffffff);
   position: relative;
   display: flex;
   align-items: center;
-  max-width: 280px;
-  padding: 8px 18px;
-  border-radius: 20px;
-  background: var(--mm-node-bg);
+  gap: 7px;
+  border-radius: 22px;
+  background: var(--mm-fill);
   color: var(--mm-node-text);
-  border: 2px solid color-mix(in srgb, var(--node-color) 55%, transparent);
+  border: 2px solid var(--mm-stroke);
   box-shadow: var(--mm-shadow);
-  font-size: 14px;
-  font-weight: 500;
   line-height: 1.35;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+:global([data-theme="dark"]) .node {
+  --mm-fill: color-mix(in srgb, var(--node-color) 24%, #15151d);
+  --mm-stroke: color-mix(in srgb, var(--node-color) 75%, #15151d);
+}
 .node:hover { border-color: var(--node-color); }
 
+/* Typographic hierarchy: central > level 1 (bold) > gently smaller below. */
 .rootNode {
-  border-radius: 24px;
-  max-width: 320px;
-  padding: 11px 22px;
+  max-width: 340px;
+  padding: 13px 26px;
+  border-radius: 26px;
+  font-size: 20px;
+  font-weight: 600;
   background: var(--node-color);
   border-color: var(--node-color);
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 600;
   box-shadow: 0 6px 20px color-mix(in srgb, var(--node-color) 35%, transparent);
 }
+.level1 { max-width: 300px; padding: 10px 20px; font-size: 17px; font-weight: 700; }
+.level2 { max-width: 280px; padding: 8px 17px; font-size: 16px; font-weight: 500; }
+.level3 { max-width: 280px; padding: 7px 15px; font-size: 15px; font-weight: 500; border-radius: 20px; }
+.level4 { max-width: 280px; padding: 6px 14px; font-size: 14.5px; font-weight: 500; border-radius: 18px; }
 
 .nodeSelected {
   border-color: var(--node-color);
@@ -205,7 +215,7 @@
 .toggle:hover { transform: translateY(-50%) scale(1.12); }
 .toggleCollapsed {
   background: var(--node-color);
-  color: #ffffff;
+  color: var(--node-on, #ffffff);
 }
 .rootNode .toggle { border-color: var(--mm-node-bg); }
 
@@ -215,7 +225,7 @@
   display: flex; align-items: center; justify-content: center;
   border-radius: 999px;
   background: var(--node-color);
-  color: #ffffff;
+  color: var(--node-on, #ffffff);
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   transition: transform 0.15s;
   z-index: 3;
@@ -298,6 +308,100 @@
 .swatch:hover { transform: scale(1.15); }
 .swatchActive { box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--text2); }
 
+.nodeToolbar button, .popover button, .zoomPanel button, .node button {
+  -webkit-tap-highlight-color: transparent;
+}
+.nodeToolbar > button.toolActive { background: var(--purple-dim2); color: var(--text); }
+
+.colorDot {
+  width: 16px; height: 16px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+
+/* Toolbar popovers sit above the toolbar (outside it, since the toolbar
+   scrolls horizontally on phones and would clip them). */
+.popover {
+  position: absolute;
+  left: 50%;
+  bottom: 78px;
+  transform: translateX(-50%);
+  z-index: 11;
+  width: min(300px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.2);
+}
+.popoverLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+}
+
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  justify-items: center;
+}
+.swatchGrid .swatch { width: 30px; height: 30px; margin: 0; }
+
+.customColor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px dashed var(--border2);
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+}
+.customColor:hover { background: var(--bg3); color: var(--text); }
+.customColor input[type="color"] {
+  width: 30px; height: 30px;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  background: none !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.customColor input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.customColor input[type="color"]::-webkit-color-swatch { border: none; border-radius: 999px; }
+.customColor input[type="color"]::-moz-color-swatch { border: none; border-radius: 999px; }
+.customValue { margin-left: auto; font-family: monospace; font-size: 12px; color: var(--text3); }
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--bg3);
+  border-radius: 10px;
+}
+.segmented button {
+  flex: 1;
+  padding: 7px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.segmented button:hover { color: var(--text); }
+.segmented .segActive {
+  background: var(--bg2);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
 .sep {
   width: 1px;
   height: 22px;
@@ -314,4 +418,5 @@
   .btnLabel { display: none; }
   .hint { display: none; }
   .nodeToolbar { bottom: 12px; }
+  .popover { bottom: 66px; }
 }

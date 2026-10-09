@@ -5,12 +5,13 @@ import {
 import '@xyflow/react/dist/style.css'
 import {
   ArrowLeft, Check, Plus, CornerDownRight, Pencil, Trash2, ZoomIn, ZoomOut, Maximize,
-  Image as ImageIcon, FileDown,
+  Image as ImageIcon, FileDown, ExternalLink, Smile, Link2,
 } from 'lucide-react'
+import Modal from './Modal'
 import {
   MINDMAP_COLORS, createNode, parseMap, serializeMap, findNode, findParent,
   updateNode, removeNode, insertChild, countDescendants, layoutMap, toFlow,
-  recolorBranch, levelOf,
+  recolorBranch, levelOf, moveNode,
 } from '../lib/mindmap'
 import { exportMindMapPng, exportMindMapPdf } from '../lib/exportMindMap'
 import styles from './MindMapEditor.module.css'
@@ -80,15 +81,17 @@ const MindNode = memo(function MindNode({ id, data }) {
   const ctx = useContext(MapCtx)
   const selected = ctx.selectedId === id
   const editing = ctx.editingId === id
-  const { text, color, onColor, textColor, depth, isRoot, childCount, hiddenCount, collapsed } = data
+  const { text, color, onColor, textColor, emoji, link, depth, isRoot, childCount, hiddenCount, collapsed } = data
+  const dropTarget = ctx.dropTargetId === id
 
   return (
     <div
-      className={`${styles.node} ${LEVEL_CLASS[levelOf(depth)]} ${selected ? styles.nodeSelected : ''}`}
+      className={`${styles.node} ${LEVEL_CLASS[levelOf(depth)]} ${selected ? styles.nodeSelected : ''} ${dropTarget ? styles.dropTarget : ''}`}
       style={{ '--node-color': color, '--node-on': onColor, ...(textColor ? { color: textColor } : null) }}
       onDoubleClick={e => { e.stopPropagation(); ctx.startEdit(id) }}
     >
       <Handle type="target" position={Position.Left} className={styles.handle} isConnectable={false} />
+      {emoji && <span className={styles.emoji}>{emoji}</span>}
       {editing ? (
         <NodeTextInput
           initial={text}
@@ -98,6 +101,17 @@ const MindNode = memo(function MindNode({ id, data }) {
         />
       ) : (
         <span className={styles.nodeText}>{text || ' '}</span>
+      )}
+      {link && !editing && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${styles.nodeLink} nodrag nopan`}
+          title={link}
+          onClick={e => e.stopPropagation()}
+          onDoubleClick={e => e.stopPropagation()}
+        ><ExternalLink size={14} /></a>
       )}
       <Handle type="source" position={Position.Right} className={styles.handle} isConnectable={false} />
 
@@ -138,6 +152,22 @@ const nodeTypes = { mind: MindNode }
 
 const LEVEL_CLASS = [styles.rootNode, styles.level1, styles.level2, styles.level3, styles.level4]
 
+const EMOJIS = [
+  '💡', '⭐', '🔥', '✅', '❌', '⚠️', '❓', '❗', '📌', '🎯',
+  '🚀', '🧠', '📚', '📝', '💬', '📣', '📅', '⏰', '💰', '📈',
+  '📉', '🛒', '🤝', '👥', '❤️', '🎉', '🏆', '🎨', '📷', '🎬',
+  '🌱', '🔒', '⚙️', '🔗', '📍', '😀', '🤔', '👀', '🙌', '✨',
+]
+
+function firstGrapheme(s) {
+  if (!s) return ''
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    const first = new Intl.Segmenter().segment(s)[Symbol.iterator]().next().value
+    return first ? first.segment : ''
+  }
+  return Array.from(s)[0] || ''
+}
+
 const isPhone = () => window.innerWidth < 640
 
 // On phones, fitting a whole map on open shrinks the text to illegible
@@ -158,7 +188,13 @@ function MindMapCanvas({ note, store, onClose }) {
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
   const [exporting, setExporting] = useState(null)
-  const [panel, setPanel] = useState(null) // open toolbar popover: 'color' | null
+  const [panel, setPanel] = useState(null) // open toolbar popover: 'color' | 'emoji' | null
+  const [linkModal, setLinkModal] = useState(null) // { id, url }
+  // Branch being dragged: its visible subtree moves with the pointer, and
+  // `target` is the node it would be re-parented under on drop.
+  const [drag, setDrag] = useState(null) // { id, ids: Set, dx, dy, target }
+  const dragRef = useRef(null)
+  dragRef.current = drag
   const wrapRef = useRef()
   const mapRef = useRef(map)
   mapRef.current = map
@@ -180,9 +216,58 @@ function MindMapCanvas({ note, store, onClose }) {
       const p = positions.get(n.id)
       n.initialWidth = p.width
       n.initialHeight = p.height
+      if (drag?.ids.has(n.id)) {
+        n.position = { x: p.x + drag.dx, y: p.y + drag.dy }
+        n.zIndex = 1000
+      }
     })
     return flow
-  }, [root, positions, sizes])
+  }, [root, positions, sizes, drag])
+
+  // ── Drag a branch onto another node to re-parent it ──────────────────────
+
+  const onNodeDragStart = useCallback((_, node) => {
+    const sub = findNode(mapRef.current.root, node.id)
+    if (!sub) return
+    const ids = new Set()
+    ;(function walk(n) { ids.add(n.id); if (!n.collapsed) n.children.forEach(walk) })(sub)
+    setDrag({ id: node.id, ids, dx: 0, dy: 0, target: null })
+    setSelectedId(node.id)
+    setEditingId(null)
+    setPanel(null)
+  }, [])
+
+  const onNodeDrag = useCallback((e, node) => {
+    const d = dragRef.current
+    const start = positions.get(node.id)
+    if (!d || !start) return
+    // Hit-test what's under the finger/cursor; fall back to the node center.
+    const src = e?.touches?.[0] || e?.changedTouches?.[0] || e
+    const pt = src && src.clientX != null
+      ? rf.screenToFlowPosition({ x: src.clientX, y: src.clientY })
+      : { x: node.position.x + start.width / 2, y: node.position.y + start.height / 2 }
+    let target = null
+    for (const [id, p] of positions) {
+      if (d.ids.has(id)) continue
+      if (pt.x >= p.x - 6 && pt.x <= p.x + p.width + 6 && pt.y >= p.y - 6 && pt.y <= p.y + p.height + 6) {
+        target = id
+        break
+      }
+    }
+    setDrag({ ...d, dx: node.position.x - start.x, dy: node.position.y - start.y, target })
+  }, [positions, rf])
+
+  const onNodeDragStop = useCallback(() => {
+    const d = dragRef.current
+    setDrag(null)
+    if (!d?.target) return // dropped on empty canvas: the layout snaps it back
+    const r = mapRef.current.root
+    if (findParent(r, d.id)?.id === d.target) return
+    // Under another branch the moved node adopts that branch's color; moved
+    // up to the central node it keeps the color it already showed.
+    const shown = nodes.find(n => n.id === d.id)?.data.color ?? null
+    setRoot(rt => moveNode(rt, d.id, d.target, d.target === r.id ? shown : null))
+  }, [nodes, setRoot])
 
   const onNodesChange = useCallback(changes => {
     setSizes(prev => {
@@ -262,6 +347,18 @@ function MindMapCanvas({ note, store, onClose }) {
     setRoot(r => updateNode(r, id, n => ({ ...n, textColor: mode })))
   }, [setRoot])
 
+  const setEmoji = useCallback((id, emoji) => {
+    setRoot(r => updateNode(r, id, n => ({ ...n, emoji })))
+  }, [setRoot])
+
+  function applyLink() {
+    if (!linkModal) return
+    const url = linkModal.url.trim()
+    const href = !url ? '' : /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
+    setRoot(r => updateNode(r, linkModal.id, n => ({ ...n, link: href })))
+    setLinkModal(null)
+  }
+
   const startEdit = useCallback(id => {
     setSelectedId(id)
     setEditingId(id)
@@ -275,14 +372,16 @@ function MindMapCanvas({ note, store, onClose }) {
 
   const cancelEdit = useCallback(() => setEditingId(null), [])
 
+  const dropTargetId = drag?.target || null
   const ctx = useMemo(() => ({
-    selectedId, editingId, addChild, addSibling, toggleCollapse, startEdit, commitEdit, cancelEdit,
-  }), [selectedId, editingId, addChild, addSibling, toggleCollapse, startEdit, commitEdit, cancelEdit])
+    selectedId, editingId, dropTargetId, addChild, addSibling, toggleCollapse, startEdit, commitEdit, cancelEdit,
+  }), [selectedId, editingId, dropTargetId, addChild, addSibling, toggleCollapse, startEdit, commitEdit, cancelEdit])
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
     function onKey(e) {
+      if (linkModal) return
       if (editingId) {
         if (e.key === 'Tab') e.preventDefault() // don't let focus wander to the node buttons
         return
@@ -314,7 +413,7 @@ function MindMapCanvas({ note, store, onClose }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedId, editingId, addChild, addSibling, deleteNode, startEdit])
+  }, [selectedId, editingId, linkModal, addChild, addSibling, deleteNode, startEdit])
 
   useEffect(() => {
     if (!selectedId) setPanel(null)
@@ -424,7 +523,10 @@ function MindMapCanvas({ note, store, onClose }) {
             minZoom={0.1}
             maxZoom={2.5}
             zoomOnDoubleClick={false}
-            nodesDraggable={false}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDrag={onNodeDrag}
+            onNodeDragStop={onNodeDragStop}
+            nodeDragThreshold={6}
             nodesConnectable={false}
             elementsSelectable={false}
             nodesFocusable={false}
@@ -439,7 +541,7 @@ function MindMapCanvas({ note, store, onClose }) {
             </Panel>
             {!selectedNode && (
               <Panel position="bottom-left" className={styles.hint}>
-                Clique num tópico para selecionar · Tab: filho · Enter: irmão · Duplo clique: editar · Del: excluir
+                Clique num tópico para selecionar · Tab: filho · Enter: irmão · Duplo clique: editar · Del: excluir · Arraste um tópico sobre outro para mudá-lo de lugar
               </Panel>
             )}
           </ReactFlow>
@@ -467,6 +569,22 @@ function MindMapCanvas({ note, store, onClose }) {
             >
               <span className={styles.colorDot} style={{ background: selectedColor }} />
               <span className={styles.btnLabel}>Cor</span>
+            </button>
+            <button
+              type="button"
+              className={panel === 'emoji' ? styles.toolActive : ''}
+              onClick={() => setPanel(p => (p === 'emoji' ? null : 'emoji'))}
+              title="Emoji"
+            >
+              {selectedNode.emoji ? <span className={styles.toolEmoji}>{selectedNode.emoji}</span> : <Smile size={15} />}
+            </button>
+            <button
+              type="button"
+              className={selectedNode.link ? styles.toolActive : ''}
+              onClick={() => { setPanel(null); setLinkModal({ id: selectedNode.id, url: selectedNode.link || '' }) }}
+              title="Link"
+            >
+              <Link2 size={15} />
             </button>
             {selectedNode.id !== root.id && (
               <>
@@ -521,7 +639,58 @@ function MindMapCanvas({ note, store, onClose }) {
             </div>
           </div>
         )}
+
+        {selectedNode && !editingId && panel === 'emoji' && (
+          <div className={styles.popover} onPointerDown={e => e.stopPropagation()}>
+            <div className={styles.popoverLabel}>Emoji do tópico</div>
+            <div className={styles.emojiGrid}>
+              {EMOJIS.map(em => (
+                <button
+                  key={em}
+                  type="button"
+                  className={selectedNode.emoji === em ? styles.emojiActive : ''}
+                  onClick={() => { setEmoji(selectedNode.id, em); setPanel(null) }}
+                >{em}</button>
+              ))}
+            </div>
+            <div className={styles.emojiRow}>
+              <input
+                className={styles.emojiInput}
+                placeholder="Ou digite/cole outro emoji"
+                onKeyDown={e => e.stopPropagation()}
+                onChange={e => {
+                  const em = firstGrapheme(e.target.value.trim())
+                  if (em) { setEmoji(selectedNode.id, em); e.target.value = '' }
+                }}
+              />
+              {selectedNode.emoji && (
+                <button type="button" className={styles.emojiRemove} onClick={() => { setEmoji(selectedNode.id, ''); setPanel(null) }}>
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {linkModal && (
+        <Modal
+          title={findNode(root, linkModal.id)?.link ? 'Editar link' : 'Adicionar link'}
+          onClose={() => setLinkModal(null)}
+          onSave={applyLink}
+        >
+          <div className={styles.linkField}>
+            <label>URL (deixe vazio para remover)</label>
+            <input
+              autoFocus
+              placeholder="https://..."
+              value={linkModal.url}
+              onChange={e => setLinkModal(m => ({ ...m, url: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') applyLink() }}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

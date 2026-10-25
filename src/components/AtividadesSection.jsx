@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle, BarChart3 } from 'lucide-react'
+import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle, BarChart3, Megaphone } from 'lucide-react'
 import { useAtividadesStore } from '../hooks/useAtividadesStore'
 import TestesBoard from './TestesBoard'
 import TestArchiveList from './TestArchiveList'
 import DiarioList from './DiarioList'
 import DadosSection from './DadosSection'
+import CriativosSection from './CriativosSection'
 import styles from './AtividadesSection.module.css'
 
 const TESTES_VIEWS = [
@@ -56,11 +57,20 @@ export default function AtividadesSection({ user }) {
         >
           <BarChart3 size={15} /> Dados
         </button>
+
+        <button
+          className={`${styles.navItem} ${section === 'criativos' ? styles.navItemActive : ''}`}
+          onClick={() => setSection('criativos')}
+        >
+          <Megaphone size={15} /> Criativos
+        </button>
       </aside>
 
       <div className={styles.content}>
         {section === 'dados' ? (
           <DadosSection user={user} />
+        ) : section === 'criativos' ? (
+          <CriativosSection user={user} />
         ) : store.loading ? (
           <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
         ) : section === 'testes' ? (

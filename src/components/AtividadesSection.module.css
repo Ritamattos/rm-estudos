@@ -87,3 +87,26 @@
   filter: drop-shadow(0 0 10px var(--purple));
 }
 @keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(0.9) } 50% { opacity: 1; transform: scale(1.1) } }
+
+/* Phones: the side nav becomes a horizontal, scrollable tab strip on top. */
+@media (max-width: 640px) {
+  .wrapper { flex-direction: column; }
+  .nav {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .navTitle { display: none; }
+  .navItem { flex-shrink: 0; white-space: nowrap; padding: 8px 12px; }
+  .subGroup {
+    flex-direction: row;
+    margin: 0;
+    padding-left: 6px;
+    border-left: 1.5px solid var(--border);
+  }
+  .subItem { flex-shrink: 0; white-space: nowrap; }
+}

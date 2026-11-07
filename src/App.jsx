@@ -12,6 +12,7 @@ import NotesSection from './components/NotesSection'
 import BibliotecaSection from './components/BibliotecaSection'
 import TelaSection from './components/TelaSection'
 import AtividadesSection from './components/AtividadesSection'
+import ProfileSwitcher from './components/ProfileSwitcher'
 import styles from './App.module.css'
 
 const WORKSPACES = [
@@ -108,7 +109,6 @@ export default function App() {
   useEffect(() => { writeSessionWorkspace(workspace) }, [workspace])
 
   const profile = WORKSPACES.find(w => w.id === workspace).profile
-  const nextProfile = PROFILES[profile].next
   const profileTabs = WORKSPACES.filter(w => w.profile === profile)
 
   function goToWorkspace(id) {
@@ -119,7 +119,7 @@ export default function App() {
   }
 
   function switchProfile() {
-    goToWorkspace(firstWorkspaceOf(nextProfile))
+    goToWorkspace(firstWorkspaceOf(PROFILES[profile].next))
   }
 
   // Covers sign-outs that don't go through the button (expired session,
@@ -245,17 +245,6 @@ export default function App() {
             </button>
           )}
 
-          <button
-            type="button"
-            className={`${styles.profileBtn} ${profile === 'pessoal' ? styles.profilePessoal : styles.profileEmpresa}`}
-            onClick={switchProfile}
-            title={`Perfil ${PROFILES[profile].label} · trocar para ${PROFILES[nextProfile].label}`}
-            aria-label={`Perfil ativo: ${PROFILES[profile].label}. Trocar para ${PROFILES[nextProfile].label}`}
-          >
-            <span className={styles.profileAvatar}>{PROFILES[profile].icon}</span>
-            <span className={styles.profileLabel}>{PROFILES[profile].label}</span>
-          </button>
-
           {profileTabs.map(w => (
             <button
               key={w.id}
@@ -266,21 +255,29 @@ export default function App() {
             </button>
           ))}
 
-          {isSpecialSection && (
-            <div className={styles.tabsEnd}>
-              {install.canInstall && (
-                <button className={styles.installTabBtn} onClick={install.prompt} title="Instalar app">
-                  <Download size={14} /> <span>Instalar</span>
+          <div className={styles.tabsEnd}>
+            {isSpecialSection && (
+              <>
+                {install.canInstall && (
+                  <button className={styles.installTabBtn} onClick={install.prompt} title="Instalar app">
+                    <Download size={14} /> <span>Instalar</span>
+                  </button>
+                )}
+                <button className={styles.themeTabBtn} onClick={() => setIsDark(!isDark)}>
+                  {isDark ? '☀️' : '🌙'}
                 </button>
-              )}
-              <button className={styles.themeTabBtn} onClick={() => setIsDark(!isDark)}>
-                {isDark ? '☀️' : '🌙'}
-              </button>
-              <button className={styles.logoutTabBtn} onClick={logout}>
-                Sair
-              </button>
-            </div>
-          )}
+                <button className={styles.logoutTabBtn} onClick={logout}>
+                  Sair
+                </button>
+              </>
+            )}
+            <ProfileSwitcher
+              user={user}
+              profile={profile}
+              profiles={PROFILES}
+              onSwitch={switchProfile}
+            />
+          </div>
         </div>
 
         {workspace === 'biblioteca' ? (

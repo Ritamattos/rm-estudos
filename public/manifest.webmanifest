@@ -1,0 +1,19 @@
+{
+  "name": "RM Estudos",
+  "short_name": "RM Estudos",
+  "description": "Estudos, notas, biblioteca, cinemateca e atividades em um só lugar.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "background_color": "#0d0d12",
+  "theme_color": "#0d0d12",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

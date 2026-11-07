@@ -9,7 +9,7 @@
 .topbar {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap;
-  padding: 1.5rem 2rem 1rem;
+  padding: 1.5rem var(--gutter) 1rem;
 }
 
 .title {
@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 2rem 1rem;
+  padding: 0 var(--gutter) 1rem;
   flex-wrap: wrap;
 }
 
@@ -94,7 +94,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 2rem 1rem;
+  margin: 0 var(--gutter) 1rem;
   padding: 12px;
   background: var(--bg2);
   border: 1px solid var(--border2);
@@ -148,7 +148,7 @@
 .addCancel:hover { background: var(--bg3); color: var(--text2); }
 
 .list {
-  padding: 0 2rem 2rem;
+  padding: 0 var(--gutter) 2rem;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -249,3 +249,7 @@
   gap: 12px; padding: 4rem; color: var(--text3); text-align: center;
 }
 .emptyIcon { font-size: 32px; color: var(--border2); margin-bottom: 4px; }
+
+@media (max-width: 640px) {
+  .addInput { min-width: 0; }
+}

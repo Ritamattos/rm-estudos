@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 2rem;
+  padding: 14px var(--gutter);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 8px 2rem;
+  padding: 8px var(--gutter);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -150,7 +150,7 @@
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  padding: 2rem;
+  padding: 2rem var(--gutter);
 }
 
 .editor {
@@ -224,3 +224,16 @@
   color: #111827 !important;
 }
 :global(.rm-pdf-export) :global(.ProseMirror a) { color: #6d28d9 !important; }
+
+/* ── Celular / touch ── */
+@media (hover: none) {
+  .editor :global(.rm-resize-handle) { opacity: 1; width: 18px; height: 18px; }
+}
+@media (max-width: 640px) {
+  .header { flex-wrap: wrap; gap: 8px; padding: 10px var(--gutter); }
+  .titleInput { order: 10; flex: 1 1 100%; font-size: 18px; }
+  .backBtn, .pdfBtn { padding: 8px 10px; }
+  .saveBtn { margin-left: auto; padding: 9px 14px; }
+  .toolbar button { width: 38px; height: 38px; }
+  .contentArea { padding: 1.25rem var(--gutter) 3rem; }
+}

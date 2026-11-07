@@ -12,6 +12,7 @@
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   height: 100vh;
+  height: 100dvh;
   position: sticky;
   top: 0;
   overflow-y: auto;
@@ -134,7 +135,7 @@
 .tipoFilter {
   display: flex;
   gap: 6px;
-  padding: 0 2rem 0.75rem;
+  padding: 0 var(--gutter) 0.75rem;
   flex-wrap: wrap;
 }
 .tipoBtn {
@@ -192,7 +193,7 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 1.5rem 2rem 1rem;
+  padding: 1.5rem var(--gutter) 1rem;
 }
 
 .titleArea {}
@@ -317,7 +318,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 18px;
-  padding: 0 2rem 2rem;
+  padding: 0 var(--gutter) 2rem;
   overflow-y: auto;
   flex: 1;
 }
@@ -442,7 +443,7 @@
 .listView {
   flex: 1;
   overflow-y: auto;
-  padding: 0 2rem 2rem;
+  padding: 0 var(--gutter) 2rem;
 }
 
 .listHeader {
@@ -898,3 +899,54 @@
 .ctxMenu button:hover { background: var(--bg3); color: var(--text); }
 .ctxDanger { color: var(--danger) !important; }
 .ctxDanger:hover { background: var(--danger-dim) !important; color: var(--danger) !important; }
+
+/* ── Celular / touch ─────────────────────────────────────────── */
+@media (hover: none) {
+  .libMenuBtn { opacity: 1; }
+  .cardOverlay { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  /* A barra lateral vira um bloco no topo com as categorias em "chips". */
+  .wrapper { flex-direction: column; overflow: visible; }
+  .libSidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .libSidebarHeader { padding: 0.75rem var(--gutter) 0.5rem; border-bottom: none; }
+  .libAddCatBtn { width: 32px; height: 32px; }
+  .libNavList {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 var(--gutter) 0.75rem;
+  }
+  .libNavItemWrap { flex: 0 0 auto; }
+  .libNavItem {
+    width: auto;
+    padding: 7px 8px 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border2);
+    min-height: 38px;
+  }
+  .libNavName { max-width: 46vw; }
+  .libMenuBtn { width: 28px; height: 28px; }
+  .libDropdown { left: 0; right: auto; min-width: 170px; }
+  .libSidebarStats { display: none; }
+
+  .libMain, .section { overflow: visible; }
+
+  .controls { width: 100%; }
+  .searchWrap { flex: 1 1 100%; }
+  .search { width: 100%; }
+
+  /* Lista em tabela: rola na horizontal em vez de espremer as colunas. */
+  .listView { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .listHeader, .listRow { min-width: 720px; }
+
+  .detailBox { max-height: 92dvh; }
+}

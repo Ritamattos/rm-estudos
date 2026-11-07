@@ -1,5 +1,6 @@
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,3 +164,9 @@
   transition: all 0.15s;
 }
 .methodToggle button.methodActive { background: var(--purple); color: white; }
+
+@media (max-width: 480px) {
+  .page { padding: 1rem; }
+  .box { padding: 1.75rem 1.25rem; }
+  .glow { width: 120vw; height: 120vw; }
+}

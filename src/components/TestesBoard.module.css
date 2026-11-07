@@ -1,7 +1,7 @@
 .board {
   display: flex;
   gap: 16px;
-  padding: 1.5rem 2rem 2rem;
+  padding: 1.5rem var(--gutter) 2rem;
   align-items: flex-start;
   overflow-x: auto;
   flex: 1;
@@ -171,3 +171,14 @@
   flex-shrink: 0;
 }
 .colAddBtn:hover { background: var(--bg2); color: var(--purple-light); }
+
+/* ── Celular ── */
+@media (max-width: 640px) {
+  .board {
+    padding-top: 0.5rem;
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .col { min-width: 82vw; max-width: 82vw; scroll-snap-align: start; }
+}

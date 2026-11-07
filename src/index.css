@@ -92,3 +92,21 @@ input:focus, textarea:focus, select:focus {
 select option { background: var(--bg3); }
 textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
 ::placeholder { color: var(--text3); }
+
+/* ── Responsivo / app instalado ─────────────────────────────── */
+:root { --gutter: 2rem; }
+@media (max-width: 640px) { :root { --gutter: 1rem; } }
+
+html { -webkit-text-size-adjust: 100%; }
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+img, video { max-width: 100%; }
+
+/* iOS dá zoom automático em campos com fonte < 16px. */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px; }
+}
+
+/* App aberto pela tela inicial (PWA): sem seleção de texto acidental em botões. */
+@media (display-mode: standalone) {
+  button { -webkit-user-select: none; user-select: none; }
+}

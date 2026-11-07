@@ -1,7 +1,7 @@
 .board {
   display: flex;
   gap: 16px;
-  padding: 1.5rem 2rem 2rem;
+  padding: 1.5rem var(--gutter) 2rem;
   align-items: flex-start;
   overflow-x: auto;
   flex: 1;
@@ -174,3 +174,20 @@
   text-align: center;
 }
 .colAddBtn:hover { background: var(--bg3); color: var(--purple-light); border-color: var(--purple); border-style: solid; }
+
+/* ── Celular / touch ── */
+@media (hover: none) {
+  .kCardEdit, .kCardDelete { opacity: 1; width: 30px; height: 30px; }
+}
+@media (max-width: 640px) {
+  .board {
+    padding-top: 0.5rem;
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .col { min-width: 82vw; max-width: 82vw; scroll-snap-align: start; }
+  .kCard { padding: 12px; }
+  .kCardTitle { font-size: 14px; }
+  .colAddBtn { padding: 12px; font-size: 13px; }
+}

@@ -6,3 +6,11 @@ import './index.css'
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode><App /></React.StrictMode>
 )
+
+// Registra o service worker (só no build de produção) para o app poder
+// ser instalado no celular e abrir mesmo com internet instável.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}

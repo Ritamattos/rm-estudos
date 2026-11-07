@@ -1,7 +1,8 @@
-.app { display: flex; min-height: 100vh; background: var(--bg); }
+.app { display: flex; min-height: 100vh; min-height: 100dvh; background: var(--bg); }
 
 .loading {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex; align-items: center; justify-content: center;
   background: var(--bg);
 }
@@ -20,9 +21,73 @@
 .workspaceTabs {
   display: flex;
   gap: 4px;
-  padding: 1.25rem 2rem 0;
+  padding: 1.25rem var(--gutter) 0;
   border-bottom: 1px solid var(--border);
   align-items: flex-end;
+}
+
+/* Profile switcher: round avatar with a colored ring marking the active
+   profile. The button itself is the 44px touch target. */
+.profileBtn {
+  --ring: var(--purple);
+  --ring-dim: var(--purple-dim2);
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px;
+  padding: 0 12px 0 0;
+  margin: 0 10px 4px 0;
+  border-radius: 999px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.profileBtn:hover { background: var(--bg3); color: var(--text); }
+.profileBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.profileEmpresa { --ring: var(--purple); --ring-dim: var(--purple-dim2); }
+.profilePessoal { --ring: #ec4899; --ring-dim: rgba(236,72,153,0.18); }
+[data-theme="light"] .profilePessoal { --ring: #db2777; }
+
+.profileAvatar {
+  width: 36px; height: 36px;
+  margin: 4px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ring-dim);
+  color: var(--ring);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ring);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.profileLabel { white-space: nowrap; }
+
+/* Botão de menu (abre a gaveta de categorias) — só no celular. */
+.menuBtn {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  margin: 0 2px 4px -6px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.menuBtn:hover { background: var(--bg3); color: var(--text); }
+
+.installTabBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  background: var(--purple-dim);
+  color: var(--purple-light);
+  font-size: 12px; font-weight: 600;
+  white-space: nowrap;
+}
+.installTabBtn:hover { background: var(--purple-dim2); }
+
+@media (max-width: 768px) {
+  .menuBtn { display: flex; }
 }
 
 .tabsEnd {
@@ -72,10 +137,30 @@
   border-bottom-color: var(--bg2);
 }
 
+@media (max-width: 640px) {
+  .workspaceTabs {
+    padding: 0.75rem 1rem 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .workspaceTabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 10px 12px; flex-shrink: 0; min-height: 44px; }
+  .profileBtn { margin-right: 6px; }
+  .tabsEnd { flex-shrink: 0; }
+  .themeTabBtn, .logoutTabBtn, .installTabBtn { min-height: 40px; }
+  .installTabBtn span { display: none; }
+  .topbar { padding-top: 1rem; }
+  .viewTitle { font-size: 19px; }
+}
+@media (max-width: 420px) {
+  .profileLabel { display: none; }
+  .profileBtn { padding-right: 0; }
+}
+
 .topbar {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; flex-wrap: wrap;
-  padding: 1.5rem 2rem 1rem;
+  padding: 1.5rem var(--gutter) 1rem;
 }
 
 .viewTitle {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight, X, Download } from 'lucide-react'
 import { useDragReorder } from '../hooks/useDragReorder'
 import styles from './Sidebar.module.css'
 
@@ -10,7 +10,8 @@ export default function Sidebar({
   onAddCat, onEditCat, onDeleteCat,
   onAddSub, onEditSub, onDeleteSub,
   onReorderCategories, onReorderSubcategories,
-  onLogout, isDark, onToggleTheme
+  onLogout, isDark, onToggleTheme,
+  mobileOpen = false, onCloseMobile, install
 }) {
   const [menu, setMenu] = useState(null)
   const [subMenu, setSubMenu] = useState(null)
@@ -33,10 +34,15 @@ export default function Sidebar({
   function closeMenus() { setMenu(null); setSubMenu(null) }
 
   return (
-    <aside className={styles.sidebar} onClick={closeMenus}>
+    <>
+    {mobileOpen && <div className={styles.backdrop} onClick={onCloseMobile} />}
+    <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ''}`} onClick={closeMenus}>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>◆</span>
         <span className={styles.logoText}>RM Estudos</span>
+        <button className={styles.closeBtn} onClick={e => { e.stopPropagation(); onCloseMobile?.() }} aria-label="Fechar menu">
+          <X size={18} />
+        </button>
       </div>
 
       <div className={styles.section}>
@@ -121,6 +127,11 @@ export default function Sidebar({
       </div>
 
       <div className={styles.bottom}>
+        {install?.canInstall && (
+          <button className={styles.installBtn} onClick={install.prompt}>
+            <Download size={14} /> Instalar app
+          </button>
+        )}
         <button className={styles.themeBtn} onClick={onToggleTheme}>
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
           {isDark ? 'Modo claro' : 'Modo escuro'}
@@ -130,5 +141,6 @@ export default function Sidebar({
         </button>
       </div>
     </aside>
+    </>
   )
 }

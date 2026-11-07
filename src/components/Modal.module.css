@@ -16,6 +16,7 @@
   animation: slideUp 0.2s ease;
   box-shadow: 0 20px 60px rgba(139,92,246,0.15);
   max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
   display: flex;
   flex-direction: column;
 }
@@ -52,3 +53,20 @@
   box-shadow: 0 4px 14px rgba(139,92,246,0.3);
 }
 .save:hover { background: var(--purple2); }
+
+/* ── Celular: o modal vira uma "folha" que sobe da parte de baixo. ── */
+@media (max-width: 640px) {
+  .bg { align-items: flex-end; padding: 0; }
+  .box {
+    max-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92vh;
+    max-height: 92dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .header { padding: 1.25rem 1.25rem 0; }
+  .body { padding: 1rem 1.25rem; }
+  .footer { padding: 0 1.25rem 1.25rem; }
+  .cancel, .save { flex: 1; padding: 12px; font-size: 14px; }
+  .closeBtn { width: 36px; height: 36px; }
+}

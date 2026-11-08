@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight, Download } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, ChevronRight, Download } from 'lucide-react'
 import { useDragReorder } from '../hooks/useDragReorder'
 import SideDrawer, { DrawerCloseButton } from './SideDrawer'
-import AccentPicker from './AccentPicker'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({
@@ -12,7 +11,7 @@ export default function Sidebar({
   onAddCat, onEditCat, onDeleteCat,
   onAddSub, onEditSub, onDeleteSub,
   onReorderCategories, onReorderSubcategories,
-  onLogout, isDark, onToggleTheme, accent, onAccentChange,
+  onLogout,
   mobileOpen = false, onCloseMobile, install
 }) {
   const [menu, setMenu] = useState(null)
@@ -35,8 +34,22 @@ export default function Sidebar({
 
   function closeMenus() { setMenu(null); setSubMenu(null) }
 
+  // Below the shared "Aparência" block that SideDrawer adds.
+  const footer = (
+    <div className={styles.bottom}>
+      {install?.canInstall && (
+        <button className={styles.installBtn} onClick={install.prompt}>
+          <Download size={14} /> Instalar app
+        </button>
+      )}
+      <button className={styles.logoutBtn} onClick={onLogout}>
+        <LogOut size={14} /> Sair
+      </button>
+    </div>
+  )
+
   return (
-    <SideDrawer className={styles.sidebar} open={mobileOpen} onClose={onCloseMobile} onClick={closeMenus}>
+    <SideDrawer className={styles.sidebar} open={mobileOpen} onClose={onCloseMobile} onClick={closeMenus} footer={footer}>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>◆</span>
         <span className={styles.logoText}>RM Estudos</span>
@@ -124,23 +137,6 @@ export default function Sidebar({
         })}
       </div>
 
-      <div className={styles.bottom}>
-        {install?.canInstall && (
-          <button className={styles.installBtn} onClick={install.prompt}>
-            <Download size={14} /> Instalar app
-          </button>
-        )}
-        <div className={styles.themeRow}>
-          <button className={styles.themeBtn} onClick={onToggleTheme}>
-            {isDark ? <Sun size={15} /> : <Moon size={15} />}
-            {isDark ? 'Modo claro' : 'Modo escuro'}
-          </button>
-          <AccentPicker accent={accent} onChange={onAccentChange} />
-        </div>
-        <button className={styles.logoutBtn} onClick={onLogout}>
-          <LogOut size={14} /> Sair
-        </button>
-      </div>
     </SideDrawer>
   )
 }

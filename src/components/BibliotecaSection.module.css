@@ -3,7 +3,7 @@
   display: flex;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip; /* not hidden: that would break the sticky side list */
 }
 
 .libSidebar {

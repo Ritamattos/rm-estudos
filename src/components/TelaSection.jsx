@@ -412,7 +412,7 @@ export default function TelaSection({ user, store: appStore, navOpen = false, on
   return (
     <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
-      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav}>
+      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav} belowTabs>
         <div className={styles.libSidebarHeader}>
           <span className={styles.libSidebarTitle}>Cinemateca</span>
           <div className={styles.libSidebarActions}>

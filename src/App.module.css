@@ -24,6 +24,11 @@
   padding: 1.25rem var(--gutter) 0;
   border-bottom: 1px solid var(--border);
   align-items: flex-end;
+  /* Stays on top while the page scrolls; side lists pin below it. */
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--bg);
 }
 
 /* Botão de menu (abre a gaveta de categorias) — só no celular. */
@@ -61,14 +66,6 @@
   padding-bottom: 4px;
 }
 
-.themeTabBtn {
-  padding: 6px 10px;
-  border-radius: var(--radius);
-  color: var(--text3);
-  font-size: 15px;
-  transition: all 0.15s;
-}
-.themeTabBtn:hover { background: var(--bg3); color: var(--text2); }
 
 .logoutTabBtn {
   padding: 6px 12px;
@@ -118,7 +115,7 @@
     background: var(--bg);
     box-shadow: -10px 0 10px -6px var(--bg);
   }
-  .themeTabBtn, .logoutTabBtn, .installTabBtn { min-height: 40px; }
+  .logoutTabBtn, .installTabBtn { min-height: 40px; }
   .installTabBtn span { display: none; }
   .topbar { padding-top: 1rem; }
   .viewTitle { font-size: 19px; }

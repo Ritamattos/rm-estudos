@@ -169,10 +169,8 @@
   gap: 6px;
 }
 
-.themeRow { display: flex; align-items: center; gap: 4px; }
-.themeRow .themeBtn { flex: 1; min-width: 0; }
 
-.themeBtn, .logoutBtn {
+.logoutBtn {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 10px;
   border-radius: var(--radius);
@@ -182,7 +180,6 @@
   width: 100%;
   text-align: left;
 }
-.themeBtn:hover { background: var(--accent-dim); color: var(--accent-light); }
 .logoutBtn:hover { background: var(--danger-dim); color: var(--danger); }
 .installBtn {
   display: flex; align-items: center; gap: 8px;
@@ -210,5 +207,5 @@
   .chevronBtn { width: 24px; height: 24px; }
   .menuBtn { width: 32px; height: 32px; }
   .addBtn { width: 28px; height: 28px; }
-  .themeBtn, .logoutBtn, .installBtn { padding: 12px 10px; font-size: 14px; }
+  .logoutBtn, .installBtn { padding: 12px 10px; font-size: 14px; }
 }

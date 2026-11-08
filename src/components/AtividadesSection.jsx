@@ -20,7 +20,7 @@ export default function AtividadesSection({ user, navOpen = false, onCloseNav })
 
   return (
     <div className={styles.wrapper}>
-      <SideDrawer className={styles.nav} open={navOpen} onClose={onCloseNav}>
+      <SideDrawer className={styles.nav} open={navOpen} onClose={onCloseNav} belowTabs>
         <div className={styles.navHeader}>
           <span className={styles.navTitle}>Atividades</span>
           <DrawerCloseButton onClose={onCloseNav} />

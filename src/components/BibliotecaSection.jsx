@@ -327,7 +327,7 @@ export default function BibliotecaSection({ user, store: appStore, navOpen = fal
   return (
     <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
-      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav}>
+      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav} belowTabs>
         <div className={styles.libSidebarHeader}>
           <span className={styles.libSidebarTitle}>Biblioteca</span>
           <div className={styles.libSidebarActions}>

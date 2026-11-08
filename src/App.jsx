@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList, BarChart3, Building2, User, Menu, Download } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
@@ -14,7 +14,7 @@ import TelaSection from './components/TelaSection'
 import AtividadesSection from './components/AtividadesSection'
 import DadosWorkspace from './components/DadosWorkspace'
 import ProfileSwitcher from './components/ProfileSwitcher'
-import AccentPicker from './components/AccentPicker'
+import { ThemeContext } from './components/ThemeSettings'
 import { readIsDark, readAccent, applyTheme } from './lib/theme'
 import styles from './App.module.css'
 
@@ -152,6 +152,19 @@ export default function App() {
     onAccentChange: setAccent,
   }
 
+  // Publishes the tab bar's height as --tabbar-h so side lists under it can
+  // be pinned right below it (see SideDrawer's belowTabs).
+  const tabBarRef = useRef(null)
+  useLayoutEffect(() => {
+    const el = tabBarRef.current
+    if (!el) return
+    const publish = () => document.documentElement.style.setProperty('--tabbar-h', `${el.offsetHeight}px`)
+    publish()
+    const ro = new ResizeObserver(publish)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [user, authLoading])
+
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
 
   function openModal(type, extra = {}) { setModal(type); setForm(extra) }
@@ -206,6 +219,8 @@ export default function App() {
   if (!user) return <Login {...themeControls} />
 
   return (
+    // Theme controls live in every side menu (ThemeSettings via SideDrawer).
+    <ThemeContext.Provider value={themeControls}>
     <div className={styles.app}>
       {!isSpecialSection && (
         <Sidebar
@@ -235,7 +250,6 @@ export default function App() {
           onReorderCategories={store.reorderCategories}
           onReorderSubcategories={(catId, ids) => store.reorderSubcategories(ids)}
           onLogout={logout}
-          {...themeControls}
           mobileOpen={navOpen}
           onCloseMobile={() => setNavOpen(false)}
           install={install}
@@ -243,7 +257,7 @@ export default function App() {
       )}
 
       <main className={`${styles.main} ${isSpecialSection ? styles.mainFull : ''}`}>
-        <div className={styles.workspaceTabs}>
+        <div className={styles.workspaceTabs} ref={tabBarRef}>
           {/* Every workspace has a side list; on phones this ☰ opens it as
               a drawer (SideDrawer). Hidden on desktop. */}
           <button
@@ -273,15 +287,6 @@ export default function App() {
                     <Download size={14} /> <span>Instalar</span>
                   </button>
                 )}
-                <AccentPicker accent={accent} onChange={setAccent} />
-                <button
-                  className={styles.themeTabBtn}
-                  onClick={themeControls.onToggleTheme}
-                  title={isDark ? 'Modo claro' : 'Modo escuro'}
-                  aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
-                >
-                  {isDark ? '☀️' : '🌙'}
-                </button>
                 <button className={styles.logoutTabBtn} onClick={logout}>
                   Sair
                 </button>
@@ -367,5 +372,6 @@ export default function App() {
       )}
 
     </div>
+    </ThemeContext.Provider>
   )
 }

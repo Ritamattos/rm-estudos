@@ -1,6 +1,22 @@
 .closeBtn { display: none; }
 .backdrop { display: none; }
 
+/* Desktop: lists under the tab bar are pinned below it and fill the rest of
+   the viewport, so the "Aparência" footer never ends up below a long page.
+   --tabbar-h is measured by App. */
+@media (min-width: 769px) {
+  aside.belowTabs {
+    position: sticky;
+    top: var(--tabbar-h, 0px);
+    height: calc(100vh - var(--tabbar-h, 0px));
+    height: calc(100dvh - var(--tabbar-h, 0px));
+    align-self: flex-start;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 /* Celular: a lista lateral vira uma gaveta que desliza da esquerda.
    `aside.drawer` outranks each section's own single-class sidebar rules. */
 @media (max-width: 768px) {

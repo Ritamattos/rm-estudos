@@ -20,7 +20,7 @@ export default function DadosWorkspace({ user, title, navOpen = false, onCloseNa
 
   return (
     <div className={styles.wrapper}>
-      <SideDrawer className={styles.nav} open={navOpen} onClose={onCloseNav}>
+      <SideDrawer className={styles.nav} open={navOpen} onClose={onCloseNav} belowTabs>
         <div className={styles.navHeader}>
           <span className={styles.navTitle}>{title}</span>
           <DrawerCloseButton onClose={onCloseNav} />

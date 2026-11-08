@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, TrendingUp } from 'lucide-react'
+import { RefreshCw, TrendingUp, Trophy, Info } from 'lucide-react'
 import { useFinancialStore } from '../hooks/useFinancialStore'
+import { offerKey, offerCatalog, aggregateOffers, rankOffers } from '../lib/offers'
 import styles from './DadosSection.module.css'
 
 function currency(v) {
@@ -48,6 +49,87 @@ const TABLE_METRICS = [
   { key: 'despesas_variaveis', label: 'Despesas Variáveis', format: currency, invert: true },
 ]
 
+// With one offer selected: only what the sheet breaks down per offer.
+// Lucro Líquido and the expenses are company-wide, so they're left out.
+const OFFER_CHART_METRICS = [
+  { key: 'receita_total', label: 'Receita', format: currency },
+  { key: 'lucro_bruto', label: 'Lucro Bruto', format: currency },
+  { key: 'roi', label: 'ROI', format: percent },
+  { key: 'roas', label: 'ROAS', format: multiplier },
+  { key: 'investido', label: 'Investido', format: currency },
+]
+
+const OFFER_TABLE_METRICS = [
+  { key: 'investido', label: 'Investido', format: currency, invert: false },
+  { key: 'vendas', label: 'Vendas', format: currency, invert: false },
+  { key: 'receita_total', label: 'Receita', format: currency, invert: false },
+  { key: 'lucro_bruto', label: 'Lucro Bruto', format: currency, invert: false },
+  { key: 'roi', label: 'ROI', format: percent, invert: false },
+  { key: 'roas', label: 'ROAS', format: multiplier, invert: false },
+]
+
+function profitClass(value) {
+  return value < 0 ? styles.cardLoss : styles.cardProfit
+}
+
+// Offers ranked by Lucro Bruto, with a bar per row that grows right from the
+// zero line for profit and left for loss. Clicking a row filters by it.
+function OfferRanking({ ranking, onPick }) {
+  const maxPos = Math.max(0, ...ranking.map(r => r.lucro_bruto))
+  const maxNeg = Math.max(0, ...ranking.map(r => -r.lucro_bruto))
+  const span = maxPos + maxNeg || 1
+  const zero = (maxNeg / span) * 100
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={`${styles.table} ${styles.rankTable}`}>
+        <thead>
+          <tr>
+            <th>#</th><th>Oferta</th><th className={styles.rankBarHead}>Lucro Bruto</th>
+            <th>Investido</th><th>Receita</th><th>ROI</th><th>ROAS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranking.map((r, i) => {
+            const width = (Math.abs(r.lucro_bruto) / span) * 100
+            const loss = r.lucro_bruto < 0
+            return (
+              <tr
+                key={r.key}
+                className={styles.rankRow}
+                tabIndex={0}
+                role="button"
+                title={`Ver só ${r.name}`}
+                onClick={() => onPick(r.key)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(r.key) } }}
+              >
+                <td className={styles.rankPos}>{i + 1}</td>
+                <td className={styles.rankName}>{r.name}</td>
+                <td>
+                  <div className={styles.rankBarCell}>
+                    <div className={styles.rankBarTrack}>
+                      {maxNeg > 0 && <span className={styles.rankZero} style={{ left: `${zero}%` }} />}
+                      <span
+                        className={`${styles.rankBar} ${loss ? styles.rankBarLoss : styles.rankBarProfit}`}
+                        style={{ left: `${loss ? zero - width : zero}%`, width: `${Math.max(width, 0.8)}%` }}
+                      />
+                    </div>
+                    <span className={loss ? styles.lossText : styles.profitText}>{currency(r.lucro_bruto)}</span>
+                  </div>
+                </td>
+                <td>{currency(r.investido)}</td>
+                <td>{currency(r.receita_total)}</td>
+                <td className={loss ? styles.lossText : ''}>{percent(r.roi)}</td>
+                <td>{multiplier(r.roas)}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function LineChartCard({ metric, months }) {
   const points = months.map(m => ({ label: m.month_name, value: metric.key === 'roi' ? (m[metric.key] ?? 0) * 100 : (m[metric.key] ?? 0) }))
   const values = points.map(p => p.value)
@@ -87,6 +169,7 @@ export default function DadosSection({ user }) {
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [compareSelected, setCompareSelected] = useState([])
   const [viewAll, setViewAll] = useState(false)
+  const [selectedOffer, setSelectedOffer] = useState('') // offer key; '' = all offers
 
   const sortedMonths = useMemo(() => [...months].sort((a, b) => a.month_number - b.month_number), [months])
 
@@ -137,13 +220,55 @@ export default function DadosSection({ user }) {
     }
   }, [sortedMonths, selectedMonth])
 
+  // ── Offer filter ────────────────────────────────────────────────────────
+  const catalog = useMemo(() => offerCatalog(offers), [offers])
+  const offerName = catalog.find(c => c.key === selectedOffer)?.name
+
+  // A re-sync can drop an offer; fall back to "all" instead of an empty view.
+  useEffect(() => {
+    if (selectedOffer && !catalog.some(c => c.key === selectedOffer)) setSelectedOffer('')
+  }, [catalog, selectedOffer])
+
+  const rowsOfOffer = useMemo(
+    () => (selectedOffer ? offers.filter(o => offerKey(o.offer_name) === selectedOffer) : []),
+    [offers, selectedOffer],
+  )
+
+  // The selected offer month by month (zeros where it didn't run), shaped
+  // like a month row so the existing charts and table can draw it.
+  const offerSeriesFor = monthList => monthList.map(m => ({
+    month_number: m.month_number,
+    month_name: m.month_name,
+    ...aggregateOffers(rowsOfOffer.filter(o => o.month_number === m.month_number)),
+  }))
+
+  const offerStats = selectedOffer
+    ? aggregateOffers(viewAll ? rowsOfOffer : rowsOfOffer.filter(o => o.month_number === selectedMonth))
+    : null
+
+  const ranking = useMemo(
+    () => rankOffers(viewAll ? offers : offers.filter(o => o.month_number === selectedMonth), catalog),
+    [offers, viewAll, selectedMonth, catalog],
+  )
+
+  // What the comparison charts/table draw: whole-company months, or the
+  // selected offer's numbers in those same months.
+  const barMonths = selectedOffer ? offerSeriesFor(sortedMonths) : sortedMonths
+  const compareSeries = selectedOffer ? offerSeriesFor(effectiveCompareMonths) : effectiveCompareMonths
+  const chartMetrics = selectedOffer ? OFFER_CHART_METRICS : CHART_METRICS
+  const tableMetrics = selectedOffer ? OFFER_TABLE_METRICS : TABLE_METRICS
+  const profitBar = selectedOffer
+    ? { key: 'lucro_bruto', label: 'Lucro Bruto' }
+    : { key: 'lucro_liquido', label: 'Lucro Líquido' }
+
   const current = sortedMonths.find(m => m.month_number === selectedMonth)
-  const monthOffers = offers.filter(o => o.month_number === selectedMonth)
+  const monthOffers = offers.filter(o => o.month_number === selectedMonth
+    && (!selectedOffer || offerKey(o.offer_name) === selectedOffer))
   const despesasFixas = expenses.filter(e => e.month_number === selectedMonth && e.tipo === 'fixa')
   const despesasVariaveis = expenses.filter(e => e.month_number === selectedMonth && e.tipo === 'variavel')
 
-  const maxLucro = Math.max(1, ...sortedMonths.map(m => Math.abs(m.lucro_liquido || 0)))
-  const maxRoi = Math.max(1, ...sortedMonths.map(m => Math.abs(m.roi || 0)))
+  const maxLucro = Math.max(1, ...barMonths.map(m => Math.abs(m[profitBar.key] || 0)))
+  const maxRoi = Math.max(1, ...barMonths.map(m => Math.abs(m.roi || 0)))
 
   if (loading) {
     return <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
@@ -155,6 +280,7 @@ export default function DadosSection({ user }) {
         <div>
           <h1 className={styles.title}>Dados</h1>
           <span className={styles.subtitle}>
+            {offerName && <strong className={styles.subtitleOffer}>Oferta: {offerName} · </strong>}
             {viewAll
               ? (sortedMonths.length > 0
                 ? `Total acumulado de ${sortedMonths.length} ${sortedMonths.length === 1 ? 'mês sincronizado' : 'meses sincronizados'}`
@@ -186,6 +312,18 @@ export default function DadosSection({ user }) {
               ))}
             </select>
           )}
+          {catalog.length > 0 && (
+            <select
+              className={`${styles.monthSelect} ${styles.offerSelect} ${selectedOffer ? styles.offerSelectActive : ''}`}
+              value={selectedOffer}
+              onChange={e => setSelectedOffer(e.target.value)}
+              aria-label="Oferta"
+              title="Filtrar por oferta"
+            >
+              <option value="">Todas as ofertas</option>
+              {catalog.map(c => <option key={c.key} value={c.key}>{c.name}</option>)}
+            </select>
+          )}
           <button className={styles.syncBtn} onClick={sync} disabled={syncing}>
             <RefreshCw size={14} className={syncing ? styles.spin : ''} />
             {syncing ? 'Sincronizando...' : 'Atualizar'}
@@ -202,7 +340,43 @@ export default function DadosSection({ user }) {
         </div>
       ) : (
         <div className={styles.content}>
-          {viewAll ? (
+          {offerStats ? (
+            <div className={styles.section}>
+              <div className={styles.cards}>
+                <div className={styles.card}>
+                  <span className={styles.cardLabel}>Investido</span>
+                  <span className={styles.cardValue}>{currency(offerStats.investido)}</span>
+                </div>
+                <div className={styles.card}>
+                  <span className={styles.cardLabel}>Vendas</span>
+                  <span className={styles.cardValue}>{currency(offerStats.vendas)}</span>
+                </div>
+                <div className={styles.card}>
+                  <span className={styles.cardLabel}>Receita</span>
+                  <span className={styles.cardValue}>{currency(offerStats.receita_total)}</span>
+                </div>
+                <div className={`${styles.card} ${profitClass(offerStats.lucro_bruto)}`}>
+                  <span className={styles.cardLabel}>{offerStats.lucro_bruto < 0 ? 'Prejuízo' : 'Lucro Bruto'}</span>
+                  <span className={styles.cardValue}>{currency(offerStats.lucro_bruto)}</span>
+                </div>
+                <div className={styles.card}>
+                  <span className={styles.cardLabel}>{viewAll ? 'ROI Geral' : 'ROI'}</span>
+                  <span className={`${styles.cardValue} ${offerStats.roi < 0 ? styles.lossText : ''}`}>{percent(offerStats.roi)}</span>
+                </div>
+                <div className={styles.card}>
+                  <span className={styles.cardLabel}>{viewAll ? 'ROAS Geral' : 'ROAS'}</span>
+                  <span className={styles.cardValue}>{multiplier(offerStats.roas)}</span>
+                </div>
+              </div>
+              {offerStats.rowCount === 0 && (
+                <p className={styles.emptyHint}>{offerName} não teve lançamentos em {current?.month_name}.</p>
+              )}
+              <p className={styles.offerNote}>
+                <Info size={13} />
+                Lucro Líquido e Despesas são da empresa toda na planilha e não são divididos por oferta, por isso não aparecem aqui.
+              </p>
+            </div>
+          ) : viewAll ? (
             <div className={styles.cards}>
               <div className={styles.card}>
                 <span className={styles.cardLabel}>Receita Total</span>
@@ -266,23 +440,35 @@ export default function DadosSection({ user }) {
             </div>
           )}
 
+          {!selectedOffer && ranking.length > 0 && (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <Trophy size={15} /> Ranking de ofertas — {viewAll ? 'todos os meses' : current?.month_name}
+              </h2>
+              <p className={styles.emptyHint}>Ordenado por Lucro Bruto. Clique numa oferta para ver só ela.</p>
+              <OfferRanking ranking={ranking} onPick={setSelectedOffer} />
+            </div>
+          )}
+
           {sortedMonths.length > 1 && (
             <div className={styles.section}>
-              <h2 className={styles.sectionTitle}><TrendingUp size={15} /> Comparação entre meses</h2>
+              <h2 className={styles.sectionTitle}>
+                <TrendingUp size={15} /> Comparação entre meses{offerName ? ` — ${offerName}` : ''}
+              </h2>
               <div className={styles.chartRow}>
                 <div className={styles.chart}>
-                  <span className={styles.chartLabel}>Lucro Líquido</span>
+                  <span className={styles.chartLabel}>{profitBar.label}</span>
                   <div className={styles.bars}>
-                    {sortedMonths.map(m => (
+                    {barMonths.map(m => (
                       <div
                         key={m.month_number}
                         className={styles.barCol}
-                        title={`${m.month_name}: ${currency(m.lucro_liquido)}`}
+                        title={`${m.month_name}: ${currency(m[profitBar.key])}`}
                         onClick={() => { setSelectedMonth(m.month_number); setViewAll(false) }}
                       >
                         <div
-                          className={`${styles.bar} ${m.month_number === selectedMonth ? styles.barActive : ''}`}
-                          style={{ height: `${Math.max(4, (Math.abs(m.lucro_liquido || 0) / maxLucro) * 100)}%` }}
+                          className={`${styles.bar} ${m.month_number === selectedMonth ? styles.barActive : ''} ${selectedOffer && m[profitBar.key] < 0 ? styles.barLoss : ''}`}
+                          style={{ height: `${Math.max(4, (Math.abs(m[profitBar.key] || 0) / maxLucro) * 100)}%` }}
                         />
                         <span className={styles.barLabel}>{m.month_name.slice(0, 3)}</span>
                       </div>
@@ -292,7 +478,7 @@ export default function DadosSection({ user }) {
                 <div className={styles.chart}>
                   <span className={styles.chartLabel}>ROI</span>
                   <div className={styles.bars}>
-                    {sortedMonths.map(m => (
+                    {barMonths.map(m => (
                       <div
                         key={m.month_number}
                         className={styles.barCol}
@@ -300,7 +486,7 @@ export default function DadosSection({ user }) {
                         onClick={() => { setSelectedMonth(m.month_number); setViewAll(false) }}
                       >
                         <div
-                          className={`${styles.bar} ${styles.barAlt} ${m.month_number === selectedMonth ? styles.barActive : ''}`}
+                          className={`${styles.bar} ${styles.barAlt} ${m.month_number === selectedMonth ? styles.barActive : ''} ${selectedOffer && m.roi < 0 ? styles.barLoss : ''}`}
                           style={{ height: `${Math.max(4, (Math.abs(m.roi || 0) / maxRoi) * 100)}%` }}
                         />
                         <span className={styles.barLabel}>{m.month_name.slice(0, 3)}</span>
@@ -340,8 +526,8 @@ export default function DadosSection({ user }) {
               ) : (
                 <>
                   <div className={styles.lineChartsGrid}>
-                    {CHART_METRICS.map(metric => (
-                      <LineChartCard key={metric.key} metric={metric} months={effectiveCompareMonths} />
+                    {chartMetrics.map(metric => (
+                      <LineChartCard key={metric.key} metric={metric} months={compareSeries} />
                     ))}
                   </div>
 
@@ -350,16 +536,16 @@ export default function DadosSection({ user }) {
                       <thead>
                         <tr>
                           <th>Métrica</th>
-                          {effectiveCompareMonths.map(m => <th key={m.month_number}>{m.month_name}</th>)}
+                          {compareSeries.map(m => <th key={m.month_number}>{m.month_name}</th>)}
                         </tr>
                       </thead>
                       <tbody>
-                        {TABLE_METRICS.map(metric => (
+                        {tableMetrics.map(metric => (
                           <tr key={metric.key}>
                             <td className={styles.metricName}>{metric.label}</td>
-                            {effectiveCompareMonths.map((m, i) => {
+                            {compareSeries.map((m, i) => {
                               const curr = m[metric.key]
-                              const prev = i > 0 ? effectiveCompareMonths[i - 1][metric.key] : null
+                              const prev = i > 0 ? compareSeries[i - 1][metric.key] : null
                               const change = i > 0 ? computeChange(curr, prev) : null
                               return (
                                 <td key={m.month_number}>
@@ -384,9 +570,11 @@ export default function DadosSection({ user }) {
 
           {!viewAll && current && (
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Ofertas — {current.month_name}</h2>
+            <h2 className={styles.sectionTitle}>
+              {offerName ? `${offerName} — ${current.month_name}` : `Ofertas — ${current.month_name}`}
+            </h2>
             {monthOffers.length === 0 ? (
-              <p className={styles.emptyHint}>Nenhuma oferta neste mês.</p>
+              <p className={styles.emptyHint}>{offerName ? 'Esta oferta não aparece neste mês.' : 'Nenhuma oferta neste mês.'}</p>
             ) : (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
@@ -414,7 +602,8 @@ export default function DadosSection({ user }) {
           </div>
           )}
 
-          {!viewAll && current && (
+          {/* Expenses are company-wide: hidden while one offer is selected. */}
+          {!viewAll && current && !selectedOffer && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Despesas — {current.month_name}</h2>
             <div className={styles.expensesRow}>

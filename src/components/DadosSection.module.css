@@ -19,7 +19,7 @@
 }
 .subtitle { font-size: 12px; color: var(--text3); margin-top: 3px; display: block; }
 
-.controls { display: flex; align-items: center; gap: 8px; }
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .monthSelect {
   background: var(--bg2);
@@ -28,6 +28,7 @@
   padding: 8px 12px;
   font-size: 12.5px;
   color: var(--text2);
+  width: auto; /* global select rule is width:100% */
 }
 
 .viewToggle {
@@ -301,3 +302,54 @@
 .emptyIcon { font-size: 32px; color: var(--border2); margin-bottom: 4px; }
 .loadingIcon { font-size: 28px; color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* ── Filtro por oferta ─────────────────────────────────────────────── */
+.offerSelect { max-width: 220px; }
+.offerSelectActive {
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.subtitleOffer { color: var(--accent-light); font-weight: 600; }
+
+/* Lucro (verde) / prejuízo (vermelho): cores de significado, não de tema. */
+.cardProfit { border-color: var(--success); box-shadow: 0 0 0 1px var(--success) inset; }
+.cardProfit .cardValue { color: var(--success); }
+.cardLoss { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
+.cardLoss .cardValue { color: var(--danger); }
+.profitText { color: var(--success); font-weight: 600; }
+.lossText { color: var(--danger) !important; }
+.barLoss, .barAlt.barLoss { background: var(--danger-dim); }
+.barActive.barLoss, .barAlt.barActive.barLoss { background: var(--danger); }
+
+.offerNote {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 12px; color: var(--text3); line-height: 1.45;
+}
+.offerNote svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Ranking de ofertas ───────────────────────────────────────────── */
+.rankRow { cursor: pointer; }
+.rankRow:focus-visible td { background: var(--accent-dim); outline: none; }
+.rankPos { width: 28px; color: var(--text3) !important; font-weight: 600; }
+.rankName { color: var(--text) !important; font-weight: 600; white-space: normal !important; min-width: 120px; }
+.rankBarHead { min-width: 220px; }
+.rankBarCell { display: flex; align-items: center; gap: 10px; }
+.rankBarTrack {
+  position: relative;
+  flex: 1;
+  min-width: 90px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--bg3);
+}
+.rankBar { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.rankBarProfit { background: var(--success); }
+.rankBarLoss { background: var(--danger); }
+.rankZero { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--text3); }
+.rankBarCell > span:last-child { min-width: 96px; text-align: right; }
+
+@media (max-width: 640px) {
+  .offerSelect { max-width: none; flex: 1 1 100%; }
+  .rankRow td { padding-top: 12px; padding-bottom: 12px; }
+}

@@ -45,7 +45,7 @@
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
-.libAddCatBtn:hover { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); }
+.libAddCatBtn:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
 .libNavList {
   padding: 0.5rem 0.75rem;
@@ -57,7 +57,7 @@
 
 .libNavItemWrap { position: relative; }
 .libNavItemWrap.dragging { opacity: 0.4; }
-.libNavItemWrap.dragOver { box-shadow: inset 0 2px 0 var(--purple); }
+.libNavItemWrap.dragOver { box-shadow: inset 0 2px 0 var(--accent); }
 
 .libNavItem {
   display: flex;
@@ -74,7 +74,7 @@
   text-align: left;
 }
 .libNavItem:hover { background: var(--bg3); }
-.libNavActive { background: var(--purple-dim) !important; color: var(--purple-light) !important; }
+.libNavActive { background: var(--accent-dim) !important; color: var(--accent-light) !important; }
 
 .libNavIcon { font-size: 15px; flex-shrink: 0; }
 .libNavName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -149,7 +149,7 @@
   white-space: nowrap;
 }
 .tipoBtn:hover { background: var(--bg3); color: var(--text); }
-.tipoBtnActive { background: var(--purple-dim2); color: var(--purple-light); border-color: var(--purple); }
+.tipoBtnActive { background: var(--accent-dim2); color: var(--accent-light); border-color: var(--accent); }
 
 /* ── View count ── */
 .viewCount { font-size: 12px; color: var(--text3); display: block; margin-top: 3px; }
@@ -264,24 +264,24 @@
   align-items: center;
 }
 .viewBtn:hover { color: var(--text2); background: var(--bg3); }
-.viewBtnActive { color: var(--purple-light) !important; background: var(--purple-dim) !important; }
+.viewBtnActive { color: var(--accent-light) !important; background: var(--accent-dim) !important; }
 
 .addBtn {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 9px 18px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font-display);
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
   transition: all 0.15s;
 }
-.addBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.addBtn:hover { background: var(--accent-strong); transform: translateY(-1px); }
 
 /* ── Empty / Loading ── */
 .empty {
@@ -305,9 +305,9 @@
   font-size: 13px;
   transition: all 0.15s;
 }
-.emptyBtn:hover { background: var(--bg2); color: var(--purple-light); border-color: var(--purple); }
+.emptyBtn:hover { background: var(--bg2); color: var(--accent-light); border-color: var(--accent); }
 .loadingIcon {
-  color: var(--purple);
+  color: var(--accent);
   font-size: 32px;
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -379,8 +379,8 @@
 .card:hover .cardOverlay { opacity: 1; }
 
 .cardCoverPinned {
-  border-color: var(--purple) !important;
-  box-shadow: 0 0 0 1px var(--purple), 0 4px 12px rgba(139,92,246,0.2);
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(var(--accent-rgb), 0.2);
 }
 
 .cardStatus {
@@ -497,7 +497,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.listTitle:hover { color: var(--purple-light); }
+.listTitle:hover { color: var(--accent-light); }
 
 .listCell { font-size: 12.5px; color: var(--text2); }
 
@@ -688,16 +688,16 @@
   align-items: center;
   gap: 6px;
   padding: 9px 18px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.15s;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.openBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.openBtn:hover { background: var(--accent-strong); transform: translateY(-1px); }
 
 .readBtn {
   display: flex;
@@ -742,7 +742,7 @@
   font-size: 13px;
   transition: all 0.15s;
 }
-.detailEditBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--purple); }
+.detailEditBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--accent); }
 
 .detailDeleteBtn {
   width: 36px;
@@ -824,16 +824,16 @@
 
 .saveBtn {
   padding: 9px 22px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font-display);
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
   transition: all 0.15s;
 }
-.saveBtn:hover { background: var(--purple2); }
+.saveBtn:hover { background: var(--accent-strong); }
 
 .uploadBtn {
   width: 100%;
@@ -845,7 +845,7 @@
   transition: all 0.15s;
   text-align: center;
 }
-.uploadBtn:hover { border-color: var(--purple); color: var(--purple-light); background: var(--purple-dim); }
+.uploadBtn:hover { border-color: var(--accent); color: var(--accent-light); background: var(--accent-dim); }
 .uploadBtn:disabled { opacity: 0.6; }
 
 .coverPreview {

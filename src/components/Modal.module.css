@@ -14,7 +14,7 @@
   border-radius: var(--radius-xl);
   width: 100%; max-width: 500px;
   animation: slideUp 0.2s ease;
-  box-shadow: 0 20px 60px rgba(139,92,246,0.15);
+  box-shadow: 0 20px 60px rgba(var(--accent-rgb), 0.15);
   max-height: calc(100vh - 2rem);
   max-height: calc(100dvh - 2rem);
   display: flex;
@@ -46,13 +46,13 @@
 
 .save {
   padding: 9px 22px; border-radius: var(--radius);
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   font-size: 13px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.save:hover { background: var(--purple2); }
+.save:hover { background: var(--accent-strong); }
 
 /* ── Celular: o modal vira uma "folha" que sobe da parte de baixo. ── */
 @media (max-width: 640px) {

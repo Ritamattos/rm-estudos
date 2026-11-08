@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Estudos, notas, biblioteca, cinemateca e atividades em um só lugar." />
     <meta name="theme-color" content="#0d0d12" />
+    <script>
+      // Aplica o modo e a cor salvos antes do primeiro desenho (sem piscar o
+      // tema errado). Mesmas chaves/padrões de src/lib/theme.js.
+      (function () {
+        var mode = 'dark', accent = 'purple'
+        try {
+          if (localStorage.getItem('rm-estudos-theme') === 'light') mode = 'light'
+          if (localStorage.getItem('rm-estudos-accent') === 'green') accent = 'green'
+        } catch (e) {}
+        var el = document.documentElement
+        el.setAttribute('data-theme', mode)
+        el.setAttribute('data-accent', accent)
+        var bg = { 'dark-purple': '#0d0d12', 'light-purple': '#f5f3ff', 'dark-green': '#0a0c0b', 'light-green': '#fbfdfc' }[mode + '-' + accent]
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', bg)
+      })()
+    </script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/icons/favicon-64.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

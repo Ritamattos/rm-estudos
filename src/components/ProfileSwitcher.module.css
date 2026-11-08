@@ -1,14 +1,14 @@
 /* Profile switcher: round avatar (photo or icon) with a colored ring
    marking the active profile, plus a small camera badge to set the photo. */
 .root {
-  --ring: var(--purple);
-  --ring-dim: var(--purple-dim2);
+  --ring: var(--accent);
+  --ring-dim: var(--accent-dim2);
   position: relative;
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
-.empresa { --ring: var(--purple); --ring-dim: var(--purple-dim2); }
+.empresa { --ring: var(--accent); --ring-dim: var(--accent-dim2); }
 .pessoal { --ring: #ec4899; --ring-dim: rgba(236,72,153,0.18); }
 :global([data-theme="light"]) .pessoal { --ring: #db2777; }
 

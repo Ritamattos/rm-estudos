@@ -68,9 +68,9 @@ function LineChartCard({ metric, months }) {
     <div className={styles.lineCard}>
       <span className={styles.chartLabel}>{metric.label}</span>
       <svg viewBox={`-2 -6 ${W + 4} ${H + 12}`} preserveAspectRatio="none" className={styles.lineSvg}>
-        <polyline points={path} fill="none" stroke="var(--purple)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <polyline points={path} fill="none" stroke="var(--accent)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         {coords.map((c, i) => (
-          <circle key={i} cx={c.x} cy={c.y} r="2" fill="var(--purple)">
+          <circle key={i} cx={c.x} cy={c.y} r="2" fill="var(--accent)">
             <title>{`${c.label}: ${metric.format(months[i][metric.key])}`}</title>
           </circle>
         ))}

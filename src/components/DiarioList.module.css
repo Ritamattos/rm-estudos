@@ -22,15 +22,15 @@
 .addBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 9px 18px;
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   border-radius: var(--radius);
   font-size: 13px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.addBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.addBtn:hover { background: var(--accent-strong); transform: translateY(-1px); }
 
 .filterBar {
   display: flex;
@@ -59,7 +59,7 @@
   white-space: nowrap;
 }
 .filterModeBtn:hover { color: var(--text2); }
-.filterModeBtnActive { background: var(--purple); color: white; font-weight: 600; }
+.filterModeBtnActive { background: var(--accent); color: white; font-weight: 600; }
 
 .filterInput {
   width: auto;
@@ -83,12 +83,12 @@
   border-radius: var(--radius);
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--purple-light);
+  color: var(--accent-light);
   border: 1px solid var(--border2);
   transition: all 0.15s;
   white-space: nowrap;
 }
-.todayBtn:hover { background: var(--purple-dim); border-color: var(--purple); }
+.todayBtn:hover { background: var(--accent-dim); border-color: var(--accent); }
 
 .addForm {
   display: flex;
@@ -112,7 +112,7 @@
   font-size: 13px;
   color: var(--text);
 }
-.addInput:focus { outline: none; border-color: var(--purple); }
+.addInput:focus { outline: none; border-color: var(--accent); }
 
 .addDateInput {
   width: auto;
@@ -126,7 +126,7 @@
 
 .addConfirm {
   padding: 8px 16px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 12.5px;
@@ -134,7 +134,7 @@
   transition: all 0.15s;
   white-space: nowrap;
 }
-.addConfirm:hover { background: var(--purple2); }
+.addConfirm:hover { background: var(--accent-strong); }
 
 .addCancel {
   padding: 8px 14px;
@@ -165,7 +165,7 @@
   color: var(--text3);
   padding: 4px 2px;
 }
-.groupHeaderToday { color: var(--purple-light); }
+.groupHeaderToday { color: var(--accent-light); }
 
 .item {
   display: flex;
@@ -188,7 +188,7 @@
   color: transparent;
   transition: all 0.15s;
 }
-.checkBtn:hover { border-color: var(--purple); color: var(--purple-light); }
+.checkBtn:hover { border-color: var(--accent); color: var(--accent-light); }
 .checkBtnDone { background: var(--success); border-color: var(--success); color: white; }
 .checkBtnDone:hover { color: white; }
 
@@ -205,7 +205,7 @@
   padding: 4px 8px;
   font-size: 13.5px;
   background: var(--bg3);
-  border: 1px solid var(--purple);
+  border: 1px solid var(--accent);
   border-radius: 6px;
   color: var(--text);
 }
@@ -219,7 +219,7 @@
   flex-shrink: 0;
 }
 .statusProgress { background: rgba(96,165,250,0.16); color: #60a5fa; }
-.statusDone { background: rgba(74,222,128,0.16); color: #4ade80; }
+.statusDone { background: rgba(74,222,128,0.16); color: #4ade80; box-shadow: var(--success-tag-ring, none); }
 .statusOverdue { background: rgba(248,113,113,0.16); color: #f87171; }
 
 .dateInput {

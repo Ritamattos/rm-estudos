@@ -11,8 +11,9 @@ import Modal from './Modal'
 import {
   MINDMAP_COLORS, createNode, parseMap, serializeMap, findNode, findParent,
   updateNode, removeNode, insertChild, countDescendants, layoutMap, toFlow,
-  recolorBranch, levelOf, moveNode, createSticky, stripEmojis,
+  recolorBranch, levelOf, moveNode, createSticky, stripEmojis, EXPLICIT_ROOT_PURPLE, isThemeRootColor,
 } from '../lib/mindmap'
+import { useAccentColor } from '../hooks/useAccentColor'
 import { exportMindMapPng, exportMindMapPdf } from '../lib/exportMindMap'
 import styles from './MindMapEditor.module.css'
 
@@ -324,9 +325,10 @@ function MindMapCanvas({ note, store, onClose }) {
   }, [])
   const isSticky = id => mapRef.current.stickyNotes.some(s => s.id === id)
 
+  const accentColor = useAccentColor()
   const positions = useMemo(() => layoutMap(root, sizes), [root, sizes])
   const treeFlow = useMemo(() => {
-    const flow = toFlow(root, positions)
+    const flow = toFlow(root, positions, accentColor)
     flow.nodes.forEach(n => {
       const s = sizes.get(n.id)
       if (s) n.measured = s
@@ -344,7 +346,7 @@ function MindMapCanvas({ note, store, onClose }) {
       }
     })
     return flow
-  }, [root, positions, sizes, drag])
+  }, [root, positions, sizes, drag, accentColor])
 
   // Sticky notes: free-floating, never touched by the layout.
   const stickyNodes = useMemo(() => stickies.map(s => ({
@@ -426,7 +428,10 @@ function MindMapCanvas({ note, store, onClose }) {
     if (findParent(r, d.id)?.id === d.target) return
     // Under another branch the moved node adopts that branch's color; moved
     // up to the central node it keeps the color it already showed.
-    const shown = treeFlow.nodes.find(n => n.id === d.id)?.data.color ?? null
+    let shown = treeFlow.nodes.find(n => n.id === d.id)?.data.color ?? null
+    // A branch showing the theme color (inherited from a default-colored
+    // central node) keeps inheriting, so it still follows theme changes.
+    if (isThemeRootColor(r.color) && shown === treeFlow.nodes.find(n => n.id === r.id)?.data.color) shown = null
     setRoot(rt => moveNode(rt, d.id, d.target, d.target === r.id ? shown : null))
   }, [treeFlow, setRoot])
 
@@ -713,7 +718,10 @@ function MindMapCanvas({ note, store, onClose }) {
   const selectedSticky = selectedId ? stickies.find(s => s.id === selectedId) : null
   const selectedNode = selectedId && !selectedSticky ? findNode(root, selectedId) : null
   const selectedData = selectedNode ? treeFlow.nodes.find(n => n.id === selectedId)?.data : null
-  const selectedColor = selectedSticky ? selectedSticky.color : selectedData?.color || null
+  const rawSelectedColor = selectedSticky ? selectedSticky.color : selectedData?.color || null
+  // A central node deliberately set to purple is stored one unit off the
+  // palette value (see EXPLICIT_ROOT_PURPLE); show it as the Roxo swatch.
+  const selectedColor = rawSelectedColor === EXPLICIT_ROOT_PURPLE ? MINDMAP_COLORS[0].value : rawSelectedColor
   const selectedTextMode = selectedData?.textColorMode || 'auto'
   const hasSelection = !!(selectedNode || selectedSticky)
 

@@ -179,7 +179,7 @@ function clearColors(node) {
 // The central node is the exception: its first-level branches keep their
 // own colors, as in Whimsical.
 export function recolorBranch(root, id, color) {
-  if (id === root.id) return { ...root, color }
+  if (id === root.id) return { ...root, color: color === DEFAULT_COLOR ? EXPLICIT_ROOT_PURPLE : color }
   return updateNode(root, id, n => ({ ...clearColors(n), color }))
 }
 
@@ -269,12 +269,27 @@ function resolveTextColor(n, color, isRoot) {
   return isRoot ? readableOn(color) : null
 }
 
+// The central node's *default* color follows the app's accent (purple or
+// green theme). Maps store that default as the old purple (or null), so
+// those values mean "theme color"; any other stored color is the user's own
+// pick and is kept as is. Branches without their own color inherit it.
+export function isThemeRootColor(color) {
+  return !color || color === DEFAULT_COLOR
+}
+
+// Picking the purple swatch for the central node on purpose must stay purple
+// in every theme, so it's stored one unit off the default — visually
+// identical, but no longer read as "theme color".
+export const EXPLICIT_ROOT_PURPLE = '#8b5cf5'
+
 // Walks the visible tree producing React Flow nodes/edges.
-export function toFlow(root, positions) {
+// `themeColor` is the current accent (hex) used for a default-colored root.
+export function toFlow(root, positions, themeColor = DEFAULT_COLOR) {
   const nodes = []
   const edges = []
+  const rootColor = isThemeRootColor(root.color) ? (themeColor || DEFAULT_COLOR) : root.color
   function walk(n, parent, inheritedColor, depth) {
-    const color = n.color || inheritedColor
+    const color = depth === 0 ? rootColor : (n.color || inheritedColor)
     const pos = positions.get(n.id)
     nodes.push({
       id: n.id,
@@ -307,6 +322,6 @@ export function toFlow(root, positions) {
     }
     if (!n.collapsed) n.children.forEach(c => walk(c, n, color, depth + 1))
   }
-  walk(root, null, root.color || DEFAULT_COLOR, 0)
+  walk(root, null, rootColor, 0)
   return { nodes, edges }
 }

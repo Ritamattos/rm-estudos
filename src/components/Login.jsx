@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { Sun, Moon } from 'lucide-react'
+import AccentPicker from './AccentPicker'
 import styles from './Login.module.css'
 
-export default function Login() {
+export default function Login({ isDark, onToggleTheme, accent, onAccentChange }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState('login') // login | signup | forgot
@@ -67,6 +69,18 @@ export default function Login() {
   return (
     <div className={styles.page}>
       <div className={styles.glow} />
+      <div className={styles.themeControls}>
+        <AccentPicker accent={accent} onChange={onAccentChange} />
+        <button
+          type="button"
+          className={styles.modeBtn}
+          onClick={onToggleTheme}
+          title={isDark ? 'Modo claro' : 'Modo escuro'}
+          aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+        >
+          {isDark ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+      </div>
       <div className={styles.box}>
         <div className={styles.logo}>
           <span className={styles.logoIcon}>◆</span>

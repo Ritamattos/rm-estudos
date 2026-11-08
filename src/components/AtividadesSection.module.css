@@ -43,7 +43,7 @@
   text-align: left;
 }
 .navItem:hover { background: var(--bg3); color: var(--text); }
-.navItemActive { background: var(--purple-dim2); color: var(--purple-light); font-weight: 600; }
+.navItemActive { background: var(--accent-dim2); color: var(--accent-light); font-weight: 600; }
 
 .subGroup {
   margin-left: 18px;
@@ -68,7 +68,7 @@
   text-align: left;
 }
 .subItem:hover { background: var(--bg3); color: var(--text2); }
-.subItemActive { background: var(--purple-dim); color: var(--purple-light); font-weight: 600; }
+.subItemActive { background: var(--accent-dim); color: var(--accent-light); font-weight: 600; }
 
 .content {
   flex: 1;
@@ -86,10 +86,10 @@
 }
 
 .loadingIcon {
-  color: var(--purple);
+  color: var(--accent);
   font-size: 32px;
   animation: pulse 1.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px var(--purple));
+  filter: drop-shadow(0 0 10px var(--accent));
 }
 @keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(0.9) } 50% { opacity: 1; transform: scale(1.1) } }
 

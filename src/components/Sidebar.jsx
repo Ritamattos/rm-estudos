@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight, Download } from 'lucide-react'
 import { useDragReorder } from '../hooks/useDragReorder'
 import SideDrawer, { DrawerCloseButton } from './SideDrawer'
+import AccentPicker from './AccentPicker'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({
@@ -11,7 +12,7 @@ export default function Sidebar({
   onAddCat, onEditCat, onDeleteCat,
   onAddSub, onEditSub, onDeleteSub,
   onReorderCategories, onReorderSubcategories,
-  onLogout, isDark, onToggleTheme,
+  onLogout, isDark, onToggleTheme, accent, onAccentChange,
   mobileOpen = false, onCloseMobile, install
 }) {
   const [menu, setMenu] = useState(null)
@@ -129,10 +130,13 @@ export default function Sidebar({
             <Download size={14} /> Instalar app
           </button>
         )}
-        <button className={styles.themeBtn} onClick={onToggleTheme}>
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
-          {isDark ? 'Modo claro' : 'Modo escuro'}
-        </button>
+        <div className={styles.themeRow}>
+          <button className={styles.themeBtn} onClick={onToggleTheme}>
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            {isDark ? 'Modo claro' : 'Modo escuro'}
+          </button>
+          <AccentPicker accent={accent} onChange={onAccentChange} />
+        </div>
         <button className={styles.logoutBtn} onClick={onLogout}>
           <LogOut size={14} /> Sair
         </button>

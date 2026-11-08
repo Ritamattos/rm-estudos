@@ -20,8 +20,8 @@
 }
 
 .colOver {
-  border-color: var(--purple);
-  box-shadow: 0 0 0 1px var(--purple), 0 4px 16px rgba(139,92,246,0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(var(--accent-rgb), 0.12);
 }
 
 .colHeader {
@@ -113,7 +113,7 @@
 
 .kCard:hover .kCardEdit,
 .kCard:hover .kCardDelete { opacity: 1; }
-.kCardEdit:hover { background: var(--bg4); color: var(--purple-light); }
+.kCardEdit:hover { background: var(--bg4); color: var(--accent-light); }
 .kCardDelete:hover { background: var(--danger-dim); color: var(--danger); }
 
 .addForm {
@@ -135,7 +135,7 @@
   font-size: 13px;
   color: var(--text);
 }
-.addInput:focus { outline: none; border-color: var(--purple); }
+.addInput:focus { outline: none; border-color: var(--accent); }
 
 .addActions {
   display: flex;
@@ -144,14 +144,14 @@
 
 .addConfirm {
   padding: 6px 14px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 12px;
   font-weight: 600;
   transition: all 0.15s;
 }
-.addConfirm:hover { background: var(--purple2); }
+.addConfirm:hover { background: var(--accent-strong); }
 
 .addCancel {
   padding: 6px 12px;
@@ -173,7 +173,7 @@
   transition: all 0.15s;
   text-align: center;
 }
-.colAddBtn:hover { background: var(--bg3); color: var(--purple-light); border-color: var(--purple); border-style: solid; }
+.colAddBtn:hover { background: var(--bg3); color: var(--accent-light); border-color: var(--accent); border-style: solid; }
 
 /* ── Celular / touch ── */
 @media (hover: none) {

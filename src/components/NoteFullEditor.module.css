@@ -55,16 +55,16 @@
 .saveBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 9px 18px;
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   border-radius: var(--radius);
   font-size: 13px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
   flex-shrink: 0;
 }
-.saveBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.saveBtn:hover { background: var(--accent-strong); transform: translateY(-1px); }
 .saveBtn:disabled { opacity: 0.7; cursor: default; transform: none; }
 
 .pdfBtn {
@@ -99,7 +99,7 @@
   transition: all 0.15s;
 }
 .toolbar button:hover { background: var(--bg3); color: var(--text); }
-.toolbar button.active { background: var(--purple-dim2); color: var(--purple-light); }
+.toolbar button.active { background: var(--accent-dim2); color: var(--accent-light); }
 .toolbar button:disabled { opacity: 0.5; cursor: default; }
 
 .sep {
@@ -172,7 +172,7 @@
 .editor :global(.ProseMirror h3) { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0.8em 0 0.4em; }
 .editor :global(.ProseMirror ul), .editor :global(.ProseMirror ol) { padding-left: 1.4em; margin: 0 0 0.85em; }
 .editor :global(.ProseMirror li) { margin: 0.25em 0; }
-.editor :global(.ProseMirror a) { color: var(--purple-light); text-decoration: underline; }
+.editor :global(.ProseMirror a) { color: var(--accent-light); text-decoration: underline; }
 .editor :global(.ProseMirror img) { max-width: 100%; border-radius: var(--radius); display: block; }
 .editor :global(.ProseMirror mark) { border-radius: 2px; padding: 0 1px; }
 .editor :global(.ProseMirror p.is-editor-empty:first-child::before) {
@@ -202,7 +202,7 @@
   width: 13px;
   height: 13px;
   border-radius: 4px;
-  background: var(--purple);
+  background: var(--accent);
   border: 2px solid var(--bg);
   cursor: nwse-resize;
   opacity: 0;

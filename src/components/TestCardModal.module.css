@@ -89,7 +89,7 @@
   transition: all 0.15s;
 }
 .toolbar button:hover { background: var(--bg3); color: var(--text); }
-.toolbar button.active { background: var(--purple-dim2); color: var(--purple-light); }
+.toolbar button.active { background: var(--accent-dim2); color: var(--accent-light); }
 
 .sep {
   width: 1px;
@@ -153,14 +153,14 @@
 
 .saveBtn {
   padding: 9px 20px;
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   border-radius: var(--radius);
   font-size: 13px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.saveBtn:hover { background: var(--purple2); }
+.saveBtn:hover { background: var(--accent-strong); }
 .saveBtn:disabled { opacity: 0.7; }
 
 @media (max-width: 640px) {

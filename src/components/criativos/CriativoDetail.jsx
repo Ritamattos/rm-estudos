@@ -43,7 +43,7 @@ function saveErrorMessage(error) {
 
 // ── Gráfico de linha simples ─────────────────────────────────────────────────
 
-function MiniLineChart({ label, points, format, color = 'var(--purple)' }) {
+function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
   const valid = points.filter(p => p.value != null)
   if (valid.length === 0) {
     return (

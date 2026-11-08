@@ -16,15 +16,15 @@
 .addBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 9px 18px;
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   border-radius: var(--radius);
   font-size: 13px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.addBtn:hover { background: var(--purple2); transform: translateY(-1px); }
+.addBtn:hover { background: var(--accent-strong); transform: translateY(-1px); }
 
 .empty {
   flex: 1; display: flex; flex-direction: column;
@@ -37,7 +37,7 @@
   border-radius: var(--radius); border: 1px solid var(--border2);
   color: var(--text2); font-size: 13px; transition: all 0.15s;
 }
-.emptyBtn:hover { background: var(--bg2); color: var(--purple-light); border-color: var(--purple); }
+.emptyBtn:hover { background: var(--bg2); color: var(--accent-light); border-color: var(--accent); }
 
 .list {
   display: flex;
@@ -110,7 +110,7 @@
 .iconBtn.danger:hover { background: var(--danger-dim); color: var(--danger); }
 
 .typeIcon { color: var(--text3); flex-shrink: 0; }
-.typeIconMap { color: var(--purple-light); }
+.typeIconMap { color: var(--accent-light); }
 
 .typePicker {
   display: grid;
@@ -135,9 +135,9 @@
   transition: all 0.15s;
 }
 .typeOption:hover {
-  border-color: var(--purple);
-  background: var(--purple-dim);
-  color: var(--purple-light);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent-light);
   transform: translateY(-1px);
 }
 .typeOptionTitle { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 4px; }

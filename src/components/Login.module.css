@@ -14,7 +14,7 @@
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.15) 0%, transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -30,7 +30,7 @@
   max-width: 400px;
   position: relative;
   z-index: 1;
-  box-shadow: 0 0 60px rgba(139,92,246,0.1);
+  box-shadow: 0 0 60px rgba(var(--accent-rgb), 0.1);
 }
 
 .logo {
@@ -42,9 +42,9 @@
 }
 
 .logoIcon {
-  color: var(--purple);
+  color: var(--accent);
   font-size: 24px;
-  filter: drop-shadow(0 0 8px var(--purple));
+  filter: drop-shadow(0 0 8px var(--accent));
 }
 
 .logoText {
@@ -90,7 +90,7 @@
 .btn {
   width: 100%;
   padding: 12px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 14px;
@@ -98,9 +98,9 @@
   font-family: var(--font-display);
   transition: all 0.2s;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 20px rgba(var(--accent-rgb), 0.3);
 }
-.btn:hover { background: var(--purple2); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(139,92,246,0.4); }
+.btn:hover { background: var(--accent-strong); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(var(--accent-rgb), 0.4); }
 .btn:disabled { opacity: 0.6; transform: none; }
 
 .toggle {
@@ -109,7 +109,7 @@
   font-size: 13px;
   color: var(--text2);
 }
-.toggle button { color: var(--purple-light); font-weight: 500; text-decoration: underline; }
+.toggle button { color: var(--accent-light); font-weight: 500; text-decoration: underline; }
 
 .googleBtn {
   width: 100%;
@@ -163,10 +163,33 @@
   color: var(--text2);
   transition: all 0.15s;
 }
-.methodToggle button.methodActive { background: var(--purple); color: white; }
+.methodToggle button.methodActive { background: var(--accent); color: white; }
 
 @media (max-width: 480px) {
   .page { padding: 1rem; }
   .box { padding: 1.75rem 1.25rem; }
   .glow { width: 120vw; height: 120vw; }
 }
+
+/* Modo claro/escuro + cor de destaque, também antes de entrar. */
+.themeControls {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+.modeBtn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2);
+  transition: background 0.15s, color 0.15s;
+}
+.modeBtn:hover { background: var(--bg3); color: var(--accent-light); }

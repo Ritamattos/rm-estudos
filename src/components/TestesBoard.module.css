@@ -97,15 +97,15 @@
   letter-spacing: 0.02em;
   margin-bottom: 7px;
 }
-.badgeGreen { background: rgba(74,222,128,0.16); color: #4ade80; }
+.badgeGreen { background: rgba(74,222,128,0.16); color: #4ade80; box-shadow: var(--success-tag-ring, none); }
 .badgeRed { background: rgba(248,113,113,0.16); color: #f87171; }
 
 .dropLine {
   height: 3px;
   border-radius: 2px;
-  background: var(--purple);
+  background: var(--accent);
   margin: 2px 0;
-  box-shadow: 0 0 8px rgba(139,92,246,0.6);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
 }
 
 .addForm {
@@ -129,7 +129,7 @@
   font-size: 13px;
   color: var(--text);
 }
-.addInput:focus { outline: none; border-color: var(--purple); }
+.addInput:focus { outline: none; border-color: var(--accent); }
 
 .addActions {
   display: flex;
@@ -138,14 +138,14 @@
 
 .addConfirm {
   padding: 6px 14px;
-  background: var(--purple);
+  background: var(--accent);
   color: white;
   border-radius: var(--radius);
   font-size: 12px;
   font-weight: 600;
   transition: all 0.15s;
 }
-.addConfirm:hover { background: var(--purple2); }
+.addConfirm:hover { background: var(--accent-strong); }
 
 .addCancel {
   padding: 6px 12px;
@@ -170,7 +170,7 @@
   transition: all 0.15s;
   flex-shrink: 0;
 }
-.colAddBtn:hover { background: var(--bg2); color: var(--purple-light); }
+.colAddBtn:hover { background: var(--bg2); color: var(--accent-light); }
 
 /* ── Celular ── */
 @media (max-width: 640px) {

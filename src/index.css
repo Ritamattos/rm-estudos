@@ -1,18 +1,55 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Tema ───────────────────────────────────────────────────────────────────
+   Duas escolhas independentes no <html>:
+     data-theme  = dark | light     (modo)
+     data-accent = purple | green   (cor de destaque)
+   Componentes usam só estas variáveis; nunca uma cor de destaque fixa.
+     --accent         cor principal (fundos de botão, bordas ativas, ícones)
+     --accent-strong  hover/pressionado dos botões
+     --accent-deep    tom mais escuro
+     --accent-light   texto/ícone de destaque sobre o fundo do app
+     --accent-dim(2)  fundos suaves (item selecionado, foco)
+     --accent-rgb     "r, g, b" para sombras: rgba(var(--accent-rgb), .3)
+   Cores de significado (aprovado/lucro, reprovado/atraso, em progresso)
+   NÃO usam estas variáveis e não mudam com a cor de destaque. */
+
 :root {
-  --purple: #8b5cf6;
-  --purple2: #7c3aed;
-  --purple3: #6d28d9;
-  --purple-light: #a78bfa;
-  --purple-dim: rgba(139,92,246,0.12);
-  --purple-dim2: rgba(139,92,246,0.22);
   --font-display: 'Outfit', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --font-serif: 'Lora', serif;
   --radius: 10px;
   --radius-lg: 16px;
   --radius-xl: 22px;
+}
+
+/* Roxo (padrão) — valores idênticos aos de antes. */
+:root, [data-accent="purple"] {
+  --accent: #8b5cf6;
+  --accent-strong: #7c3aed;
+  --accent-deep: #6d28d9;
+  --accent-light: #a78bfa;
+  --accent-rgb: 139, 92, 246;
+  --accent-dim: rgba(139,92,246,0.12);
+  --accent-dim2: rgba(139,92,246,0.22);
+  --accent-pale: #c4b5fd;   /* texto claro sobre capas/fotos */
+}
+
+/* Verde: esmeralda (matiz ~160°), propositalmente afastado do verde-lima
+   de "Aprovado/Lucro/Concluído" (#4ade80 / #16a34a, matiz ~142°).
+   #059669 com texto branco: contraste 3.8:1 (texto em negrito/botões). */
+[data-accent="green"] {
+  --accent: #059669;
+  --accent-strong: #047857;
+  --accent-deep: #065f46;
+  --accent-light: #34d399;
+  --accent-rgb: 5, 150, 105;
+  --accent-dim: rgba(5,150,105,0.14);
+  --accent-dim2: rgba(5,150,105,0.26);
+  --accent-pale: #a7f3d0;
+  /* Contorno extra nas etiquetas de "Aprovado/Concluído/Escala" só no tema
+     verde, para não se confundirem com itens destacados. */
+  --success-tag-ring: inset 0 0 0 1px rgba(74,222,128,0.55);
 }
 
 [data-theme="dark"] {
@@ -26,8 +63,6 @@
   --text: #f0eeff;
   --text2: #a09ab8;
   --text3: #5a546e;
-  --accent: var(--purple);
-  --accent2: var(--purple2);
   --card-bg: #13131a;
   --sidebar-bg: #0f0f16;
   --danger: #f87171;
@@ -47,14 +82,48 @@
   --text: #1e1b2e;
   --text2: #5b4e7a;
   --text3: #9c8fb5;
-  --accent: var(--purple2);
-  --accent2: var(--purple3);
   --card-bg: #ffffff;
   --sidebar-bg: #ede9fe;
   --danger: #ef4444;
   --danger-dim: rgba(239,68,68,0.1);
   --success: #16a34a;
   --scrollbar: #ddd6fe;
+}
+
+/* Verde + escuro: fundo quase preto, neutros levemente esverdeados. */
+[data-theme="dark"][data-accent="green"] {
+  --bg: #0a0c0b;
+  --bg2: #111513;
+  --bg3: #171c1a;
+  --bg4: #1f2623;
+  --bg5: #28302c;
+  --border: rgba(52,211,153,0.10);
+  --border2: rgba(52,211,153,0.20);
+  --text: #eef5f1;
+  --text2: #9db0a7;
+  --text3: #5d6d66;
+  --card-bg: #111513;
+  --sidebar-bg: #0d100f;
+  --scrollbar: #1f2623;
+}
+
+/* Verde + claro: fundo branco. Texto de destaque escurecido para manter
+   contraste AA sobre branco (#047857: 5.5:1). */
+[data-theme="light"][data-accent="green"] {
+  --accent-light: #047857;
+  --bg: #fbfdfc;
+  --bg2: #ffffff;
+  --bg3: #edf6f2;
+  --bg4: #d5ebe1;
+  --bg5: #a7d8c2;
+  --border: rgba(5,150,105,0.16);
+  --border2: rgba(5,150,105,0.32);
+  --text: #13201b;
+  --text2: #3f5a4f;
+  --text3: #7f978d;
+  --card-bg: #ffffff;
+  --sidebar-bg: #f2f8f5;
+  --scrollbar: #d5ebe1;
 }
 
 html, body, #root {
@@ -86,8 +155,8 @@ input, textarea, select {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 input:focus, textarea:focus, select:focus {
-  border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--purple-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 select option { background: var(--bg3); }
 textarea { resize: vertical; min-height: 90px; line-height: 1.6; }

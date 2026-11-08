@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList, BarChart3, Building2, User, Menu, Download } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
@@ -14,6 +14,8 @@ import TelaSection from './components/TelaSection'
 import AtividadesSection from './components/AtividadesSection'
 import DadosWorkspace from './components/DadosWorkspace'
 import ProfileSwitcher from './components/ProfileSwitcher'
+import AccentPicker from './components/AccentPicker'
+import { readIsDark, readAccent, applyTheme } from './lib/theme'
 import styles from './App.module.css'
 
 const WORKSPACES = [
@@ -66,13 +68,13 @@ function Field({ label, children }) {
   return <div className={styles.field}><label className={styles.fieldLabel}>{label}</label>{children}</div>
 }
 
-const THEME_KEY = 'rm-estudos-theme'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
-  const [isDark, setIsDark] = useState(() => localStorage.getItem(THEME_KEY) !== 'light')
+  const [isDark, setIsDark] = useState(readIsDark)
+  const [accent, setAccent] = useState(readAccent)
   const [workspace, setWorkspace] = useState(readSessionWorkspace)
   const [selectedCat, setSelectedCat] = useState(null)
   const [selectedSub, setSelectedSub] = useState(null)
@@ -139,12 +141,16 @@ export default function App() {
     await supabase.auth.signOut()
   }
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
-    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light')
-    // Cor da barra de status do celular acompanha o tema.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark ? '#0d0d12' : '#f5f3ff')
-  }, [isDark])
+  // Applies and saves mode + accent. The first paint is already right
+  // thanks to the inline script in index.html; this keeps it in sync after.
+  useLayoutEffect(() => { applyTheme(isDark, accent) }, [isDark, accent])
+
+  const themeControls = {
+    isDark,
+    onToggleTheme: () => setIsDark(d => !d),
+    accent,
+    onAccentChange: setAccent,
+  }
 
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
 
@@ -197,7 +203,7 @@ export default function App() {
 
   if (window.location.pathname === '/reset-password' || isRecovery) return <ResetPassword />
   if (authLoading) return <div className={styles.loading}><span className={styles.loadingIcon}>◆</span></div>
-  if (!user) return <Login />
+  if (!user) return <Login {...themeControls} />
 
   return (
     <div className={styles.app}>
@@ -229,8 +235,7 @@ export default function App() {
           onReorderCategories={store.reorderCategories}
           onReorderSubcategories={(catId, ids) => store.reorderSubcategories(ids)}
           onLogout={logout}
-          isDark={isDark}
-          onToggleTheme={() => setIsDark(!isDark)}
+          {...themeControls}
           mobileOpen={navOpen}
           onCloseMobile={() => setNavOpen(false)}
           install={install}
@@ -268,7 +273,13 @@ export default function App() {
                     <Download size={14} /> <span>Instalar</span>
                   </button>
                 )}
-                <button className={styles.themeTabBtn} onClick={() => setIsDark(!isDark)}>
+                <AccentPicker accent={accent} onChange={setAccent} />
+                <button
+                  className={styles.themeTabBtn}
+                  onClick={themeControls.onToggleTheme}
+                  title={isDark ? 'Modo claro' : 'Modo escuro'}
+                  aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+                >
                   {isDark ? '☀️' : '🌙'}
                 </button>
                 <button className={styles.logoutTabBtn} onClick={logout}>

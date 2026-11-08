@@ -47,22 +47,22 @@
 .viewToggle button:hover { color: var(--text); }
 .viewToggle button + button { border-left: 1px solid var(--border); }
 .viewToggleActive {
-  background: var(--purple);
+  background: var(--accent);
   color: white;
 }
 
 .syncBtn {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 16px;
-  background: var(--purple); color: white;
+  background: var(--accent); color: white;
   border-radius: var(--radius);
   font-size: 12.5px; font-weight: 600;
   font-family: var(--font-display);
   transition: all 0.15s;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(139,92,246,0.3);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 }
-.syncBtn:hover { background: var(--purple2); }
+.syncBtn:hover { background: var(--accent-strong); }
 .syncBtn:disabled { opacity: 0.7; cursor: default; }
 
 .spin { animation: spin 0.9s linear infinite; }
@@ -99,7 +99,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
-.cardHighlight { border-color: var(--purple); box-shadow: 0 0 0 1px var(--purple) inset; }
+.cardHighlight { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 
 .cardLabel { font-size: 11.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
 .cardValue { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text); }
@@ -153,13 +153,13 @@
   width: 100%;
   max-width: 34px;
   min-height: 4px;
-  background: var(--purple-dim2);
+  background: var(--accent-dim2);
   border-radius: 4px 4px 0 0;
   transition: background 0.15s, opacity 0.15s;
 }
 .barCol:hover .bar { opacity: 0.85; }
 .barAlt { background: rgba(96,165,250,0.35); }
-.barActive { background: var(--purple); }
+.barActive { background: var(--accent); }
 .barAlt.barActive { background: #60a5fa; }
 
 .barLabel { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
@@ -180,10 +180,10 @@
   background: var(--card-bg);
   transition: all 0.15s;
 }
-.monthPill:hover { border-color: var(--purple); }
+.monthPill:hover { border-color: var(--accent); }
 .monthPillActive {
-  background: var(--purple);
-  border-color: var(--purple);
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
@@ -191,7 +191,7 @@
   margin-left: auto;
   font-size: 12px;
   font-weight: 600;
-  color: var(--purple);
+  color: var(--accent);
 }
 .monthPickerAction:hover { text-decoration: underline; }
 
@@ -299,5 +299,5 @@
   gap: 12px; padding: 4rem; color: var(--text3); text-align: center;
 }
 .emptyIcon { font-size: 32px; color: var(--border2); margin-bottom: 4px; }
-.loadingIcon { font-size: 28px; color: var(--purple); animation: pulse 1.2s ease-in-out infinite; }
+.loadingIcon { font-size: 28px; color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }

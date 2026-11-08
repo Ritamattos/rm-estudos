@@ -15,6 +15,12 @@
   gap: 3px;
 }
 
+.navHeader {
+  display: flex;
+  align-items: center;
+  padding: 0 0 12px 10px;
+}
+
 .navTitle {
   font-family: var(--font-display);
   font-size: 11px;
@@ -22,7 +28,6 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text3);
-  padding: 0 10px 12px;
 }
 
 .navItem {
@@ -88,25 +93,10 @@
 }
 @keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(0.9) } 50% { opacity: 1; transform: scale(1.1) } }
 
-/* Phones: the side nav becomes a horizontal, scrollable tab strip on top. */
-@media (max-width: 640px) {
-  .wrapper { flex-direction: column; }
-  .nav {
-    width: auto;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 8px 10px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .navTitle { display: none; }
-  .navItem { flex-shrink: 0; white-space: nowrap; padding: 8px 12px; }
-  .subGroup {
-    flex-direction: row;
-    margin: 0;
-    padding-left: 6px;
-    border-left: 1.5px solid var(--border);
-  }
-  .subItem { flex-shrink: 0; white-space: nowrap; }
+/* Phones: the side nav is a drawer (SideDrawer) opened by ☰ in the tab
+   bar; here only the touch targets grow. */
+@media (max-width: 768px) {
+  .navHeader { padding-bottom: 8px; }
+  .navItem { padding: 12px 10px; font-size: 14px; }
+  .subItem { padding: 10px 8px; font-size: 13px; }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight, X, Download } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, LogOut, Sun, Moon, ChevronRight, Download } from 'lucide-react'
 import { useDragReorder } from '../hooks/useDragReorder'
+import SideDrawer, { DrawerCloseButton } from './SideDrawer'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar({
@@ -34,15 +35,11 @@ export default function Sidebar({
   function closeMenus() { setMenu(null); setSubMenu(null) }
 
   return (
-    <>
-    {mobileOpen && <div className={styles.backdrop} onClick={onCloseMobile} />}
-    <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ''}`} onClick={closeMenus}>
+    <SideDrawer className={styles.sidebar} open={mobileOpen} onClose={onCloseMobile} onClick={closeMenus}>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>◆</span>
         <span className={styles.logoText}>RM Estudos</span>
-        <button className={styles.closeBtn} onClick={e => { e.stopPropagation(); onCloseMobile?.() }} aria-label="Fechar menu">
-          <X size={18} />
-        </button>
+        <DrawerCloseButton onClose={onCloseMobile} />
       </div>
 
       <div className={styles.section}>
@@ -140,7 +137,6 @@ export default function Sidebar({
           <LogOut size={14} /> Sair
         </button>
       </div>
-    </aside>
-    </>
+    </SideDrawer>
   )
 }

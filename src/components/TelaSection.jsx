@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, Play } from 'lucide-react'
 import { useMediaStore } from '../hooks/useMediaStore'
 import { useDragReorder } from '../hooks/useDragReorder'
+import SideDrawer, { DrawerCloseButton } from './SideDrawer'
 import styles from './TelaSection.module.css'
 
 const STATUS_OPTS = [
@@ -281,7 +282,7 @@ function MediaFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   )
 }
 
-export default function TelaSection({ user, store: appStore }) {
+export default function TelaSection({ user, store: appStore, navOpen = false, onCloseNav }) {
   const store = useMediaStore(user)
   const telaCats = appStore
     ? appStore.categories.filter(c => c.workspace === 'tela').sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -411,15 +412,18 @@ export default function TelaSection({ user, store: appStore }) {
   return (
     <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
-      <aside className={styles.libSidebar}>
+      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav}>
         <div className={styles.libSidebarHeader}>
           <span className={styles.libSidebarTitle}>Cinemateca</span>
-          {appStore && (
-            <button className={styles.libAddCatBtn} title="Nova categoria"
-              onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
-              <Plus size={12} />
-            </button>
-          )}
+          <div className={styles.libSidebarActions}>
+            {appStore && (
+              <button className={styles.libAddCatBtn} title="Nova categoria"
+                onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
+                <Plus size={12} />
+              </button>
+            )}
+            <DrawerCloseButton onClose={onCloseNav} />
+          </div>
         </div>
 
         <nav className={styles.libNavList}>
@@ -432,7 +436,7 @@ export default function TelaSection({ user, store: appStore }) {
               onDrop={e => drop(e, cat.id, telaCatIds, appStore?.reorderCategories)}
               onDragEnd={dragEnd}>
               <button className={`${styles.libNavItem} ${effectiveTelaCat?.id === cat.id ? styles.libNavActive : ''}`}
-                onClick={() => setSelectedTelaCat(cat)}>
+                onClick={() => { setSelectedTelaCat(cat); onCloseNav?.() }}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>
                 <span className={styles.libNavName}>{cat.name}</span>
                 <span className={styles.libMenuBtn}
@@ -461,7 +465,7 @@ export default function TelaSection({ user, store: appStore }) {
             </span>
           ))}
         </div>
-      </aside>
+      </SideDrawer>
 
       <div className={styles.libMain}>
         <div className={styles.section}>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, Search, LayoutGrid, List, Star, Pencil, Trash2, ExternalLink, X, MoreHorizontal, BookOpen, ShoppingCart } from 'lucide-react'
 import { useBookStore } from '../hooks/useBookStore'
 import { useDragReorder } from '../hooks/useDragReorder'
+import SideDrawer, { DrawerCloseButton } from './SideDrawer'
 import styles from './BibliotecaSection.module.css'
 
 const STATUS_OPTS = [
@@ -205,7 +206,7 @@ function BookFormModal({ initial, onClose, onSave, uploadCover, categories }) {
   )
 }
 
-export default function BibliotecaSection({ user, store: appStore }) {
+export default function BibliotecaSection({ user, store: appStore, navOpen = false, onCloseNav }) {
   const store = useBookStore(user)
   const libCats = appStore
     ? appStore.categories.filter(c => c.workspace === 'biblioteca').sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -326,15 +327,18 @@ export default function BibliotecaSection({ user, store: appStore }) {
   return (
     <div className={styles.wrapper} onClick={() => { setCatMenu(null); setCtxMenu(null) }}>
 
-      <aside className={styles.libSidebar}>
+      <SideDrawer className={styles.libSidebar} open={navOpen} onClose={onCloseNav}>
         <div className={styles.libSidebarHeader}>
           <span className={styles.libSidebarTitle}>Biblioteca</span>
-          {appStore && (
-            <button className={styles.libAddCatBtn} title="Nova categoria"
-              onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
-              <Plus size={12} />
-            </button>
-          )}
+          <div className={styles.libSidebarActions}>
+            {appStore && (
+              <button className={styles.libAddCatBtn} title="Nova categoria"
+                onClick={e => { e.stopPropagation(); setCatModal('add'); setCatForm({ name: '', icon: '' }) }}>
+                <Plus size={12} />
+              </button>
+            )}
+            <DrawerCloseButton onClose={onCloseNav} />
+          </div>
         </div>
 
         <nav className={styles.libNavList}>
@@ -347,7 +351,7 @@ export default function BibliotecaSection({ user, store: appStore }) {
               onDrop={e => drop(e, cat.id, libCatIds, appStore?.reorderCategories)}
               onDragEnd={dragEnd}>
               <button className={`${styles.libNavItem} ${effectiveLibCat?.id === cat.id ? styles.libNavActive : ''}`}
-                onClick={() => setSelectedLibCat(cat)}>
+                onClick={() => { setSelectedLibCat(cat); onCloseNav?.() }}>
                 <span className={styles.libNavIcon}>{cat.icon}</span>
                 <span className={styles.libNavName}>{cat.name}</span>
                 <span className={styles.libMenuBtn}
@@ -376,7 +380,7 @@ export default function BibliotecaSection({ user, store: appStore }) {
             </span>
           ))}
         </div>
-      </aside>
+      </SideDrawer>
 
       <div className={styles.libMain}>
         <div className={styles.section}>

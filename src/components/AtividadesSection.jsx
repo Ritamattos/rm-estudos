@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle, BarChart3, Megaphone } from 'lucide-react'
+import { FlaskConical, CalendarCheck, LayoutGrid, CheckCircle2, XCircle } from 'lucide-react'
 import { useAtividadesStore } from '../hooks/useAtividadesStore'
 import TestesBoard from './TestesBoard'
 import TestArchiveList from './TestArchiveList'
 import DiarioList from './DiarioList'
-import DadosSection from './DadosSection'
-import CriativosSection from './CriativosSection'
+import SideDrawer, { DrawerCloseButton } from './SideDrawer'
 import styles from './AtividadesSection.module.css'
 
 const TESTES_VIEWS = [
@@ -14,18 +13,22 @@ const TESTES_VIEWS = [
   { id: 'reprovados', label: 'Reprovados',    icon: <XCircle size={13} /> },
 ]
 
-export default function AtividadesSection({ user }) {
+export default function AtividadesSection({ user, navOpen = false, onCloseNav }) {
   const store = useAtividadesStore(user)
   const [section, setSection] = useState('testes')
   const [testesView, setTestesView] = useState('board')
 
   return (
     <div className={styles.wrapper}>
-      <aside className={styles.nav}>
-        <span className={styles.navTitle}>Atividades</span>
+      <SideDrawer className={styles.nav} open={navOpen} onClose={onCloseNav}>
+        <div className={styles.navHeader}>
+          <span className={styles.navTitle}>Atividades</span>
+          <DrawerCloseButton onClose={onCloseNav} />
+        </div>
 
         <button
           className={`${styles.navItem} ${section === 'testes' ? styles.navItemActive : ''}`}
+          // Testes expands its sub-views, so the drawer stays open here.
           onClick={() => setSection('testes')}
         >
           <FlaskConical size={15} /> Testes
@@ -36,7 +39,7 @@ export default function AtividadesSection({ user }) {
               <button
                 key={v.id}
                 className={`${styles.subItem} ${testesView === v.id ? styles.subItemActive : ''}`}
-                onClick={() => setTestesView(v.id)}
+                onClick={() => { setTestesView(v.id); onCloseNav?.() }}
               >
                 {v.icon} {v.label}
               </button>
@@ -46,32 +49,14 @@ export default function AtividadesSection({ user }) {
 
         <button
           className={`${styles.navItem} ${section === 'diario' ? styles.navItemActive : ''}`}
-          onClick={() => setSection('diario')}
+          onClick={() => { setSection('diario'); onCloseNav?.() }}
         >
           <CalendarCheck size={15} /> Diário
         </button>
-
-        <button
-          className={`${styles.navItem} ${section === 'dados' ? styles.navItemActive : ''}`}
-          onClick={() => setSection('dados')}
-        >
-          <BarChart3 size={15} /> Dados
-        </button>
-
-        <button
-          className={`${styles.navItem} ${section === 'criativos' ? styles.navItemActive : ''}`}
-          onClick={() => setSection('criativos')}
-        >
-          <Megaphone size={15} /> Criativos
-        </button>
-      </aside>
+      </SideDrawer>
 
       <div className={styles.content}>
-        {section === 'dados' ? (
-          <DadosSection user={user} />
-        ) : section === 'criativos' ? (
-          <CriativosSection user={user} />
-        ) : store.loading ? (
+        {store.loading ? (
           <div className={styles.empty}><span className={styles.loadingIcon}>◆</span></div>
         ) : section === 'testes' ? (
           testesView === 'board' ? (

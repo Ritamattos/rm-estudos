@@ -918,3 +918,11 @@
 
   .detailBox { max-height: 92dvh; }
 }
+
+/* Botão "+" e o ✕ da gaveta (celular) lado a lado. */
+.libSidebarActions { display: flex; align-items: center; gap: 6px; }
+
+@media (max-width: 768px) {
+  .libAddCatBtn { width: 28px; height: 28px; }
+  .libNavItem { padding-top: 10px; padding-bottom: 10px; font-size: 14px; }
+}

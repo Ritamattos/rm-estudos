@@ -195,48 +195,13 @@
 }
 .installBtn:hover { background: var(--purple-dim2); }
 
-.closeBtn { display: none; }
-.backdrop { display: none; }
-
 /* Telas sem mouse: os botões "⋯" ficam sempre visíveis. */
 @media (hover: none) {
   .menuBtn { opacity: 1; }
 }
 
-/* Celular: a barra lateral vira uma gaveta que desliza da esquerda. */
+/* Celular: a gaveta em si vem do SideDrawer; aqui só os alvos de toque. */
 @media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    width: min(82vw, 300px);
-    z-index: 800;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    box-shadow: none;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .sidebarOpen {
-    transform: translateX(0);
-    box-shadow: 12px 0 40px rgba(0,0,0,0.35);
-  }
-  .backdrop {
-    display: block;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 790;
-    animation: fadeIn 0.2s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-
-  .closeBtn {
-    display: flex; align-items: center; justify-content: center;
-    margin-left: auto;
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    color: var(--text2);
-  }
-  .closeBtn:hover { background: var(--bg3); }
-
   .item { padding: 11px 10px; font-size: 14px; }
   .subItem { padding: 9px 8px; font-size: 13px; }
   .chevronBtn { width: 24px; height: 24px; }

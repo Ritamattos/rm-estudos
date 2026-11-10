@@ -36,6 +36,7 @@ const CHART_METRICS = [
   { key: 'roi', label: 'ROI', format: percent },
   { key: 'roas', label: 'ROAS', format: multiplier },
   { key: 'investido_ads', label: 'Investido em Ads', format: currency },
+  { key: 'total_impostos', label: 'Total de impostos', format: currency },
 ]
 
 const TABLE_METRICS = [
@@ -47,6 +48,10 @@ const TABLE_METRICS = [
   { key: 'roas', label: 'ROAS', format: multiplier, invert: false },
   { key: 'despesas_fixas', label: 'Despesas Fixas', format: currency, invert: true },
   { key: 'despesas_variaveis', label: 'Despesas Variáveis', format: currency, invert: true },
+  // More tax is bad: shown red when it goes up, like the expenses.
+  { key: 'iof', label: 'IOF', format: currency, invert: true },
+  { key: 'imposto', label: 'Imposto', format: currency, invert: true },
+  { key: 'total_impostos', label: 'Total de impostos', format: currency, invert: true },
 ]
 
 // With one offer selected: only what the sheet breaks down per offer.
@@ -57,6 +62,7 @@ const OFFER_CHART_METRICS = [
   { key: 'roi', label: 'ROI', format: percent },
   { key: 'roas', label: 'ROAS', format: multiplier },
   { key: 'investido', label: 'Investido', format: currency },
+  { key: 'total_impostos', label: 'Total de impostos', format: currency },
 ]
 
 const OFFER_TABLE_METRICS = [
@@ -66,7 +72,34 @@ const OFFER_TABLE_METRICS = [
   { key: 'lucro_bruto', label: 'Lucro Bruto', format: currency, invert: false },
   { key: 'roi', label: 'ROI', format: percent, invert: false },
   { key: 'roas', label: 'ROAS', format: multiplier, invert: false },
+  { key: 'iof', label: 'IOF', format: currency, invert: true },
+  { key: 'imposto', label: 'Imposto', format: currency, invert: true },
+  { key: 'total_impostos', label: 'Total de impostos', format: currency, invert: true },
 ]
+
+// IOF, Imposto and their total, as read from the sheet (R$ 0,00 when the
+// period or offer has none).
+function TaxCards({ iof, imposto, total, title }) {
+  return (
+    <div className={styles.section}>
+      <h2 className={styles.sectionTitle}>Impostos{title ? ` — ${title}` : ''}</h2>
+      <div className={styles.cards}>
+        <div className={`${styles.card} ${styles.cardTax}`}>
+          <span className={styles.cardLabel}>IOF</span>
+          <span className={styles.cardValue}>{currency(iof)}</span>
+        </div>
+        <div className={styles.card}>
+          <span className={styles.cardLabel}>Imposto</span>
+          <span className={styles.cardValue}>{currency(imposto)}</span>
+        </div>
+        <div className={styles.card}>
+          <span className={styles.cardLabel}>Total de impostos</span>
+          <span className={styles.cardValue}>{currency(total)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function profitClass(value) {
   return value < 0 ? styles.cardLoss : styles.cardProfit
@@ -86,7 +119,7 @@ function OfferRanking({ ranking, onPick }) {
         <thead>
           <tr>
             <th>#</th><th>Oferta</th><th className={styles.rankBarHead}>Lucro Bruto</th>
-            <th>Investido</th><th>Receita</th><th>ROI</th><th>ROAS</th>
+            <th>Investido</th><th>Receita</th><th>ROI</th><th>ROAS</th><th>Impostos</th>
           </tr>
         </thead>
         <tbody>
@@ -121,6 +154,9 @@ function OfferRanking({ ranking, onPick }) {
                 <td>{currency(r.receita_total)}</td>
                 <td className={loss ? styles.lossText : ''}>{percent(r.roi)}</td>
                 <td>{multiplier(r.roas)}</td>
+                <td title={`IOF ${currency(r.iof)} · Imposto ${currency(r.imposto)}`}>
+                  {r.total_impostos ? currency(r.total_impostos) : '–'}
+                </td>
               </tr>
             )
           })}
@@ -171,7 +207,14 @@ export default function DadosSection({ user }) {
   const [viewAll, setViewAll] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState('') // offer key; '' = all offers
 
-  const sortedMonths = useMemo(() => [...months].sort((a, b) => a.month_number - b.month_number), [months])
+  // Months before taxes were added have iof/imposto = 0 (or no column yet).
+  const sortedMonths = useMemo(() => [...months]
+    .sort((a, b) => a.month_number - b.month_number)
+    .map(m => {
+      const iof = Number(m.iof) || 0
+      const imposto = Number(m.imposto) || 0
+      return { ...m, iof, imposto, total_impostos: iof + imposto }
+    }), [months])
 
   // Totals across every synced month. ROI/ROAS are recalculated from the
   // summed values (not averaged per-month), per how the business defines
@@ -187,6 +230,7 @@ export default function DadosSection({ user }) {
     const despesas_variaveis = sum('despesas_variaveis')
     return {
       receita_total, investido_ads, lucro_bruto, lucro_liquido, despesas_fixas, despesas_variaveis,
+      iof: sum('iof'), imposto: sum('imposto'), total_impostos: sum('total_impostos'),
       roi: investido_ads ? lucro_bruto / investido_ads : null,
       roas: investido_ads ? receita_total / investido_ads : null,
     }
@@ -440,6 +484,16 @@ export default function DadosSection({ user }) {
             </div>
           )}
 
+          {(() => {
+            // One offer: its own taxes. Otherwise the month (or all months)
+            // total, which is the sum over every offer.
+            const t = offerStats ?? (viewAll ? totals : current)
+            const title = offerName
+              ? `${offerName}${viewAll ? ' (todos os meses)' : ` (${current?.month_name ?? ''})`}`
+              : (viewAll ? 'todos os meses' : current?.month_name)
+            return t && <TaxCards iof={t.iof} imposto={t.imposto} total={t.total_impostos} title={title} />
+          })()}
+
           {!selectedOffer && ranking.length > 0 && (
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>
@@ -580,7 +634,7 @@ export default function DadosSection({ user }) {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Oferta</th><th>Investido</th><th>Vendas</th><th>Receita</th><th>Lucro</th><th>ROI</th><th>Status</th>
+                      <th>Oferta</th><th>Investido</th><th>Vendas</th><th>Receita</th><th>Lucro</th><th>ROI</th><th>IOF</th><th>Imposto</th><th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -592,6 +646,8 @@ export default function DadosSection({ user }) {
                         <td>{currency(o.receita_total)}</td>
                         <td>{currency(o.lucro_bruto)}</td>
                         <td>{percent(o.roi)}</td>
+                        <td>{Number(o.iof) ? currency(Number(o.iof)) : '–'}</td>
+                        <td>{Number(o.imposto) ? currency(Number(o.imposto)) : '–'}</td>
                         <td>{o.status}</td>
                       </tr>
                     ))}

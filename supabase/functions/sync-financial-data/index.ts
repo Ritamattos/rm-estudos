@@ -109,6 +109,99 @@ function parseConsolidado(rows: any[][]) {
   }
 }
 
+// ── Impostos (IOF / imposto) ──────────────────────────────────────────────────
+// They are NOT in "Consolidado": each offer has its own tab in the month's
+// spreadsheet, and the taxes live there. The sheet is the source of truth —
+// we only read the R$ amounts it shows, never compute or assume a rate.
+// Labels are found by text (no fixed positions), since layouts differ
+// between months. Missing label, blank, "-" or "–" all read as 0.
+
+// Same matching as the app (src/lib/offers.js): "1 - Casal Arte" → "casal arte".
+function offerKey(name: string): string {
+  return String(name ?? '').replace(/^\s*\d+\s*[-–—.:)]\s*/, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR')
+}
+
+const isIofLabel = (s: string) => /\bIOF\b/i.test(s)
+const isImpostoLabel = (s: string) => /IMPOSTO/i.test(s) && !/\bIOF\b/i.test(s)
+
+type Grid = { raw: any[][]; fmt: any[][] }
+
+// A cell counts as an amount only if it's numeric and not shown as a
+// percentage (so a "12,5%" rate next to the label is skipped).
+function amountAt(g: Grid, r: number, c: number): number | null {
+  const raw = g.raw[r]?.[c]
+  const shown = String(g.fmt[r]?.[c] ?? '').trim()
+  if (shown.endsWith('%')) return null
+  if (typeof raw === 'number') return raw
+  return null
+}
+const isBlankish = (v: unknown) => v == null || /^\s*[-–—]?\s*$/.test(String(v))
+
+// Reads one tax from an offer tab. For each label cell it tries, in order:
+//  1. label/value pair: the first amount to the right on the same row;
+//  2. column header: the "TOTAL" row below in that column, or else the sum
+//     of the amounts below it.
+// A label/value pair wins over a column (it's the tab's own summary).
+function readTax(g: Grid, isLabel: (s: string) => boolean): number {
+  let pair: number | null = null
+  let column: number | null = null
+  for (let r = 0; r < g.raw.length; r++) {
+    const row = g.raw[r] || []
+    for (let c = 0; c < row.length; c++) {
+      if (typeof row[c] !== 'string' || !isLabel(row[c])) continue
+
+      if (pair == null) {
+        for (let k = c + 1; k <= c + 6; k++) {
+          const a = amountAt(g, r, k)
+          if (a != null) { pair = a; break }
+          if (typeof row[k] === 'string' && !isBlankish(row[k]) && !String(g.fmt[r]?.[k] ?? '').trim().endsWith('%')) break // another label: not a pair
+        }
+      }
+
+      if (column == null) {
+        let sum = 0
+        let seen = false
+        for (let rr = r + 1; rr < g.raw.length; rr++) {
+          const isTotalRow = (g.raw[rr] || []).some((v: unknown) => typeof v === 'string' && /^\s*TOTAL/i.test(v))
+          const a = amountAt(g, rr, c)
+          if (isTotalRow) { if (a != null) { sum = a; seen = true } break }
+          if (a != null) { sum += a; seen = true }
+        }
+        if (seen) column = sum
+      }
+    }
+  }
+  return pair ?? column ?? 0
+}
+
+// Picks the offer tab for an offer: exact name match first, then a tab whose
+// name contains the offer's (or vice versa), e.g. tab "Casal" ↔ "Casal Arte".
+function matchTab(offerName: string, tabs: { title: string; key: string }[]) {
+  const key = offerKey(offerName)
+  if (!key) return null
+  return tabs.find((t) => t.key === key)
+    ?? tabs.find((t) => t.key.length >= 3 && (key.includes(t.key) || t.key.includes(key)))
+    ?? null
+}
+
+async function readTabs(fileId: string, titles: string[], gHeaders: Record<string, string>): Promise<Map<string, Grid>> {
+  const out = new Map<string, Grid>()
+  if (titles.length === 0) return out
+  const ranges = titles.map((t) => `ranges=${encodeURIComponent(`'${t.replace(/'/g, "''")}'!A1:AZ1000`)}`).join('&')
+  const get = async (render: string) => {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values:batchGet?${ranges}&valueRenderOption=${render}`,
+      { headers: gHeaders },
+    )
+    const data = await res.json()
+    if (!res.ok) throw new Error('Sheets batchGet error: ' + JSON.stringify(data))
+    return (data.valueRanges || []).map((v: any) => v.values || [])
+  }
+  const [raw, fmt] = await Promise.all([get('UNFORMATTED_VALUE'), get('FORMATTED_VALUE')])
+  titles.forEach((t, i) => out.set(t, { raw: raw[i] || [], fmt: fmt[i] || [] }))
+  return out
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -179,11 +272,29 @@ Deno.serve(async (req) => {
       const rows = valData.values || []
       const { summary, offers, despesasFixasItems, despesasVariaveisItems } = parseConsolidado(rows)
 
+      // Taxes from each offer's own tab (0 when the tab or label is missing,
+      // which is the case for every month before taxes were added).
+      const offerTabs = tabs
+        .filter((t: any) => t.title !== consolidado.title)
+        .map((t: any) => ({ title: t.title as string, key: offerKey(t.title) }))
+      const tabFor = new Map(offers.map((o) => [o.offer_name, matchTab(o.offer_name, offerTabs)]))
+      const neededTitles = [...new Set([...tabFor.values()].filter(Boolean).map((t) => t!.title))]
+      const grids = await readTabs(file.id, neededTitles, gHeaders)
+      const offersWithTax = offers.map((o) => {
+        const tab = tabFor.get(o.offer_name)
+        const g = tab ? grids.get(tab.title) : null
+        return { ...o, iof: g ? readTax(g, isIofLabel) : 0, imposto: g ? readTax(g, isImpostoLabel) : 0 }
+      })
+      const iof = offersWithTax.reduce((a, o) => a + o.iof, 0)
+      const imposto = offersWithTax.reduce((a, o) => a + o.imposto, 0)
+
       const monthNumber = file.parsed.number
       const monthName = file.parsed.name
       const syncedAt = new Date().toISOString()
 
-      await admin.from('rm_financial_data').upsert(
+      // Checked before anything is deleted: if this fails (e.g. the iof /
+      // imposto columns don't exist yet) the month is left untouched.
+      const { error: monthErr } = await admin.from('rm_financial_data').upsert(
         {
           user_id: userId,
           month_number: monthNumber,
@@ -197,16 +308,20 @@ Deno.serve(async (req) => {
           despesas_variaveis: summary.despesas_variaveis,
           roi: summary.roi,
           roas: summary.roas,
+          iof,
+          imposto,
           synced_at: syncedAt,
         },
         { onConflict: 'user_id,month_number' },
       )
+      if (monthErr) throw new Error(`Falha ao gravar ${monthName}: ${monthErr.message}`)
 
       await admin.from('rm_financial_offers').delete().eq('user_id', userId).eq('month_number', monthNumber)
-      if (offers.length > 0) {
-        await admin.from('rm_financial_offers').insert(
-          offers.map((o) => ({ ...o, user_id: userId, month_number: monthNumber, synced_at: syncedAt })),
+      if (offersWithTax.length > 0) {
+        const { error: offersErr } = await admin.from('rm_financial_offers').insert(
+          offersWithTax.map((o) => ({ ...o, user_id: userId, month_number: monthNumber, synced_at: syncedAt })),
         )
+        if (offersErr) throw new Error(`Falha ao gravar ofertas de ${monthName}: ${offersErr.message}`)
       }
 
       await admin.from('rm_financial_expenses').delete().eq('user_id', userId).eq('month_number', monthNumber)
@@ -220,7 +335,15 @@ Deno.serve(async (req) => {
         )
       }
 
-      results.push({ month: monthNumber, name: monthName, offers: offers.length })
+      results.push({
+        month: monthNumber,
+        name: monthName,
+        offers: offers.length,
+        iof,
+        imposto,
+        // Which tab each offer's taxes were read from (null = no tab found).
+        taxTabs: Object.fromEntries([...tabFor.entries()].map(([name, t]) => [name, t?.title ?? null])),
+      })
     }
 
     return new Response(JSON.stringify({ synced: results }), {

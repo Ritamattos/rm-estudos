@@ -30,7 +30,15 @@ export function aggregateOffers(rows) {
     ? Number(rows[0].roi)
     : (investido ? lucro_bruto / investido : null)
   const roas = investido ? receita_total / investido : null
-  return { investido, vendas, receita_total, lucro_bruto, roi, roas, rowCount: rows.length }
+  // Taxes as read from the sheet (0 where the offer has none); display only,
+  // they don't enter ROI/ROAS.
+  const iof = rows.reduce((a, r) => a + n(r.iof), 0)
+  const imposto = rows.reduce((a, r) => a + n(r.imposto), 0)
+  return {
+    investido, vendas, receita_total, lucro_bruto, roi, roas,
+    iof, imposto, total_impostos: iof + imposto,
+    rowCount: rows.length,
+  }
 }
 
 // Distinct offers across all synced months, as [{ key, name }] sorted by

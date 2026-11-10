@@ -353,3 +353,6 @@
   .offerSelect { max-width: none; flex: 1 1 100%; }
   .rankRow td { padding-top: 12px; padding-bottom: 12px; }
 }
+
+/* IOF é o imposto principal: card com destaque discreto. */
+.cardTax { border-color: var(--border2); box-shadow: 0 0 0 1px var(--border2) inset; }

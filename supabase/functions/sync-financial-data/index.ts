@@ -121,18 +121,37 @@ function offerKey(name: string): string {
   return String(name ?? '').replace(/^\s*\d+\s*[-–—.:)]\s*/, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR')
 }
 
-const isIofLabel = (s: string) => /\bIOF\b/i.test(s)
-const isImpostoLabel = (s: string) => /IMPOSTO/i.test(s) && !/\bIOF\b/i.test(s)
+// Labels as written in the offer tabs:
+//   "IOF e SPREAD"                → iof
+//   "12,15% de PIS/COFINS e ISS"  → imposto
+// Some tabs have only the first, others have both.
+const IOF_RE = /\bIOF\b|SPREAD/i
+const PIS_RE = /\bPIS\b|COFINS|\bISS\b/i
+const isIofLabel = (s: string) => IOF_RE.test(s) && !PIS_RE.test(s)
+const isImpostoLabel = (s: string) => PIS_RE.test(s) || (/IMPOSTO/i.test(s) && !IOF_RE.test(s))
 
 type Grid = { raw: any[][]; fmt: any[][] }
 
-// A cell counts as an amount only if it's numeric and not shown as a
-// percentage (so a "12,5%" rate next to the label is skipped).
+// "R$ 1.234,56", "-R$ 12,30", "(12,30)" → number; anything else → null.
+function parseMoneyText(s: string): number | null {
+  const t = s.replace(/\s/g, '')
+  if (!/^[-(]?(R\$)?-?\(?[\d.]+(,\d+)?\)?$/.test(t)) return null
+  const v = Number(t.replace(/[R$()\-]/g, '').replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(v) ? v : null
+}
+
+// A cell counts as an amount only if it's numeric (or R$ text) and not
+// shown as a percentage, so a "12,15%" rate next to the label is skipped.
+// Taxes are costs: a value written as negative is read as its amount.
 function amountAt(g: Grid, r: number, c: number): number | null {
   const raw = g.raw[r]?.[c]
   const shown = String(g.fmt[r]?.[c] ?? '').trim()
   if (shown.endsWith('%')) return null
-  if (typeof raw === 'number') return raw
+  if (typeof raw === 'number') return Math.abs(raw)
+  if (typeof raw === 'string') {
+    const v = parseMoneyText(raw)
+    return v == null ? null : Math.abs(v)
+  }
   return null
 }
 const isBlankish = (v: unknown) => v == null || /^\s*[-–—]?\s*$/.test(String(v))

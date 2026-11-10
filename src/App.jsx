@@ -19,10 +19,11 @@ import { readIsDark, readAccent, applyTheme } from './lib/theme'
 import styles from './App.module.css'
 
 const WORKSPACES = [
-  { id: 'atividades',  label: 'Atividades',  icon: <ClipboardList size={15} />, profile: 'empresa' },
-  { id: 'marketing',   label: 'Marketing',   icon: <Briefcase size={15} />,     profile: 'empresa' },
+  // Dados comes first: it's where the Empresa profile opens.
   // To rename this tab, change only `label` (the id stays 'dados').
   { id: 'dados',       label: 'Dados',       icon: <BarChart3 size={15} />,     profile: 'empresa' },
+  { id: 'atividades',  label: 'Atividades',  icon: <ClipboardList size={15} />, profile: 'empresa' },
+  { id: 'marketing',   label: 'Marketing',   icon: <Briefcase size={15} />,     profile: 'empresa' },
   { id: 'pessoal',     label: 'Pessoal',     icon: <BookOpen size={15} />,      profile: 'pessoal' },
   { id: 'biblioteca',  label: 'Biblioteca',  icon: <Library size={15} />,       profile: 'pessoal' },
   { id: 'tela',        label: 'Cinemateca',  icon: <Clapperboard size={15} />,  profile: 'pessoal' },

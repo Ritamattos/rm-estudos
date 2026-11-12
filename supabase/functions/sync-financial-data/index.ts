@@ -109,26 +109,42 @@ function parseConsolidado(rows: any[][]) {
   }
 }
 
-// ── Impostos (IOF / imposto) ──────────────────────────────────────────────────
-// They are NOT in "Consolidado": each offer has its own tab in the month's
-// spreadsheet, and the taxes live there. The sheet is the source of truth —
-// we only read the R$ amounts it shows, never compute or assume a rate.
-// Labels are found by text (no fixed positions), since layouts differ
-// between months. Missing label, blank, "-" or "–" all read as 0.
+// ── Impostos (IOF + Spread / imposto 12,15%) ──────────────────────────────────
+// Each offer has its own tab in the month's spreadsheet. Layout (Nov/2026):
+//
+//   TAXA IMPOSTO 12.15%   TAXA IOF + SPREAD 7.64%   IOF DESDE DIA 10
+//   ADS | IOF + SPREAD (or IMPOSTO) | VENDAS | …       ← summary
+//   Dia | INVESTIDO | IOF + SPREAD (or IMPOSTO) | VENDAS R$ | …
+//   1   | R$106.98  | -        | …
+//   6   | R$58.19   | R$4.45   | …
+//
+// The daily tax column holds what was actually paid each day. Its header
+// says which tax it is:
+//   - "IOF + SPREAD" / "IOF" / "SPREAD"      → IOF
+//   - "PIS", "COFINS", "ISS"                  → imposto 12,15%
+//   - plain "IMPOSTO" (both taxes mixed)      → split by "IOF DESDE DIA N":
+//       days before N are the 12,15% imposto, day N onward is IOF.
+//       Without that cell it's all 12,15% imposto (or all IOF if the tab
+//       only has a "TAXA IOF" rate).
+// We only sum the R$ amounts the sheet shows; no rate is ever applied.
+// The summary row (IOF + SPREAD / IMPOSTO under ADS) holds the same total,
+// so it's not added again. Tabs without a tax column (older months) → 0.
 
 // Same matching as the app (src/lib/offers.js): "1 - Casal Arte" → "casal arte".
 function offerKey(name: string): string {
   return String(name ?? '').replace(/^\s*\d+\s*[-–—.:)]\s*/, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR')
 }
 
-// Labels as written in the offer tabs:
-//   "IOF e SPREAD"                → iof
-//   "12,15% de PIS/COFINS e ISS"  → imposto
-// Some tabs have only the first, others have both.
 const IOF_RE = /\bIOF\b|SPREAD/i
 const PIS_RE = /\bPIS\b|COFINS|\bISS\b/i
-const isIofLabel = (s: string) => IOF_RE.test(s) && !PIS_RE.test(s)
-const isImpostoLabel = (s: string) => PIS_RE.test(s) || (/IMPOSTO/i.test(s) && !IOF_RE.test(s))
+type TaxKind = 'iof' | 'imposto' | 'mixed'
+function taxColumnKind(header: string): TaxKind | null {
+  if (/DESDE/i.test(header) || /^\s*TAXA/i.test(header)) return null
+  if (PIS_RE.test(header)) return 'imposto'
+  if (IOF_RE.test(header)) return 'iof'
+  if (/IMPOSTO/i.test(header)) return 'mixed'
+  return null
+}
 
 type Grid = { raw: any[][]; fmt: any[][] }
 
@@ -140,9 +156,7 @@ function parseMoneyText(s: string): number | null {
   return Number.isFinite(v) ? v : null
 }
 
-// A cell counts as an amount only if it's numeric (or R$ text) and not
-// shown as a percentage, so a "12,15%" rate next to the label is skipped.
-// Taxes are costs: a value written as negative is read as its amount.
+// A numeric (or R$ text) cell not shown as a percentage; "-" / blank → null.
 function amountAt(g: Grid, r: number, c: number): number | null {
   const raw = g.raw[r]?.[c]
   const shown = String(g.fmt[r]?.[c] ?? '').trim()
@@ -154,43 +168,62 @@ function amountAt(g: Grid, r: number, c: number): number | null {
   }
   return null
 }
-const isBlankish = (v: unknown) => v == null || /^\s*[-–—]?\s*$/.test(String(v))
 
-// Reads one tax from an offer tab. For each label cell it tries, in order:
-//  1. label/value pair: the first amount to the right on the same row;
-//  2. column header: the "TOTAL" row below in that column, or else the sum
-//     of the amounts below it.
-// A label/value pair wins over a column (it's the tab's own summary).
-function readTax(g: Grid, isLabel: (s: string) => boolean): number {
-  let pair: number | null = null
-  let column: number | null = null
+const cellText = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
+
+// First number to the right of a label cell matching `re` (e.g. the 10 in
+// "IOF DESDE DIA | 10"), or null when the label isn't in the tab.
+function numberAfterLabel(g: Grid, re: RegExp): number | null {
   for (let r = 0; r < g.raw.length; r++) {
     const row = g.raw[r] || []
     for (let c = 0; c < row.length; c++) {
-      if (typeof row[c] !== 'string' || !isLabel(row[c])) continue
-
-      if (pair == null) {
-        for (let k = c + 1; k <= c + 6; k++) {
-          const a = amountAt(g, r, k)
-          if (a != null) { pair = a; break }
-          if (typeof row[k] === 'string' && !isBlankish(row[k]) && !String(g.fmt[r]?.[k] ?? '').trim().endsWith('%')) break // another label: not a pair
-        }
-      }
-
-      if (column == null) {
-        let sum = 0
-        let seen = false
-        for (let rr = r + 1; rr < g.raw.length; rr++) {
-          const isTotalRow = (g.raw[rr] || []).some((v: unknown) => typeof v === 'string' && /^\s*TOTAL/i.test(v))
-          const a = amountAt(g, rr, c)
-          if (isTotalRow) { if (a != null) { sum = a; seen = true } break }
-          if (a != null) { sum += a; seen = true }
-        }
-        if (seen) column = sum
+      if (!re.test(cellText(row[c]))) continue
+      for (let k = c + 1; k <= c + 4; k++) {
+        const v = row[k]
+        if (typeof v === 'number') return v
+        if (typeof v === 'string' && /^\s*\d+\s*$/.test(v)) return Number(v)
       }
     }
   }
-  return pair ?? column ?? 0
+  return null
+}
+const hasLabel = (g: Grid, re: RegExp) => g.raw.some((row) => (row || []).some((v: unknown) => re.test(cellText(v))))
+
+function readOfferTaxes(g: Grid): { iof: number; imposto: number } {
+  const out = { iof: 0, imposto: 0 }
+  // Daily table header: the row with a "Dia" cell.
+  const hr = g.raw.findIndex((row) => (row || []).some((v: unknown) => /^dia$/i.test(cellText(v))))
+  if (hr === -1) return out
+  const header = g.raw[hr] || []
+  const dayCol = header.findIndex((v: unknown) => /^dia$/i.test(cellText(v)))
+  const cols = header
+    .map((v: unknown, c: number) => ({ c, kind: taxColumnKind(cellText(v)) }))
+    .filter((x: { kind: TaxKind | null }) => x.kind) as { c: number; kind: TaxKind }[]
+  if (cols.length === 0) return out
+
+  const iofFrom = numberAfterLabel(g, /IOF.*DESDE/i)
+  const mixedDefault: 'iof' | 'imposto' =
+    !hasLabel(g, /TAXA\s+IMPOSTO/i) && hasLabel(g, /TAXA\s+IOF/i) ? 'iof' : 'imposto'
+
+  let started = false
+  for (let r = hr + 1; r < g.raw.length; r++) {
+    const dayRaw = g.raw[r]?.[dayCol]
+    const day = typeof dayRaw === 'number' ? dayRaw : /^\s*\d+\s*$/.test(cellText(dayRaw)) ? Number(dayRaw) : null
+    if (day == null || day < 1 || day > 31) { if (started) break; else continue }
+    started = true
+    for (const { c, kind } of cols) {
+      const a = amountAt(g, r, c)
+      if (!a) continue
+      const target = kind !== 'mixed' ? kind
+        : iofFrom != null ? (day >= iofFrom ? 'iof' : 'imposto')
+        : mixedDefault
+      out[target] += a
+    }
+  }
+  // Cents rounding so sums like 31.869999 read as 31.87.
+  out.iof = Math.round(out.iof * 100) / 100
+  out.imposto = Math.round(out.imposto * 100) / 100
+  return out
 }
 
 // Picks the offer tab for an offer: exact name match first, then a tab whose
@@ -302,10 +335,10 @@ Deno.serve(async (req) => {
       const offersWithTax = offers.map((o) => {
         const tab = tabFor.get(o.offer_name)
         const g = tab ? grids.get(tab.title) : null
-        return { ...o, iof: g ? readTax(g, isIofLabel) : 0, imposto: g ? readTax(g, isImpostoLabel) : 0 }
+        return { ...o, ...(g ? readOfferTaxes(g) : { iof: 0, imposto: 0 }) }
       })
-      const iof = offersWithTax.reduce((a, o) => a + o.iof, 0)
-      const imposto = offersWithTax.reduce((a, o) => a + o.imposto, 0)
+      const iof = Math.round(offersWithTax.reduce((a, o) => a + o.iof, 0) * 100) / 100
+      const imposto = Math.round(offersWithTax.reduce((a, o) => a + o.imposto, 0) * 100) / 100
 
       const monthNumber = file.parsed.number
       const monthName = file.parsed.name

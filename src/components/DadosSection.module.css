@@ -355,4 +355,5 @@
 }
 
 /* IOF é o imposto principal: card com destaque discreto. */
+.cardHint { font-size: 11px; color: var(--text3); }
 .cardTax { border-color: var(--border2); box-shadow: 0 0 0 1px var(--border2) inset; }

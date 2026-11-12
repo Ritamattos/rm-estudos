@@ -49,8 +49,8 @@ const TABLE_METRICS = [
   { key: 'despesas_fixas', label: 'Despesas Fixas', format: currency, invert: true },
   { key: 'despesas_variaveis', label: 'Despesas Variáveis', format: currency, invert: true },
   // More tax is bad: shown red when it goes up, like the expenses.
-  { key: 'iof', label: 'IOF e Spread', format: currency, invert: true },
-  { key: 'imposto', label: 'PIS/COFINS e ISS', format: currency, invert: true },
+  { key: 'iof', label: 'Imposto IOF (IOF e Spread)', format: currency, invert: true },
+  { key: 'imposto', label: 'Imposto 12,15% (PIS/COFINS e ISS)', format: currency, invert: true },
   { key: 'total_impostos', label: 'Total de impostos', format: currency, invert: true },
 ]
 
@@ -72,8 +72,8 @@ const OFFER_TABLE_METRICS = [
   { key: 'lucro_bruto', label: 'Lucro Bruto', format: currency, invert: false },
   { key: 'roi', label: 'ROI', format: percent, invert: false },
   { key: 'roas', label: 'ROAS', format: multiplier, invert: false },
-  { key: 'iof', label: 'IOF e Spread', format: currency, invert: true },
-  { key: 'imposto', label: 'PIS/COFINS e ISS', format: currency, invert: true },
+  { key: 'iof', label: 'Imposto IOF (IOF e Spread)', format: currency, invert: true },
+  { key: 'imposto', label: 'Imposto 12,15% (PIS/COFINS e ISS)', format: currency, invert: true },
   { key: 'total_impostos', label: 'Total de impostos', format: currency, invert: true },
 ]
 
@@ -85,16 +85,19 @@ function TaxCards({ iof, imposto, total, title }) {
       <h2 className={styles.sectionTitle}>Impostos{title ? ` — ${title}` : ''}</h2>
       <div className={styles.cards}>
         <div className={`${styles.card} ${styles.cardTax}`}>
-          <span className={styles.cardLabel}>IOF e Spread</span>
+          <span className={styles.cardLabel}>Imposto IOF</span>
           <span className={styles.cardValue}>{currency(iof)}</span>
+          <span className={styles.cardHint}>IOF e Spread</span>
         </div>
         <div className={styles.card}>
-          <span className={styles.cardLabel}>PIS/COFINS e ISS</span>
+          <span className={styles.cardLabel}>Imposto 12,15%</span>
           <span className={styles.cardValue}>{currency(imposto)}</span>
+          <span className={styles.cardHint}>PIS/COFINS e ISS</span>
         </div>
         <div className={styles.card}>
           <span className={styles.cardLabel}>Total de impostos</span>
           <span className={styles.cardValue}>{currency(total)}</span>
+          <span className={styles.cardHint}>IOF + 12,15%</span>
         </div>
       </div>
     </div>
@@ -154,7 +157,7 @@ function OfferRanking({ ranking, onPick }) {
                 <td>{currency(r.receita_total)}</td>
                 <td className={loss ? styles.lossText : ''}>{percent(r.roi)}</td>
                 <td>{multiplier(r.roas)}</td>
-                <td title={`IOF e Spread ${currency(r.iof)} · PIS/COFINS e ISS ${currency(r.imposto)}`}>
+                <td title={`Imposto IOF ${currency(r.iof)} · Imposto 12,15% ${currency(r.imposto)}`}>
                   {r.total_impostos ? currency(r.total_impostos) : '–'}
                 </td>
               </tr>
@@ -634,7 +637,7 @@ export default function DadosSection({ user }) {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Oferta</th><th>Investido</th><th>Vendas</th><th>Receita</th><th>Lucro</th><th>ROI</th><th>IOF e Spread</th><th>PIS/COFINS e ISS</th><th>Status</th>
+                      <th>Oferta</th><th>Investido</th><th>Vendas</th><th>Receita</th><th>Lucro</th><th>ROI</th><th>Imposto IOF</th><th>Imposto 12,15%</th><th>Status</th>
                     </tr>
                   </thead>
                   <tbody>

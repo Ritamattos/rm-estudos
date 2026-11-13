@@ -82,7 +82,12 @@ export function useCriativosStore(user) {
   }, [user, criativos])
 
   const updateCriativo = useCallback(async (id, fields) => {
-    await supabase.from('criativos').update(fields).eq('id', id)
+    const { error } = await supabase.from('criativos').update(fields).eq('id', id)
+    if (error) {
+      console.error('[updateCriativo]', error)
+      alert('Não foi possível salvar as alterações do criativo. Tente de novo.')
+      return
+    }
     setCriativos(prev => prev.map(c => c.id === id ? { ...c, ...fields } : c))
   }, [])
 

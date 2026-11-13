@@ -98,17 +98,34 @@ function OfertaModal({ oferta, onClose, onSave }) {
   )
 }
 
-function NovoCriativoModal({ onClose, onSave }) {
-  const [form, setForm] = useState({ link_drive: '', formato: 'video', angulo: '' })
+// Creates a criativo, or edits one already saved (`criativo` given).
+function CriativoModal({ criativo, onClose, onSave }) {
+  const [form, setForm] = useState({
+    nome: criativo?.nome ?? '',
+    link_drive: criativo?.link_drive ?? '',
+    formato: criativo?.formato ?? 'video',
+    angulo: criativo?.angulo ?? '',
+    observacoes: criativo?.observacoes ?? '',
+  })
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
   async function save() {
-    await onSave({ link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim() })
+    const fields = { link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim() }
+    if (criativo) {
+      fields.nome = form.nome.trim() || `AD ${criativo.numero}`
+      fields.observacoes = form.observacoes.trim()
+    }
+    await onSave(fields)
     onClose()
   }
   return (
-    <Modal title="Novo criativo" onClose={onClose} onSave={save} saveLabel="Criar">
+    <Modal title={criativo ? 'Editar criativo' : 'Novo criativo'} onClose={onClose} onSave={save} saveLabel={criativo ? 'Salvar' : 'Criar'}>
+      {criativo && (
+        <Field label="Nome">
+          <input value={form.nome} onChange={f('nome')} placeholder={`AD ${criativo.numero}`} autoFocus />
+        </Field>
+      )}
       <Field label="Link do Google Drive · opcional">
-        <input value={form.link_drive} onChange={f('link_drive')} placeholder="https://drive.google.com/file/d/..." autoFocus />
+        <input value={form.link_drive} onChange={f('link_drive')} placeholder="https://drive.google.com/file/d/..." autoFocus={!criativo} />
       </Field>
       <Field label="Formato">
         <select value={form.formato} onChange={f('formato')}>
@@ -118,7 +135,13 @@ function NovoCriativoModal({ onClose, onSave }) {
       <Field label="Ângulo / gancho da copy">
         <input value={form.angulo} onChange={f('angulo')} placeholder="Ex: Dor de não ter tempo" />
       </Field>
-      <p className={styles.hint}>O nome (AD 1, AD 2…) é gerado automaticamente e pode ser editado depois.</p>
+      {criativo ? (
+        <Field label="Observações · opcional">
+          <textarea value={form.observacoes} onChange={f('observacoes')} rows={3} placeholder="Anotações sobre este criativo" />
+        </Field>
+      ) : (
+        <p className={styles.hint}>O nome (AD 1, AD 2…) é gerado automaticamente e pode ser editado depois.</p>
+      )}
     </Modal>
   )
 }
@@ -193,6 +216,7 @@ export default function CriativosSection({ user }) {
         rows={rowsByCriativo[criativo.id] || NO_ROWS}
         store={store}
         onDeleted={goOferta}
+        onEdit={() => setModal({ type: 'criativo', target: criativo })}
       />
     )
   } else if (oferta) {
@@ -202,6 +226,7 @@ export default function CriativosSection({ user }) {
         criativos={criativos.filter(c => c.oferta_id === oferta.id)}
         rowsByCriativo={rowsByCriativo}
         onOpen={setCriativoId}
+        onEdit={c => setModal({ type: 'criativo', target: c })}
         onNew={() => setModal({ type: 'criativo' })}
         onConfig={() => setModal({ type: 'oferta', target: oferta })}
       />
@@ -320,7 +345,11 @@ export default function CriativosSection({ user }) {
         />
       )}
       {modal?.type === 'criativo' && oferta && (
-        <NovoCriativoModal onClose={closeModal} onSave={fields => store.addCriativo(oferta.id, fields)} />
+        <CriativoModal
+          criativo={modal.target}
+          onClose={closeModal}
+          onSave={fields => modal.target ? store.updateCriativo(modal.target.id, fields) : store.addCriativo(oferta.id, fields)}
+        />
       )}
     </div>
   )

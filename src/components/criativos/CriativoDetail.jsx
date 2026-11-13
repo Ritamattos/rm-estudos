@@ -276,7 +276,7 @@ function InlineInput({ value, onSave, className, placeholder }) {
 
 // ── Detalhe ──────────────────────────────────────────────────────────────────
 
-export default function CriativoDetail({ criativo, oferta, rows, store, onDeleted }) {
+export default function CriativoDetail({ criativo, oferta, rows, store, onDeleted, onEdit }) {
   const moeda = oferta.moeda || 'BRL'
   const money = v => currency(v, moeda)
   const totals = useMemo(() => summarize(rows, oferta.ticket_medio), [rows, oferta.ticket_medio])
@@ -318,6 +318,9 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               value={criativo.nome}
               onSave={v => update({ nome: v || `AD ${criativo.numero}` })}
             />
+            <button className={styles.editBtn} onClick={onEdit} title="Editar criativo">
+              <Pencil size={14} /> Editar
+            </button>
             <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={removeCriativo} title="Excluir criativo">
               <Trash2 size={15} />
             </button>
@@ -335,6 +338,7 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               <InlineInput value={criativo.angulo} onSave={v => update({ angulo: v })} placeholder="Gancho da copy" />
             </Field>
           </div>
+          {criativo.observacoes && <p className={styles.detailNotes}>{criativo.observacoes}</p>}
         </div>
       </div>
 

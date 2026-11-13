@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Settings } from 'lucide-react'
+import { Plus, Settings, Pencil } from 'lucide-react'
 import {
   summarize, computeVerdict, rankCompare, filterByPeriodo, PERIODOS,
   currency, percent, multiplier, decimal, integer,
@@ -12,7 +12,7 @@ function signClass(v) {
   return v > 0 ? styles.positive : styles.negative
 }
 
-export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen, onNew, onConfig }) {
+export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen, onEdit, onNew, onConfig }) {
   const [periodo, setPeriodo] = useState('total')
   const moeda = oferta.moeda || 'BRL'
   const money = v => currency(v, moeda)
@@ -92,6 +92,14 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
                   </td>
                   <td className={styles.stickyName}>
                     <button className={styles.nameLink} onClick={() => onOpen(criativo.id)}>{criativo.nome}</button>
+                    <button
+                      className={`${styles.iconBtn} ${styles.rowEditBtn}`}
+                      onClick={() => onEdit(criativo)}
+                      title="Editar criativo"
+                      aria-label={`Editar ${criativo.nome}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
                     {criativo.angulo && <span className={styles.nameSub}>{criativo.angulo}</span>}
                   </td>
                   <td>

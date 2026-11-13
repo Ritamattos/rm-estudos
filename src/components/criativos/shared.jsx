@@ -32,10 +32,16 @@ export const MOEDAS = [
 
 // Accepts "1.234,50" (pt-BR) as well as "1234.50"; empty → null. Integer
 // fields treat any dot/comma as a thousands separator ("12.345" impressões).
+// Reads what people type in Brazil: "50", "50,90", "R$ 1.234,56", "1.500"
+// (thousands), "US$ 12.50". Currency symbols and spaces are ignored.
+// Returns null when there's no number at all (so it can be flagged).
 export function parseNum(v, isDecimal = true) {
-  const s = String(v ?? '').trim()
-  if (!s) return null
-  const n = Number(!isDecimal ? s.replace(/[.,\s]/g, '') : s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s)
+  let s = String(v ?? '').replace(/[^\d.,-]/g, '')
+  if (!s || !/\d/.test(s)) return null
+  if (!isDecimal) s = s.replace(/[.,]/g, '')
+  else if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')        // 1.234,56
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')         // 1.500 → 1500
+  const n = Number(s)
   return Number.isFinite(n) ? n : null
 }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Pencil, Trash2, TrendingUp, Check, X } from 'lucide-react'
+import { Pencil, Trash2, TrendingUp, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   summarize, computeVerdict, todayISO,
   currency, percent, multiplier, decimal, integer,
@@ -38,7 +38,8 @@ function formToPayload(form) {
 }
 
 function saveErrorMessage(error) {
-  return error.code === '23505' ? 'Já existe um lançamento nessa data.' : 'Não foi possível salvar.'
+  if (error.code === '23505') return 'Já existe um lançamento nessa data.'
+  return `Não foi possível salvar${error.message ? `: ${error.message}` : ''}. Verifique a conexão e tente de novo.`
 }
 
 // ── Gráfico de linha simples ─────────────────────────────────────────────────
@@ -102,6 +103,88 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
   )
 }
 
+// ── Calendário do mês ────────────────────────────────────────────────────────
+// Every past day can be picked to fill in or fix its numbers; days that
+// already have data show the spend and sales. Future days are disabled.
+
+const WEEK_HEAD = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+const pad2 = n => String(n).padStart(2, '0')
+const isoOf = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`
+
+function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
+  const today = todayISO()
+  const [view, setView] = useState(() => {
+    const [y, m] = (selected || today).split('-').map(Number)
+    return { y, m: m - 1 }
+  })
+  // Follow the selection when it moves to another month.
+  useEffect(() => {
+    if (!selected) return
+    const [y, m] = selected.split('-').map(Number)
+    setView(v => (v.y === y && v.m === m - 1 ? v : { y, m: m - 1 }))
+  }, [selected])
+
+  const first = new Date(view.y, view.m, 1)
+  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate()
+  const lead = (first.getDay() + 6) % 7 // segunda = 0
+  const cells = [...Array(lead).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const rawLabel = first.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const monthLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1)
+  const isCurrentMonth = isoOf(view.y, view.m, 1) === today.slice(0, 8) + '01'
+  const shift = n => setView(v => {
+    const d = new Date(v.y, v.m + n, 1)
+    return { y: d.getFullYear(), m: d.getMonth() }
+  })
+  const filledThisMonth = cells.filter(d => d && rowsByDate.has(isoOf(view.y, view.m, d))).length
+
+  return (
+    <div className={styles.cal}>
+      <div className={styles.calHead}>
+        <button type="button" className={styles.iconBtnLg} onClick={() => shift(-1)} aria-label="Mês anterior"><ChevronLeft size={16} /></button>
+        <div className={styles.calTitle}>
+          <span>{monthLabel}</span>
+          <small>{filledThisMonth} {filledThisMonth === 1 ? 'dia lançado' : 'dias lançados'}</small>
+        </div>
+        <button type="button" className={styles.iconBtnLg} onClick={() => shift(1)} disabled={isCurrentMonth} aria-label="Próximo mês"><ChevronRight size={16} /></button>
+      </div>
+      <div className={styles.calGrid} role="grid">
+        {WEEK_HEAD.map(w => <span key={w} className={styles.calWeek}>{w}</span>)}
+        {cells.map((d, i) => {
+          if (!d) return <span key={`e${i}`} />
+          const iso = isoOf(view.y, view.m, d)
+          const row = rowsByDate.get(iso)
+          const future = iso > today
+          return (
+            <button
+              type="button"
+              key={iso}
+              disabled={future}
+              onClick={() => onSelect(iso)}
+              aria-pressed={iso === selected}
+              aria-label={`${d}${row ? `: gasto ${money(row.gasto)}, ${row.vendas} vendas` : ': sem dados'}`}
+              className={[
+                styles.calDay,
+                row ? styles.calDayFilled : '',
+                iso === selected ? styles.calDaySelected : '',
+                iso === today ? styles.calDayToday : '',
+              ].join(' ')}
+            >
+              <span className={styles.calNum}>{d}</span>
+              {row && (
+                <>
+                  <span className={styles.calGasto}>{money(row.gasto)}</span>
+                  <span className={styles.calVendas}>{Number(row.vendas) || 0} v</span>
+                </>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      <p className={styles.hint}>Toque em um dia para lançar ou corrigir os dados. Dias marcados já têm lançamento.</p>
+    </div>
+  )
+}
+
 // ── Lançar dia ───────────────────────────────────────────────────────────────
 
 function LancarDia({ criativoId, rows, store, moeda }) {
@@ -130,18 +213,25 @@ function LancarDia({ criativoId, rows, store, moeda }) {
   }
 
   const existingForDate = rows.some(r => r.data === form.data)
+  const rowsByDate = useMemo(() => new Map(rows.map(r => [r.data, r])), [rows])
+  const money = v => currency(v, moeda)
 
   async function save(e) {
     e.preventDefault()
     if (!form.data) return
+    // Something typed that isn't a number would silently become 0 — flag it.
+    const bad = METRIC_FIELDS.find(m => String(form[m.key] ?? '').trim() && parseNum(form[m.key], m.decimal) == null)
+    if (bad) { setError(`"${form[bad.key]}" não é um número válido em ${bad.label}.`); return }
     setSaving(true)
     setError(null)
     const res = await store.saveMetrica(criativoId, formToPayload(form))
     setSaving(false)
-    if (res.error) { setError(saveErrorMessage(res.error)); return }
+    if (res.error) { console.error('[saveMetrica]', res.error); setError(saveErrorMessage(res.error)); return }
     setFlash(true)
-    setTimeout(() => setFlash(false), 1600)
+    setTimeout(() => setFlash(false), 2200)
   }
+
+  const dayTitle = new Date(`${form.data}T00:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
     <form className={styles.dayForm} onSubmit={save}>
@@ -149,10 +239,11 @@ function LancarDia({ criativoId, rows, store, moeda }) {
         <h2 className={styles.sectionTitle}>Lançar dia</h2>
         {flash && <span className={styles.flash}>Salvo ✓</span>}
       </div>
-      <Field label="Data">
-        <input className={styles.bigInput} type="date" value={form.data} onChange={e => changeDate(e.target.value)} />
-      </Field>
-      {existingForDate && <p className={styles.hint}>Esse dia já tem dados — os valores foram carregados para editar.</p>}
+      <MonthCalendar selected={form.data} onSelect={changeDate} rowsByDate={rowsByDate} money={money} />
+      <div className={styles.dayEditing}>
+        <span>{existingForDate ? 'Editando' : 'Lançando'}: <strong>{dayTitle}</strong></span>
+        {existingForDate && <small>Esse dia já tem dados — altere e toque em “Atualizar dia”.</small>}
+      </div>
       <div className={styles.dayGrid}>
         {METRIC_FIELDS.map(m => (
           <Field key={m.key} label={`${m.label}${m.decimal ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}>

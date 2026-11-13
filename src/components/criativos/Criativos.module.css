@@ -387,6 +387,49 @@ a.thumb:hover { border-color: var(--accent); }
 }
 .dayFormHeader { display: flex; align-items: center; justify-content: space-between; }
 .flash { font-size: 12.5px; font-weight: 600; color: var(--success); }
+
+/* ── Calendário de lançamentos ─────────────────────────────── */
+.cal { display: flex; flex-direction: column; gap: 10px; }
+.calHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.calHead button:disabled { opacity: 0.35; cursor: default; }
+.calTitle { display: flex; flex-direction: column; align-items: center; }
+.calTitle span { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+.calTitle small { font-size: 11.5px; color: var(--text3); }
+.calGrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.calWeek { text-align: center; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text3); padding-bottom: 2px; }
+.calDay {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  min-height: 58px; padding: 6px 7px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg2); text-align: left; min-width: 0;
+  transition: border-color 0.12s, background 0.12s;
+}
+.calDay:hover:not(:disabled) { border-color: var(--accent); }
+.calDay:disabled { opacity: 0.3; cursor: default; }
+.calNum { font-size: 12.5px; font-weight: 700; color: var(--text2); }
+.calGasto, .calVendas { font-size: 10.5px; line-height: 1.25; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calGasto { color: var(--text2); }
+.calVendas { color: var(--success); font-weight: 600; }
+.calDayFilled { background: var(--accent-dim); border-color: var(--accent-dim2); }
+.calDayFilled .calNum { color: var(--text); }
+.calDayToday .calNum { color: var(--accent-light); }
+.calDaySelected, .calDaySelected:hover { border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent) inset; background: var(--accent-dim2); }
+
+.dayEditing {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border-radius: var(--radius);
+  background: var(--bg2); border-left: 3px solid var(--accent);
+  font-size: 13.5px; color: var(--text2);
+}
+.dayEditing strong { color: var(--text); }
+.dayEditing small { font-size: 11.5px; color: var(--text3); }
+
+@media (max-width: 480px) {
+  .calGrid { gap: 3px; }
+  .calDay { min-height: 46px; padding: 5px 4px; align-items: center; }
+  .calGasto { display: none; }
+  .calVendas { font-size: 10px; }
+}
 .dayGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dayActions { display: flex; gap: 8px; }
 .dayActions .primaryBtn { flex: 1; padding: 14px 16px; font-size: 15px; }

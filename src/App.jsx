@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList, BarChart3, Building2, User, Menu, Download } from 'lucide-react'
+import { BookOpen, Briefcase, Library, Clapperboard, ClipboardList, BarChart3, Building2, User, Menu, Download, HeartPulse } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import { useStore } from './hooks/useStore'
 import { useInstallPrompt } from './hooks/useInstallPrompt'
@@ -12,6 +12,7 @@ import NotesSection from './components/NotesSection'
 import BibliotecaSection from './components/BibliotecaSection'
 import TelaSection from './components/TelaSection'
 import AtividadesSection from './components/AtividadesSection'
+import RotinaSection from './components/RotinaSection'
 import DadosWorkspace from './components/DadosWorkspace'
 import ProfileSwitcher from './components/ProfileSwitcher'
 import { ThemeContext } from './components/ThemeSettings'
@@ -27,6 +28,7 @@ const WORKSPACES = [
   { id: 'pessoal',     label: 'Pessoal',     icon: <BookOpen size={15} />,      profile: 'pessoal' },
   { id: 'biblioteca',  label: 'Biblioteca',  icon: <Library size={15} />,       profile: 'pessoal' },
   { id: 'tela',        label: 'Cinemateca',  icon: <Clapperboard size={15} />,  profile: 'pessoal' },
+  { id: 'rotina',      label: 'Rotina',      icon: <HeartPulse size={15} />,    profile: 'pessoal' },
 ]
 
 // Profiles are a UI-only grouping of workspaces: same Supabase account,
@@ -192,7 +194,7 @@ export default function App() {
   }
 
   const cats = store.categories.filter(c => c.workspace === workspace)
-  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela' || workspace === 'atividades' || workspace === 'dados'
+  const isSpecialSection = workspace === 'biblioteca' || workspace === 'tela' || workspace === 'atividades' || workspace === 'dados' || workspace === 'rotina'
 
   // No more "show everything" view: always resolve to a real category so
   // the workspace never lands in an unfiltered state. Falls back to null
@@ -306,6 +308,8 @@ export default function App() {
           <BibliotecaSection user={user} store={store} navOpen={navOpen} onCloseNav={closeNav} />
         ) : workspace === 'tela' ? (
           <TelaSection user={user} store={store} navOpen={navOpen} onCloseNav={closeNav} />
+        ) : workspace === 'rotina' ? (
+          <RotinaSection user={user} navOpen={navOpen} onCloseNav={closeNav} />
         ) : workspace === 'atividades' ? (
           <AtividadesSection user={user} navOpen={navOpen} onCloseNav={closeNav} />
         ) : workspace === 'dados' ? (

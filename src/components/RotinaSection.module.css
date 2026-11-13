@@ -1,0 +1,261 @@
+.wrap { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+
+.topbar { padding: 1.5rem var(--gutter) 0.75rem; }
+.title {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.03em;
+}
+
+.content {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 0 var(--gutter) 2.5rem;
+  max-width: 920px;
+}
+
+.loading { flex: 1; display: flex; align-items: center; justify-content: center; padding: 4rem; }
+.loading span { font-size: 28px; color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.error {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 var(--gutter) 12px; padding: 10px 14px;
+  background: var(--danger-dim); color: var(--danger);
+  border-radius: var(--radius); font-size: 13px;
+}
+
+.hint { font-size: 12.5px; color: var(--text3); line-height: 1.5; }
+.goodText { color: var(--success) !important; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+.badText { color: var(--danger) !important; font-weight: 600; }
+.upCell { color: var(--success) !important; font-weight: 600; }
+
+/* ── Cards / campos ───────────────────────────────────────────── */
+.card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.cardTitle {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-display);
+  font-size: 14.5px; font-weight: 700; color: var(--text);
+}
+.cardHeadRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--text2); }
+.field small { font-weight: 400; color: var(--text3); }
+.inlineField { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.inlineField > span { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.inlineField select { width: auto; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.addRow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.addRow > input { flex: 2 1 160px; min-width: 0; }
+.addRow .qtyInput { flex: 1 1 110px; }
+
+/* ── Botões ───────────────────────────────────────────────────── */
+.primaryBtn, .secondaryBtn, .toggleBtn, .bigBtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px; padding: 0 16px;
+  border-radius: var(--radius);
+  font-size: 13.5px; font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.primaryBtn { background: var(--accent); color: white; }
+.primaryBtn:hover { background: var(--accent-strong); }
+.secondaryBtn, .toggleBtn { background: var(--bg2); border: 1px solid var(--border2); color: var(--text2); }
+.secondaryBtn:hover, .toggleBtn:hover { color: var(--text); border-color: var(--accent); }
+.toggleOn { background: var(--accent-dim2); border-color: var(--accent); color: var(--accent-light); }
+.primaryBtn:disabled, .secondaryBtn:disabled, .bigBtn:disabled { opacity: 0.45; cursor: default; }
+
+.iconBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: var(--radius);
+  color: var(--text3); transition: all 0.15s; flex-shrink: 0;
+}
+.iconBtn:hover:not(:disabled) { background: var(--bg3); color: var(--text); }
+.iconBtn:disabled { opacity: 0.35; cursor: default; }
+.linkBtn { font-size: 12.5px; font-weight: 600; color: var(--accent-light); padding: 6px 4px; }
+.linkBtn:hover { text-decoration: underline; }
+
+/* ── HOJE ─────────────────────────────────────────────────────── */
+.dayNav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dayLabel {
+  display: flex; flex-direction: column; align-items: center; min-width: 170px;
+  font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text);
+}
+.dayLabel small { font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text3); }
+
+.alert {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 11px 14px; border-radius: var(--radius);
+  background: var(--danger-dim); color: var(--danger);
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+}
+.alert svg { flex-shrink: 0; margin-top: 1px; }
+
+.meals { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.meal {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 13px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s, background 0.15s;
+}
+.mealDone { border-color: var(--success); }
+.mealSkipped { opacity: 0.8; }
+.mealAlert { border-color: var(--danger); background: var(--danger-dim); box-shadow: 0 0 0 1px var(--danger) inset; }
+.mealHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; }
+.mealName { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: var(--text); }
+.mainTag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text3); border: 1px solid var(--border2); border-radius: 999px; padding: 1px 7px;
+}
+.mealPlan { font-size: 12px; color: var(--text3); line-height: 1.35; }
+.timeInput { width: auto; padding: 5px 8px; font-size: 13px; }
+
+.statusRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.statusBtn {
+  min-height: 44px; border-radius: var(--radius);
+  background: var(--bg2); border: 1px solid var(--border2);
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  transition: all 0.12s;
+}
+.statusBtn:hover { color: var(--text); }
+.status_comi { background: var(--success); border-color: var(--success); color: white; }
+.status_pulei { background: var(--danger); border-color: var(--danger); color: white; }
+.status_subst { background: var(--accent); border-color: var(--accent); color: white; }
+.noteInput { font-size: 13.5px; }
+
+.dayExtras { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 10px; align-items: end; }
+.dayExtras .toggleBtn { min-height: 46px; }
+
+/* ── ÁGUA ─────────────────────────────────────────────────────── */
+.waterHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.waterTotal { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); }
+.waterTotal small { font-size: 13px; color: var(--text3); font-weight: 500; }
+.progress { height: 12px; border-radius: 6px; background: var(--bg3); overflow: hidden; }
+.progressFill { height: 100%; border-radius: 6px; background: var(--accent); transition: width 0.25s; }
+.progressDone { background: var(--success); }
+.waterBtns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.bigBtn { background: var(--accent-dim2); color: var(--accent-light); border: 1px solid transparent; min-height: 50px; font-size: 14.5px; }
+.bigBtn:hover:not(:disabled) { border-color: var(--accent); }
+.ghostBtn { background: var(--bg2); color: var(--text2); border-color: var(--border2); }
+
+.waterChart { position: relative; display: flex; align-items: stretch; gap: 8px; height: 170px; padding-top: 4px; }
+.waterCol { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.waterVal { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
+.waterBarTrack { position: relative; flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.trackGoal { position: absolute; left: -4px; right: -4px; border-top: 1.5px dashed var(--text3); pointer-events: none; z-index: 1; }
+.waterBar { width: 100%; max-width: 30px; min-height: 2px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.waterBarDone { background: var(--success); }
+.waterDay { font-size: 11px; color: var(--text3); }
+
+/* ── LANCHES ──────────────────────────────────────────────────── */
+.snackGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.snack {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 14px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.snackPicked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.snackHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.snackName { font-size: 14px; font-weight: 700; color: var(--text); padding-top: 8px; }
+.snackActions { display: flex; gap: 0; margin-right: -6px; }
+.favOn { color: #f5b301; }
+.snackIng { font-size: 12px; color: var(--accent-light); }
+.snackPrep { font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+.pickedBox { display: flex; flex-direction: column; gap: 6px; }
+.pickedLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-light); }
+
+/* ── CARDÁPIO ─────────────────────────────────────────────────── */
+.segmented { display: flex; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+.segmented button { min-height: 40px; padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--text2); background: var(--bg2); }
+.segmented button + button { border-left: 1px solid var(--border2); }
+.segOn { background: var(--accent) !important; color: white !important; }
+.tabsSmall { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.tabsSmall button { padding: 8px 10px; font-size: 12.5px; font-weight: 600; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabSmallOn { color: var(--accent-light) !important; border-bottom-color: var(--accent) !important; }
+
+.planGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.planDay { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg2); }
+.planDayName { font-size: 13px; font-weight: 700; color: var(--text); }
+.planSlot { display: flex; flex-direction: column; gap: 3px; }
+.planSlot span { font-size: 11px; color: var(--text3); }
+.planSlot select { padding: 7px 9px; font-size: 13px; }
+
+/* ── COMPRAS ──────────────────────────────────────────────────── */
+.shopList { list-style: none; display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.shopItem { display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 14px; border-bottom: 1px solid var(--border); min-height: 52px; }
+.shopItem:last-child { border-bottom: none; }
+.shopCheck { flex: 1; display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; min-width: 0; }
+.shopCheck input { width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0; padding: 0; }
+.shopName { font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.shopQty { font-size: 12px; color: var(--text3); text-align: right; }
+.shopDone .shopName { text-decoration: line-through; color: var(--text3); }
+.shopDone { background: var(--bg2); }
+
+/* ── PESO / RESUMO ────────────────────────────────────────────── */
+.statGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 14px 16px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.stat > span { font-size: 11.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
+.stat > strong { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); }
+.stat > small { font-size: 11.5px; color: var(--text3); }
+.statAccent { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.statAlert { border-color: var(--danger); }
+.statAlert > strong { color: var(--danger); }
+
+.chartBox { position: relative; }
+.weightSvg { width: 100%; height: auto; display: block; overflow: visible; }
+.gridLine { stroke: var(--border); stroke-width: 1; }
+.axisText { fill: var(--text3); font-size: 11px; }
+.goalSvgLine { stroke: var(--success); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.goalSvgText { fill: var(--text2); font-size: 11.5px; font-weight: 600; }
+.pathSvgLine { stroke: var(--text3); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.weightLine { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.weightDot { fill: var(--accent); stroke: var(--card-bg); stroke-width: 2; }
+.lastLabel { fill: var(--text); font-size: 12px; font-weight: 700; }
+.tooltip {
+  position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  padding: 5px 10px; border-radius: var(--radius);
+  background: var(--bg4); border: 1px solid var(--border2);
+  font-size: 12px; color: var(--text2); pointer-events: none; white-space: nowrap;
+}
+.tooltip strong { color: var(--text); }
+
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th {
+  text-align: left; padding: 7px 10px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.table td { padding: 8px 10px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.table tbody tr:last-child td { border-bottom: none; }
+.rowFuture td { opacity: 0.4; }
+
+/* ── Celular ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .topbar { padding-top: 1rem; }
+  .content { gap: 12px; }
+  .meals { grid-template-columns: 1fr; }
+  .dayExtras { grid-template-columns: 1fr 1fr; }
+  .dayExtras .toggleBtn { grid-column: 1 / -1; }
+  .waterBtns { grid-template-columns: repeat(3, 1fr); }
+  .waterBtns .ghostBtn { grid-column: 1 / -1; min-height: 44px; }
+  .dayNav { justify-content: space-between; }
+  .dayLabel { min-width: 0; flex: 1; }
+  .statGrid { grid-template-columns: 1fr 1fr; }
+  .toolbar > * { flex: 1 1 auto; }
+  .card { padding: 14px; }
+}

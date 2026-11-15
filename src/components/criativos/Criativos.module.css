@@ -618,3 +618,6 @@ a.thumb:hover { border-color: var(--accent); }
 
 /* Rótulos que quebram linha não desalinham os campos da mesma fileira. */
 .dayGrid { align-items: end; }
+
+.inputError, .inputError:focus { border-color: var(--danger) !important; box-shadow: 0 0 0 3px var(--danger-dim) !important; }
+.fieldError { font-size: 12px; color: var(--danger); margin-top: -6px; }

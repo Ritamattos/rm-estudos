@@ -75,7 +75,8 @@ export function useCriativosStore(user) {
   const addCriativo = useCallback(async (ofertaId, fields) => {
     const numero = Math.max(0, ...criativos.filter(c => c.oferta_id === ofertaId).map(c => c.numero || 0)) + 1
     const { data } = await supabase.from('criativos').insert({
-      ...fields, oferta_id: ofertaId, numero, nome: `AD ${numero}`, user_id: user.id,
+      // `numero` only orders the criativos; the name is the one the user typed.
+      nome: `AD ${numero}`, ...fields, oferta_id: ofertaId, numero, user_id: user.id,
     }).select().single()
     if (data) setCriativos(prev => [...prev, data])
     return data

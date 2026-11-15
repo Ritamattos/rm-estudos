@@ -130,25 +130,37 @@ function CriativoModal({ criativo, onClose, onSave }) {
     angulo: criativo?.angulo ?? '',
     observacoes: criativo?.observacoes ?? '',
   })
-  const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
+  const [nomeError, setNomeError] = useState(false)
+  const f = key => e => {
+    setForm(prev => ({ ...prev, [key]: e.target.value }))
+    if (key === 'nome') setNomeError(false)
+  }
   async function save() {
-    const fields = {
+    // The name is always chosen by the user — never generated.
+    const nome = form.nome.trim()
+    if (!nome) { setNomeError(true); return }
+    await onSave({
+      nome,
       link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim(),
       observacoes: form.observacoes.trim(),
-    }
-    if (criativo) fields.nome = form.nome.trim() || `AD ${criativo.numero}`
-    await onSave(fields)
+    })
     onClose()
   }
   return (
     <Modal title={criativo ? 'Editar criativo' : 'Novo criativo'} onClose={onClose} onSave={save} saveLabel={criativo ? 'Salvar' : 'Criar'}>
-      {criativo && (
-        <Field label="Nome">
-          <input value={form.nome} onChange={f('nome')} placeholder={`AD ${criativo.numero}`} autoFocus />
-        </Field>
-      )}
-      <Field label="Link do Google Drive · opcional">
-        <input value={form.link_drive} onChange={f('link_drive')} placeholder="https://drive.google.com/file/d/..." autoFocus={!criativo} />
+      <Field label="Nome do criativo">
+        <input
+          value={form.nome}
+          onChange={f('nome')}
+          placeholder="Ex: Antes e depois — vídeo 1"
+          autoFocus
+          aria-invalid={nomeError}
+          className={nomeError ? styles.inputError : ''}
+        />
+      </Field>
+      {nomeError && <p className={styles.fieldError}>Dê um nome para o criativo.</p>}
+      <Field label="Link do criativo no Google Drive · opcional">
+        <input value={form.link_drive} onChange={f('link_drive')} placeholder="https://drive.google.com/file/d/..." />
       </Field>
       <Field label="Formato">
         <select value={form.formato} onChange={f('formato')}>
@@ -166,9 +178,6 @@ function CriativoModal({ criativo, onClose, onSave }) {
           placeholder="Informações importantes. Ex: criativos salvos no e-mail fulano@gmail.com"
         />
       </Field>
-      {!criativo && (
-        <p className={styles.hint}>O nome (AD 1, AD 2…) é gerado automaticamente e pode ser editado depois.</p>
-      )}
     </Modal>
   )
 }

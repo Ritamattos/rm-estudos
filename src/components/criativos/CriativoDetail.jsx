@@ -344,10 +344,13 @@ function HistoryRow({ row, oferta, store, onEdit }) {
 
 // ── Campo de texto que salva ao sair ─────────────────────────────────────────
 
-function InlineInput({ value, onSave, className, placeholder }) {
+function InlineInput({ value, onSave, className, placeholder, required = false }) {
   const [v, setV] = useState(value || '')
   useEffect(() => { setV(value || '') }, [value])
-  function commit() { if (v.trim() !== (value || '')) onSave(v.trim()) }
+  function commit() {
+    if (required && !v.trim()) { setV(value || ''); return } // empty → keep the previous value
+    if (v.trim() !== (value || '')) onSave(v.trim())
+  }
   return (
     <input
       className={className}
@@ -425,7 +428,8 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
             <InlineInput
               className={styles.nameInput}
               value={criativo.nome}
-              onSave={v => update({ nome: v || `AD ${criativo.numero}` })}
+              required
+              onSave={v => update({ nome: v })}
             />
             <button className={styles.editBtn} onClick={onEdit} title="Editar criativo">
               <Pencil size={14} /> Editar

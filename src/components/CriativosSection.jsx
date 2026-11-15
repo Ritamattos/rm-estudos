@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Folder, ArrowLeft } from 'lucide-react'
 import { useCriativosStore } from '../hooks/useCriativosStore'
-import { summarize, currency, integer, TIPOS_OFERTA, tipoOf } from '../lib/criativosMetrics'
+import {
+  summarize, currency, integer, TIPOS_OFERTA, tipoOf,
+  MOEDAS_CONTA, ACRESCIMO_PADRAO, moedaContaOf, gastoEmReais, fetchCotacaoHoje,
+} from '../lib/criativosMetrics'
 import Modal from './Modal'
 import {
   FORMATOS, IDIOMAS, MOEDAS, Field, Breadcrumb, parseNum, numToInput,
@@ -54,15 +57,51 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
     nome: oferta?.nome || '',
     idioma: oferta?.idioma || 'pt',
     moeda: oferta?.moeda || 'BRL',
+    moeda_conta: moedaContaOf(oferta),
+    cotacao: numToInput(oferta?.cotacao ?? null),
+    acrescimo_gasto: numToInput(oferta ? Number(oferta.acrescimo_gasto ?? 0) : ACRESCIMO_PADRAO.BRL),
     ...Object.fromEntries(OFERTA_NUM_FIELDS.map(f => [
       f.key, numToInput(oferta ? oferta[f.key] : f.fallback ?? null),
     ])),
   }))
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
+  const [cotacaoMsg, setCotacaoMsg] = useState(null)
+  const [erro, setErro] = useState(null)
+
+  // Switching the account currency swaps the acréscimo to the new default
+  // only if it was still the old default (a typed value is kept).
+  function setMoedaConta(m) {
+    setForm(prev => {
+      const cur = parseNum(prev.acrescimo_gasto)
+      const other = ACRESCIMO_PADRAO[prev.moeda_conta]
+      const acrescimo_gasto = cur == null || cur === other ? numToInput(ACRESCIMO_PADRAO[m]) : prev.acrescimo_gasto
+      return { ...prev, moeda_conta: m, acrescimo_gasto }
+    })
+    setErro(null)
+  }
+
+  async function usarCotacaoHoje() {
+    setCotacaoMsg('Buscando…')
+    const v = await fetchCotacaoHoje()
+    if (v == null) { setCotacaoMsg('Não foi possível buscar agora. Digite a cotação.'); return }
+    setForm(prev => ({ ...prev, cotacao: numToInput(v) }))
+    setCotacaoMsg(`Cotação de hoje: R$ ${numToInput(v)}`)
+  }
+
+  const exemplo = form.moeda_conta === 'USD'
+    ? gastoEmReais(10, parseNum(form.cotacao), parseNum(form.acrescimo_gasto))
+    : gastoEmReais(100, 1, parseNum(form.acrescimo_gasto))
 
   async function save() {
     if (!form.nome.trim()) return
-    const payload = { nome: form.nome.trim(), idioma: form.idioma, moeda: form.moeda, tipo: form.tipo }
+    const cotacao = parseNum(form.cotacao)
+    if (form.moeda_conta === 'USD' && !(cotacao > 0)) { setErro('Informe a cotação (R$ por US$).'); return }
+    const payload = {
+      nome: form.nome.trim(), idioma: form.idioma, moeda: form.moeda, tipo: form.tipo,
+      moeda_conta: form.moeda_conta,
+      cotacao: form.moeda_conta === 'USD' ? cotacao : (oferta?.cotacao ?? null),
+      acrescimo_gasto: parseNum(form.acrescimo_gasto) ?? 0,
+    }
     OFERTA_NUM_FIELDS.forEach(c => { payload[c.key] = parseNum(form[c.key]) ?? c.fallback ?? null })
     await onSave(payload)
     onClose()
@@ -101,11 +140,54 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
             {IDIOMAS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
         </Field>
-        <Field label="Moeda">
+        <Field label="Moeda da venda">
           <select value={form.moeda} onChange={f('moeda')}>
             {MOEDAS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
         </Field>
+      </div>
+      <div className={styles.gastoBox}>
+        <Field label="Moeda da conta de anúncios" info="moedaConta">
+          <div className={styles.segmented} role="radiogroup" aria-label="Moeda da conta de anúncios">
+            {MOEDAS_CONTA.map(m => (
+              <button
+                type="button"
+                key={m.id}
+                role="radio"
+                aria-checked={form.moeda_conta === m.id}
+                className={form.moeda_conta === m.id ? styles.segmentedOn : ''}
+                onClick={() => setMoedaConta(m.id)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <div className={styles.fieldRow}>
+          {form.moeda_conta === 'USD' && (
+            <Field label="Cotação (R$ por US$)" info="cotacao">
+              <input inputMode="decimal" value={form.cotacao} onChange={f('cotacao')} placeholder="ex: 5,40" />
+            </Field>
+          )}
+          <Field label="Acréscimo sobre o gasto (%)" info="acrescimoGasto">
+            <input inputMode="decimal" value={form.acrescimo_gasto} onChange={f('acrescimo_gasto')} placeholder="0" />
+          </Field>
+        </div>
+        {form.moeda_conta === 'USD' && (
+          <div className={styles.cotacaoRow}>
+            <button type="button" className={styles.linkBtn} onClick={usarCotacaoHoje}>Usar cotação de hoje</button>
+            {cotacaoMsg && <span className={styles.hint}>{cotacaoMsg}</span>}
+          </div>
+        )}
+        <p className={styles.hint}>
+          {form.moeda_conta === 'USD'
+            ? (parseNum(form.cotacao) > 0
+              ? `Exemplo: US$ 10 viram ${currency(exemplo)} (US$ 10 × ${form.cotacao} × (1 + ${form.acrescimo_gasto || 0}%)).`
+              : 'Informe a cotação para ver o exemplo.')
+            : `Exemplo: R$ 100 de gasto viram ${currency(exemplo)} com o acréscimo.`}
+          {' '}Dias já lançados não mudam.
+        </p>
+        {erro && <p className={styles.fieldError}>{erro}</p>}
       </div>
       <div className={styles.fieldRow}>
         {OFERTA_NUM_FIELDS.map(c => (
@@ -115,7 +197,7 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
         ))}
       </div>
       <p className={styles.hint}>
-        O CPA máximo é a base das sugestões. Se o faturamento de um dia ficar vazio, usa vendas × ticket médio.
+        Ticket médio e CPA máximo em reais. O CPA máximo é a base das sugestões. Se o faturamento de um dia ficar vazio, usa vendas × ticket médio.
       </p>
     </Modal>
   )

@@ -25,6 +25,47 @@ export const tipoOf = oferta => (oferta?.tipo === 'direta' ? 'direta' : 'whatsap
 const has = v => v != null && v !== ''
 const num = v => Number(v) || 0
 
+// ── Gasto: moeda da conta de anúncios → reais ──────────────────────────────
+// gasto em reais = gasto digitado × cotação × (1 + acréscimo%), em centavos.
+// Real: cotação 1. Ex: US$ 10 × 5,00 × 1,0764 = R$ 53,82.
+export const MOEDAS_CONTA = [
+  { id: 'BRL', label: 'Real (R$)', symbol: 'R$' },
+  { id: 'USD', label: 'Dólar (US$)', symbol: 'US$' },
+]
+export const ACRESCIMO_PADRAO = { USD: 7.64, BRL: 0 }
+export const moedaContaOf = oferta => (oferta?.moeda_conta === 'USD' ? 'USD' : 'BRL')
+
+export function gastoEmReais(original, cotacao, acrescimo) {
+  const v = num(original) * (num(cotacao) || 1) * (1 + num(acrescimo) / 100)
+  return Math.round(v * 100) / 100
+}
+
+// How a saved day's spend was entered. Days saved before the conversion
+// existed have no original/currency: they are reais, cotação 1, acréscimo 0.
+export function rowGasto(row) {
+  if (!has(row.gasto_original)) return { original: num(row.gasto), moeda: 'BRL', cotacao: 1, acrescimo: 0, reais: num(row.gasto) }
+  return {
+    original: num(row.gasto_original),
+    moeda: row.moeda_gasto === 'USD' ? 'USD' : 'BRL',
+    cotacao: row.moeda_gasto === 'USD' ? num(row.cotacao) : 1,
+    acrescimo: num(row.acrescimo),
+    reais: num(row.gasto),
+  }
+}
+
+// Today's USD→BRL rate from a free public source (AwesomeAPI). Returns a
+// number, or null if it fails (manual typing keeps working).
+export async function fetchCotacaoHoje() {
+  try {
+    const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL')
+    if (!res.ok) return null
+    const v = Number((await res.json())?.USDBRL?.bid)
+    return v > 0 ? Math.round(v * 10000) / 10000 : null
+  } catch {
+    return null
+  }
+}
+
 // Cliques de um dia: o valor informado; se vazio, impressões × CTR do dia.
 // → { value, estimated } ou null quando não dá para saber.
 export function rowCliques(row) {
@@ -88,9 +129,13 @@ export function summarize(rows, ticketMedio) {
   const checkoutRows = rows.filter(r => has(r.checkouts))
   const checkouts = checkoutRows.length ? sum('checkouts', checkoutRows) : null
 
+  // Part of the spend entered in dollars (shown as detail next to R$).
+  const usdRows = rows.map(rowGasto).filter(g => g.moeda === 'USD')
+  const gastoUSD = usdRows.length ? usdRows.reduce((a, g) => a + g.original, 0) : null
+
   return {
     dias: rows.length,
-    gasto, impressoes, alcance, conversas, vendas, faturamento, lucro,
+    gasto, gastoUSD, impressoes, alcance, conversas, vendas, faturamento, lucro,
     cliques, cliquesAprox, checkouts,
     // compat: quem lê cliques_link continua funcionando
     cliques_link: cliques ?? 0,
@@ -114,7 +159,10 @@ export function summarize(rows, ticketMedio) {
 // { oque, formula, exemplo, mexer }
 export const METRIC_INFO = {
   vendas: { oque: 'Quantas vendas esse criativo trouxe.', formula: 'Soma das vendas lançadas nos dias.', exemplo: '3 + 2 + 0 = 5 vendas.', mexer: 'É o que decide o ranking: mais vendas primeiro; no empate, o menor CPA.' },
-  gasto: { oque: 'Quanto foi investido em anúncio.', formula: 'Soma do gasto dos dias.', exemplo: 'R$ 50 + R$ 60 = R$ 110.', mexer: 'Na fase de teste, só julgue depois de gastar pelo menos 2× o CPA máximo.' },
+  gasto: { oque: 'Quanto foi investido em anúncio, em reais (já com cotação e acréscimo do cartão).', formula: 'Soma do gasto em reais dos dias. Cada dia: gasto digitado × cotação × (1 + acréscimo%).', exemplo: 'US$ 10 × 5,00 × 1,0764 = R$ 53,82.', mexer: 'Na fase de teste, só julgue depois de gastar pelo menos 2× o CPA máximo (em reais).' },
+  moedaConta: { oque: 'Em que moeda a conta de anúncios cobra (o que aparece no Gerenciador). A "Moeda" da oferta continua sendo a da venda.', formula: 'Real: o gasto digitado já é em reais. Dólar: o gasto é convertido pela cotação.', exemplo: 'Conta em dólar: você digita US$ 10 e o app usa R$ 53,82.', mexer: 'Mude só se a conta de anúncios mudar de moeda; os dias já lançados não mudam.' },
+  cotacao: { oque: 'Quantos reais custa 1 dólar.', formula: 'Gasto em reais = gasto em US$ × cotação × (1 + acréscimo%).', exemplo: 'Cotação 5,00: US$ 10 → R$ 50 antes do acréscimo.', mexer: 'Atualize quando o dólar mudar (ou use "cotação de hoje"). Cada dia guarda a cotação usada, então mudar depois não altera o passado.' },
+  acrescimoGasto: { oque: 'O que o cartão ou a conta cobra a mais sobre o gasto: IOF + spread no dólar, ou impostos numa conta em real.', formula: 'Gasto em reais = gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'Dólar: 7,64% (IOF + spread). Conta em real com imposto: 12,15%. Sem acréscimo: 0.', mexer: 'Ajuste se o banco ou o imposto mudar. Cada dia guarda o acréscimo usado.' },
   faturamento: { oque: 'Quanto entrou com as vendas.', formula: 'Valor lançado; se o dia ficou vazio, vendas × ticket médio.', exemplo: '3 vendas × R$ 47 = R$ 141.', mexer: 'Preencha quando o valor real for diferente do ticket médio (upsell, desconto).' },
   lucro: { oque: 'O que sobra depois de pagar os anúncios.', formula: 'Faturamento − gasto.', exemplo: 'R$ 141 − R$ 110 = R$ 31.', mexer: 'Negativo por vários dias com gasto suficiente: hora de cortar ou mexer no funil.' },
   cpa: { oque: 'Custo por venda.', formula: 'Gasto ÷ vendas.', exemplo: 'R$ 110 ÷ 5 = R$ 22.', mexer: 'Compare com o CPA máximo da oferta: abaixo dele o criativo se paga.' },

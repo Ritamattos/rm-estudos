@@ -19,7 +19,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
   const cell = (c, t) => {
     const sg = c.sign?.(t)
     return (
-      <td key={c.key} className={`${styles.num} ${c.strong ? styles.strong : ''} ${sg ? signClass(sg) : ''}`}>
+      <td key={c.key} className={`${styles.num} ${c.strong ? styles.strong : ''} ${sg ? signClass(sg) : ''}`} title={c.detail?.(t) || undefined}>
         {c.fmt(t)}{c.aprox?.(t) && <small className={styles.approx}> aprox.</small>}
       </td>
     )

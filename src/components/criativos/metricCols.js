@@ -12,7 +12,10 @@ export function metricCols(oferta) {
   const cur = money(null, m)
   const head = [
     C('vendas', 'Vendas', t => integer(t.vendas), { strong: true }),
-    C('gasto', 'Gasto', t => cur(t.gasto)),
+    // Always in reais; the part typed in dollars shows as detail.
+    C('gasto', 'Gasto', t => cur(t.gasto), {
+      detail: t => (t.gastoUSD != null ? `US$ ${t.gastoUSD.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lançados em dólar` : null),
+    }),
     C('faturamento', 'Faturamento', t => cur(t.faturamento)),
     C('lucro', 'Lucro', t => cur(t.lucro), { sign: t => t.lucro }),
     C('cpa', 'CPA', t => cur(t.cpa), {

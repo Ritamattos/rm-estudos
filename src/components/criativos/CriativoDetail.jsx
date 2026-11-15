@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Pencil, Trash2, TrendingUp, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import {
   summarize, computeVerdict, todayISO, tipoOf,
+  moedaContaOf, rowGasto, gastoEmReais,
   currency, percent, multiplier, decimal, integer,
 } from '../../lib/criativosMetrics'
 import {
@@ -15,7 +16,8 @@ import styles from './Criativos.module.css'
 // (and never sent, so switching the offer type loses nothing).
 // `extra` fields live in the collapsed "Mais dados" block.
 const METRIC_FIELDS = [
-  { key: 'gasto',            label: 'Gasto',               decimal: true, info: 'gasto' },
+  // Gasto is typed in the ad account currency and converted (see below).
+  { key: 'gasto',            label: 'Gasto',               decimal: true, info: 'gasto', special: true },
   { key: 'vendas',           label: 'Vendas',              info: 'vendas' },
   { key: 'conversas',        label: 'Conversas iniciadas', tipos: ['whatsapp'], info: 'conversas' },
   { key: 'checkouts',        label: 'Checkouts iniciados', tipos: ['direta'], optional: true, info: 'checkouts' },
@@ -26,23 +28,54 @@ const METRIC_FIELDS = [
   { key: 'cliques_link',     label: 'Cliques no link',     tipos: ['direta'], optional: true, extra: true, info: 'cliques' },
   { key: 'orcamento_diario', label: 'Orçamento diário',    decimal: true, optional: true, extra: true, money: true },
 ]
-METRIC_FIELDS.find(f => f.key === 'gasto').money = true
 
 const fieldsFor = tipo => METRIC_FIELDS.filter(f => !f.tipos || f.tipos.includes(tipo))
 
-function emptyDayForm(date = todayISO()) {
-  return { data: date, ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, ''])) }
+// A new day uses the offer's account currency, rate and acréscimo.
+function emptyDayForm(date, oferta) {
+  const moeda = moedaContaOf(oferta)
+  return {
+    data: date,
+    ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, ''])),
+    moeda_gasto: moeda,
+    cotacao: moeda === 'USD' ? numToInput(oferta.cotacao ?? null) : '1',
+    acrescimo: numToInput(Number(oferta.acrescimo_gasto ?? 0)),
+  }
 }
 
+// A saved day keeps the currency, rate and acréscimo it was saved with, so
+// editing it (or changing the offer later) never re-converts the past.
 function rowToForm(row) {
-  return { data: row.data, ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, numToInput(row[m.key])])) }
+  const g = rowGasto(row)
+  return {
+    data: row.data,
+    ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, numToInput(row[m.key])])),
+    gasto: numToInput(g.original),
+    moeda_gasto: g.moeda,
+    cotacao: numToInput(g.cotacao),
+    acrescimo: numToInput(g.acrescimo),
+  }
+}
+
+// Gasto em reais for the form as typed (null when the rate is missing).
+function formGastoReais(form) {
+  const original = parseNum(form.gasto) ?? 0
+  const cotacao = form.moeda_gasto === 'USD' ? parseNum(form.cotacao) : 1
+  if (!(cotacao > 0)) return null
+  return gastoEmReais(original, cotacao, parseNum(form.acrescimo) ?? 0)
 }
 
 // Only the fields of the offer's type are sent: an upsert updates just the
 // columns it receives, so hidden fields keep their saved values.
 function formToPayload(form, tipo) {
   const payload = { data: form.data }
-  fieldsFor(tipo).forEach(m => {
+  const usd = form.moeda_gasto === 'USD'
+  payload.gasto_original = parseNum(form.gasto) ?? 0
+  payload.moeda_gasto = usd ? 'USD' : 'BRL'
+  payload.cotacao = usd ? parseNum(form.cotacao) : 1
+  payload.acrescimo = parseNum(form.acrescimo) ?? 0
+  payload.gasto = formGastoReais(form) // always in reais: used by every calculation
+  fieldsFor(tipo).filter(m => !m.special).forEach(m => {
     const n = parseNum(form[m.key], m.decimal)
     payload[m.key] = m.optional ? n : (n ?? 0)
   })
@@ -205,7 +238,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
   const fields = fieldsFor(tipo)
   const loadForm = d => {
     const existing = rows.find(r => r.data === d)
-    return existing ? rowToForm(existing) : emptyDayForm(d)
+    return existing ? rowToForm(existing) : emptyDayForm(d, oferta)
   }
   const [form, setForm] = useState(() => loadForm(date))
   const [saving, setSaving] = useState(false)
@@ -235,21 +268,42 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
     // Something typed that isn't a number would silently become 0 — flag it.
     const bad = fields.find(m => String(form[m.key] ?? '').trim() && parseNum(form[m.key], m.decimal) == null)
     if (bad) { setError(`"${form[bad.key]}" não é um número válido em ${bad.label}.`); if (bad.extra) setMoreOpen(true); return }
+    if (form.moeda_gasto === 'USD' && !(parseNum(form.cotacao) > 0)) {
+      setError('Informe a cotação do dia (R$ por US$) em “Mais dados”.'); setMoreOpen(true); return
+    }
     setSaving(true)
     setError(null)
     const res = await store.saveMetrica(criativoId, formToPayload(form, tipo))
     setSaving(false)
     if (res.error) { console.error('[saveMetrica]', res.error); setError(saveErrorMessage(res.error)); return }
+    // The rate typed for a day becomes the default for the next days.
+    const cot = parseNum(form.cotacao)
+    if (form.moeda_gasto === 'USD' && cot > 0 && cot !== Number(oferta.cotacao)) store.updateOferta(oferta.id, { cotacao: cot })
     setFlash(true)
     setTimeout(() => setFlash(false), 2200)
   }
 
   const dayTitle = new Date(`${form.data}T00:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const input = m => (
+  const usd = form.moeda_gasto === 'USD'
+  const reais = formGastoReais(form)
+  const gastoHint = usd
+    ? (reais == null
+      ? 'Informe a cotação em “Mais dados” para converter.'
+      : `= ${money(reais)}  (US$ ${form.gasto || 0} × ${form.cotacao} × (1 + ${form.acrescimo || 0}%))`)
+    : (parseNum(form.acrescimo) ? `= ${money(reais)} com acréscimo de ${form.acrescimo}%` : null)
+  const gastoSymbol = usd ? 'US$' : 'R$'
+
+  // Gasto takes two columns so its live conversion line doesn't push the
+  // neighbouring field out of line.
+  const input = m => m.key === 'gasto'
+    ? <div key="gasto" className={styles.gastoCell}>{field(m)}</div>
+    : field(m)
+
+  const field = m => (
     <Field
       key={m.key}
-      label={`${m.label}${m.money ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}
+      label={`${m.label}${m.key === 'gasto' ? ` (${gastoSymbol})` : m.money ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}
       info={m.info}
     >
       <input
@@ -262,6 +316,19 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
             : m.key === 'cliques_link' ? 'impr. × CTR'
               : m.pct ? 'ex: 1,8' : m.optional ? '' : '0'
         }
+      />
+      {m.key === 'gasto' && gastoHint && <span className={styles.gastoReais} aria-live="polite">{gastoHint}</span>}
+    </Field>
+  )
+
+  const cotacaoField = usd && (
+    <Field key="cotacao" label="Cotação do dia (R$ por US$)" info="cotacao">
+      <input
+        className={styles.bigInput}
+        inputMode="decimal"
+        value={form.cotacao}
+        onChange={e => setForm(prev => ({ ...prev, cotacao: e.target.value }))}
+        placeholder="ex: 5,40"
       />
     </Field>
   )
@@ -284,9 +351,9 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         <button type="button" className={styles.moreToggle} aria-expanded={moreOpen} onClick={() => setMoreOpen(o => !o)}>
           <ChevronDown size={15} className={moreOpen ? styles.moreIconOpen : ''} />
           Mais dados
-          <span>{fields.filter(m => m.extra).map(m => m.label.toLowerCase()).join(', ')}</span>
+          <span>{[...(usd ? ['cotação do dia'] : []), ...fields.filter(m => m.extra).map(m => m.label.toLowerCase())].join(', ')}</span>
         </button>
-        {moreOpen && <div className={styles.dayGrid}>{fields.filter(m => m.extra).map(input)}</div>}
+        {moreOpen && <div className={styles.dayGrid}>{cotacaoField}{fields.filter(m => m.extra).map(input)}</div>}
       </div>
       {error && <div className={styles.error}>{error}</div>}
       <div className={styles.dayActions}>
@@ -304,6 +371,10 @@ function HistoryRow({ row, oferta, store, onEdit }) {
   const money = v => currency(v, oferta.moeda)
   const m = summarize([row], oferta.ticket_medio)
   const direta = tipoOf(oferta) === 'direta'
+  const g = rowGasto(row)
+  const gastoTitle = g.moeda === 'USD'
+    ? `US$ ${numToInput(g.original)} × ${numToInput(g.cotacao)} × (1 + ${numToInput(g.acrescimo)}%)`
+    : g.acrescimo ? `R$ ${numToInput(g.original)} + ${numToInput(g.acrescimo)}%` : undefined
 
   async function remove() {
     if (!confirm(`Excluir o lançamento de ${formatDate(row.data)}?`)) return
@@ -313,7 +384,10 @@ function HistoryRow({ row, oferta, store, onEdit }) {
   return (
     <tr>
       <td className={styles.strong}>{formatDate(row.data)}</td>
-      <td className={styles.num}>{money(row.gasto)}</td>
+      <td className={styles.num} title={gastoTitle}>
+        {money(row.gasto)}
+        {g.moeda === 'USD' && <small className={styles.cellSub}>US$ {numToInput(g.original)}</small>}
+      </td>
       <td className={`${styles.num} ${styles.strong}`}>{integer(row.vendas)}</td>
       {direta ? (
         <>
@@ -529,6 +603,7 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
                   {c.fmt(totals)}
                 </span>
                 {c.aprox?.(totals) && <span className={styles.cardSub}>aproximado</span>}
+                {c.detail?.(totals) && <span className={styles.cardSub}>{c.detail(totals)}</span>}
                 {c.key === "cpa" && cpaMax && <span className={styles.cardSub}>máx. {money(cpaMax)}</span>}
               </div>
             )

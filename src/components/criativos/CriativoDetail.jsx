@@ -389,6 +389,14 @@ function HistoryRow({ row, oferta, store, onEdit }) {
         {g.moeda === 'USD' && <small className={styles.cellSub}>US$ {numToInput(g.original)}</small>}
       </td>
       <td className={`${styles.num} ${styles.strong}`}>{integer(row.vendas)}</td>
+      {/* Lucro do dia = faturamento − gasto em reais: verde lucro, vermelho prejuízo.
+          Fica perto do início para aparecer no celular sem rolar a tabela. */}
+      <td
+        className={`${styles.num} ${styles.bold} ${m.lucro > 0 ? styles.positive : m.lucro < 0 ? styles.negative : ''}`}
+        title={m.lucro > 0 ? 'Lucro no dia' : m.lucro < 0 ? 'Prejuízo no dia' : undefined}
+      >
+        {money(m.lucro)}
+      </td>
       {direta ? (
         <>
           <td className={styles.num}>{row.checkouts == null ? '—' : integer(row.checkouts)}</td>
@@ -571,11 +579,13 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               <thead>
                 <tr>
                   <th>Data</th><th className={styles.num}>Gasto</th><th className={styles.num}>Vendas</th>
+                  <th className={styles.num}><span className={styles.thInfo}>Lucro<InfoTip info="lucro" title="Lucro do dia" /></span></th>
                   {tipoOf(oferta) === "direta"
                     ? <><th className={styles.num}>Checkouts</th><th className={styles.num}>Cliques</th></>
                     : <th className={styles.num}>Conversas</th>}
                   <th className={styles.num}>Impr.</th><th className={styles.num}>CTR</th><th className={styles.num}>Freq.</th>
-                  <th className={styles.num}>Faturam.</th><th className={styles.num}>CPA</th><th className={styles.num}>ROAS</th><th></th>
+                  <th className={styles.num}>Faturam.</th>
+                  <th className={styles.num}>CPA</th><th className={styles.num}>ROAS</th><th></th>
                 </tr>
               </thead>
               <tbody>

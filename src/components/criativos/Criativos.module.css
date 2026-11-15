@@ -658,3 +658,10 @@ a.thumb:hover { border-color: var(--accent); }
   .foraActions .primaryBtn { flex: 1 1 100%; justify-content: center; min-height: 44px; }
 }
 .foraRowActive td { background: var(--accent-dim); }
+
+/* Card da oferta: verde no lucro, borda vermelha no prejuízo. */
+.cardLucro { border-color: var(--success); box-shadow: 0 0 0 1px var(--success) inset; background: color-mix(in srgb, var(--success) 8%, var(--card-bg)); }
+.cardLucro:hover { border-color: var(--success); }
+.cardPrejuizo { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
+.cardPrejuizo:hover { border-color: var(--danger); }
+.cardForaNote { font-size: 11px; color: var(--text3); margin-top: -4px; }

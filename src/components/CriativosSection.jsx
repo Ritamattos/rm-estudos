@@ -4,6 +4,7 @@ import { useCriativosStore } from '../hooks/useCriativosStore'
 import {
   summarize, currency, integer, TIPOS_OFERTA, tipoOf,
   MOEDAS_CONTA, ACRESCIMO_PADRAO, moedaContaOf, gastoEmReais, fetchCotacaoHoje,
+  summarizeFora, totalOferta,
 } from '../lib/criativosMetrics'
 import Modal from './Modal'
 import {
@@ -281,14 +282,17 @@ export default function CriativosSection({ user }) {
   }, [metricas])
 
   // Totais por oferta (todo o período), usados nos cards de pasta e oferta.
+  // É o "Total da oferta": campanha + vendas fora da campanha, que bate com
+  // a planilha de controle.
   const ofertaTotals = useMemo(() => {
     const map = {}
     ofertas.forEach(o => {
       const rows = criativos.filter(c => c.oferta_id === o.id).flatMap(c => rowsByCriativo[c.id] || [])
-      map[o.id] = summarize(rows, o.ticket_medio)
+      const fora = summarizeFora(store.vendasFora.filter(v => v.oferta_id === o.id), o.ticket_medio)
+      map[o.id] = totalOferta(summarize(rows, o.ticket_medio), fora)
     })
     return map
-  }, [ofertas, criativos, rowsByCriativo])
+  }, [ofertas, criativos, rowsByCriativo, store.vendasFora])
 
   const pasta = pastas.find(p => p.id === pastaId)
   const oferta = ofertas.find(o => o.id === ofertaId && o.pasta_id === pastaId)
@@ -371,7 +375,11 @@ export default function CriativosSection({ user }) {
               const t = ofertaTotals[o.id]
               const money = v => currency(v, o.moeda)
               return (
-                <div key={o.id} className={styles.folderCard} onClick={() => setOfertaId(o.id)}>
+                <div
+                  key={o.id}
+                  className={`${styles.folderCard} ${t.lucro > 0 ? styles.cardLucro : t.lucro < 0 ? styles.cardPrejuizo : ''}`}
+                  onClick={() => setOfertaId(o.id)}
+                >
                   <div className={styles.folderTop}>
                     <span className={styles.folderName}>{o.nome}</span>
                     <span className={styles.langBadge}>{IDIOMA_SHORT[o.idioma]} · {o.moeda}</span>
@@ -381,10 +389,13 @@ export default function CriativosSection({ user }) {
                     <div><span className={styles.statLabel}>Vendas</span><span className={styles.statValue}>{integer(t.vendas)}</span></div>
                     <div><span className={styles.statLabel}>Gasto</span><span className={styles.statValue}>{money(t.gasto)}</span></div>
                     <div>
-                      <span className={styles.statLabel}>Lucro</span>
-                      <span className={`${styles.statValue} ${t.lucro > 0 ? styles.positive : t.lucro < 0 ? styles.negative : ''}`}>{money(t.lucro)}</span>
+                      <span className={styles.statLabel}>{t.lucro < 0 ? 'Prejuízo' : 'Lucro'}</span>
+                      <span className={`${styles.statValue} ${t.lucro > 0 ? styles.positive : t.lucro < 0 ? styles.negative : ''}`}>{money(Math.abs(t.lucro))}</span>
                     </div>
                   </div>
+                  {t.faturamentoFora > 0 && (
+                    <span className={styles.cardForaNote}>inclui {money(t.faturamentoFora)} de vendas fora da campanha</span>
+                  )}
                   <div className={styles.folderActions} onClick={e => e.stopPropagation()}>
                     <button className={styles.iconBtn} onClick={() => setModal({ type: 'oferta', target: o })} title="Editar oferta"><Pencil size={14} /></button>
                     <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => removeOferta(o)} title="Excluir oferta"><Trash2 size={14} /></button>

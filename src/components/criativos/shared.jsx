@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Play, ImageOff, Link2 } from 'lucide-react'
-import { driveThumbUrl } from '../../lib/criativosMetrics'
+import { useState, useEffect, useRef, useId } from 'react'
+import { Play, ImageOff, Link2, Info } from 'lucide-react'
+import { driveThumbUrl, METRIC_INFO } from '../../lib/criativosMetrics'
 import styles from './Criativos.module.css'
 
 export const FASES = [
@@ -53,8 +53,86 @@ export function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-export function Field({ label, children }) {
-  return <div className={styles.field}><label className={styles.fieldLabel}>{label}</label>{children}</div>
+export function Field({ label, children, info }) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.fieldLabelRow}>
+        <label className={styles.fieldLabel}>{label}</label>
+        {info && <InfoTip info={info} title={typeof label === 'string' ? label : ''} />}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+// ⓘ — explains a metric: what it is, formula, example and when to act.
+// `info` is a METRIC_INFO key or an { oque, formula, exemplo, mexer } object.
+// Opens on tap (works on phones); closes on outside tap, Esc or scroll.
+export function InfoTip({ info, title = '' }) {
+  const data = typeof info === 'string' ? METRIC_INFO[info] : info
+  const [pos, setPos] = useState(null)
+  const btn = useRef(null)
+  const id = useId()
+
+  useEffect(() => {
+    if (!pos) return
+    const close = e => { if (!btn.current?.contains(e.target) && !e.target.closest?.(`[data-tip="${id}"]`)) setPos(null) }
+    const esc = e => { if (e.key === 'Escape') setPos(null) }
+    const off = () => setPos(null)
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', esc)
+    window.addEventListener('scroll', off, true)
+    window.addEventListener('resize', off)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', esc)
+      window.removeEventListener('scroll', off, true)
+      window.removeEventListener('resize', off)
+    }
+  }, [pos, id])
+
+  if (!data) return null
+  function toggle(e) {
+    e.preventDefault(); e.stopPropagation()
+    if (pos) return setPos(null)
+    const r = btn.current.getBoundingClientRect()
+    const width = Math.min(290, window.innerWidth - 24)
+    const left = Math.max(12, Math.min(r.left + r.width / 2 - width / 2, window.innerWidth - width - 12))
+    const below = r.bottom + 8
+    const top = below + 230 > window.innerHeight && r.top > 260 ? null : below
+    setPos({ left, width, top, bottom: top == null ? window.innerHeight - r.top + 8 : null })
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        ref={btn}
+        className={styles.infoBtn}
+        onClick={toggle}
+        aria-label={`O que é ${title || 'esta métrica'}?`}
+        aria-expanded={!!pos}
+        aria-describedby={pos ? id : undefined}
+      >
+        <Info size={13} />
+      </button>
+      {pos && (
+        <div
+          id={id}
+          data-tip={id}
+          role="tooltip"
+          className={styles.infoPop}
+          style={{ left: pos.left, width: pos.width, top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto' }}
+        >
+          {title && <strong className={styles.infoTitle}>{title}</strong>}
+          <p>{data.oque}</p>
+          {data.formula && <p><b>Fórmula:</b> {data.formula}</p>}
+          {data.exemplo && <p><b>Exemplo:</b> {data.exemplo}</p>}
+          {data.mexer && <p><b>Quando mexer:</b> {data.mexer}</p>}
+        </div>
+      )}
+    </>
+  )
 }
 
 export function FaseBadge({ fase }) {

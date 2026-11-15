@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Folder, ArrowLeft } from 'lucide-react'
 import { useCriativosStore } from '../hooks/useCriativosStore'
-import { summarize, currency, integer } from '../lib/criativosMetrics'
+import { summarize, currency, integer, TIPOS_OFERTA, tipoOf } from '../lib/criativosMetrics'
 import Modal from './Modal'
 import {
   FORMATOS, IDIOMAS, MOEDAS, Field, Breadcrumb, parseNum, numToInput,
@@ -48,8 +48,9 @@ const OFERTA_NUM_FIELDS = [
   { key: 'freq_max_escala',     label: 'Frequência máx. — escala',     fallback: 3 },
 ]
 
-function OfertaModal({ oferta, onClose, onSave }) {
+function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
   const [form, setForm] = useState(() => ({
+    tipo: oferta ? tipoOf(oferta) : defaultTipo,
     nome: oferta?.nome || '',
     idioma: oferta?.idioma || 'pt',
     moeda: oferta?.moeda || 'BRL',
@@ -61,7 +62,7 @@ function OfertaModal({ oferta, onClose, onSave }) {
 
   async function save() {
     if (!form.nome.trim()) return
-    const payload = { nome: form.nome.trim(), idioma: form.idioma, moeda: form.moeda }
+    const payload = { nome: form.nome.trim(), idioma: form.idioma, moeda: form.moeda, tipo: form.tipo }
     OFERTA_NUM_FIELDS.forEach(c => { payload[c.key] = parseNum(form[c.key]) ?? c.fallback ?? null })
     await onSave(payload)
     onClose()
@@ -72,6 +73,28 @@ function OfertaModal({ oferta, onClose, onSave }) {
       <Field label="Nome da oferta">
         <input value={form.nome} onChange={f('nome')} placeholder="Ex: Baralho da Ousadia — PT" autoFocus={!oferta} />
       </Field>
+      <Field label="Tipo de oferta">
+        <div className={styles.tipoChoice} role="radiogroup" aria-label="Tipo de oferta">
+          {TIPOS_OFERTA.map(t => (
+            <button
+              type="button"
+              key={t.id}
+              role="radio"
+              aria-checked={form.tipo === t.id}
+              className={`${styles.tipoOption} ${form.tipo === t.id ? styles.tipoOptionOn : ''}`}
+              onClick={() => setForm(prev => ({ ...prev, tipo: t.id }))}
+            >
+              <strong>{t.label}</strong>
+              <span>{t.hint}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+      {oferta && tipoOf(oferta) !== form.tipo && (
+        <p className={styles.hint}>
+          Nenhum lançamento é perdido: os campos que não se aplicam ao novo tipo ficam guardados, só ocultos.
+        </p>
+      )}
       <div className={styles.fieldRow}>
         <Field label="Idioma">
           <select value={form.idioma} onChange={f('idioma')}>
@@ -255,6 +278,7 @@ export default function CriativosSection({ user }) {
                   <div className={styles.folderTop}>
                     <span className={styles.folderName}>{o.nome}</span>
                     <span className={styles.langBadge}>{IDIOMA_SHORT[o.idioma]} · {o.moeda}</span>
+                    <span className={`${styles.tipoBadge} ${styles[`tipo_${tipoOf(o)}`]}`}>{tipoOf(o) === 'direta' ? 'Direta' : 'WhatsApp'}</span>
                   </div>
                   <div className={styles.cardStats}>
                     <div><span className={styles.statLabel}>Vendas</span><span className={styles.statValue}>{integer(t.vendas)}</span></div>
@@ -340,6 +364,8 @@ export default function CriativosSection({ user }) {
       {modal?.type === 'oferta' && (
         <OfertaModal
           oferta={modal.target}
+          // A new offer starts with the type of the latest offer in this pasta.
+          defaultTipo={tipoOf([...ofertas].reverse().find(o => o.pasta_id === pasta?.id))}
           onClose={closeModal}
           onSave={fields => modal.target ? store.updateOferta(modal.target.id, fields) : store.addOferta(pasta.id, fields)}
         />

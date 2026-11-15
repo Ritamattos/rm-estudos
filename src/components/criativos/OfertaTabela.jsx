@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react'
 import { Plus, Settings, Pencil } from 'lucide-react'
 import {
   summarize, computeVerdict, rankCompare, filterByPeriodo, PERIODOS,
-  currency, percent, multiplier, decimal, integer,
+
 } from '../../lib/criativosMetrics'
-import { FaseBadge, DriveThumb } from './shared'
+import { FaseBadge, DriveThumb, InfoTip } from './shared'
+import { metricCols } from './metricCols'
 import styles from './Criativos.module.css'
 
 function signClass(v) {
@@ -14,8 +15,15 @@ function signClass(v) {
 
 export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen, onEdit, onNew, onConfig }) {
   const [periodo, setPeriodo] = useState('total')
-  const moeda = oferta.moeda || 'BRL'
-  const money = v => currency(v, moeda)
+  const cols = useMemo(() => metricCols(oferta), [oferta])
+  const cell = (c, t) => {
+    const sg = c.sign?.(t)
+    return (
+      <td key={c.key} className={`${styles.num} ${c.strong ? styles.strong : ''} ${sg ? signClass(sg) : ''}`}>
+        {c.fmt(t)}{c.aprox?.(t) && <small className={styles.approx}> aprox.</small>}
+      </td>
+    )
+  }
 
   const ranked = useMemo(() => criativos.map(c => {
     const all = rowsByCriativo[c.id] || []
@@ -70,15 +78,11 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
                 <th className={styles.stickyThumb}></th>
                 <th className={styles.stickyName}>Nome</th>
                 <th>Status</th>
-                <th className={styles.num}>Vendas</th>
-                <th className={styles.num}>Gasto</th>
-                <th className={styles.num}>Faturamento</th>
-                <th className={styles.num}>Lucro</th>
-                <th className={styles.num}>CPA</th>
-                <th className={styles.num}>ROI</th>
-                <th className={styles.num}>ROAS</th>
-                <th className={styles.num}>CTR</th>
-                <th className={styles.num}>Freq.</th>
+                {cols.map(c => (
+                  <th key={c.key} className={styles.num}>
+                    <span className={styles.thInfo}>{c.label}<InfoTip info={c.info} title={c.label} /></span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -107,16 +111,9 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
                     {verdict.text && (
                       <span className={`${styles.suggestion} ${styles[`sug_${verdict.level}`]}`}>{verdict.text}</span>
                     )}
+                    {verdict.reason && <span className={styles.suggestionReason}>{verdict.reason}</span>}
                   </td>
-                  <td className={`${styles.num} ${styles.strong}`}>{integer(totals.vendas)}</td>
-                  <td className={styles.num}>{money(totals.gasto)}</td>
-                  <td className={styles.num}>{money(totals.faturamento)}</td>
-                  <td className={`${styles.num} ${signClass(totals.lucro)}`}>{money(totals.lucro)}</td>
-                  <td className={styles.num}>{money(totals.cpa)}</td>
-                  <td className={`${styles.num} ${signClass(totals.roi)}`}>{percent(totals.roi, 1)}</td>
-                  <td className={styles.num}>{multiplier(totals.roas)}</td>
-                  <td className={styles.num}>{percent(totals.ctr)}</td>
-                  <td className={styles.num}>{decimal(totals.frequencia)}</td>
+                  {cols.map(c => cell(c, totals))}
                 </tr>
               ))}
             </tbody>
@@ -126,15 +123,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
                 <td className={styles.stickyThumb}></td>
                 <td className={styles.stickyName}>Total</td>
                 <td></td>
-                <td className={styles.num}>{integer(total.vendas)}</td>
-                <td className={styles.num}>{money(total.gasto)}</td>
-                <td className={styles.num}>{money(total.faturamento)}</td>
-                <td className={`${styles.num} ${signClass(total.lucro)}`}>{money(total.lucro)}</td>
-                <td className={styles.num}>{money(total.cpa)}</td>
-                <td className={`${styles.num} ${signClass(total.roi)}`}>{percent(total.roi, 1)}</td>
-                <td className={styles.num}>{multiplier(total.roas)}</td>
-                <td className={styles.num}>{percent(total.ctr)}</td>
-                <td className={styles.num}>{decimal(total.frequencia)}</td>
+                {cols.map(c => cell(c, total))}
               </tr>
             </tfoot>
           </table>

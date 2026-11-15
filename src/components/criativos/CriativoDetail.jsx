@@ -1,24 +1,34 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Pencil, Trash2, TrendingUp, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Pencil, Trash2, TrendingUp, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import {
-  summarize, computeVerdict, todayISO,
+  summarize, computeVerdict, todayISO, tipoOf,
   currency, percent, multiplier, decimal, integer,
 } from '../../lib/criativosMetrics'
 import {
-  FASES, FORMATOS, Field, DriveThumb, parseNum, numToInput, formatDate,
+  FASES, FORMATOS, Field, DriveThumb, InfoTip, parseNum, numToInput, formatDate,
 } from './shared'
+import { metricCols } from './metricCols'
 import styles from './Criativos.module.css'
 
+// Fields typed per day, per criativo. `tipos` limits a field to one offer
+// type; fields of the other type stay saved in the database, just hidden
+// (and never sent, so switching the offer type loses nothing).
+// `extra` fields live in the collapsed "Mais dados" block.
 const METRIC_FIELDS = [
-  { key: 'gasto',            label: 'Gasto',            decimal: true },
-  { key: 'impressoes',       label: 'Impressões' },
-  { key: 'alcance',          label: 'Alcance' },
-  { key: 'cliques_link',     label: 'Cliques no link' },
-  { key: 'conversas',        label: 'Conversas' },
-  { key: 'vendas',           label: 'Vendas' },
-  { key: 'faturamento',      label: 'Faturamento',      decimal: true, optional: true },
-  { key: 'orcamento_diario', label: 'Orçamento diário', decimal: true, optional: true },
+  { key: 'gasto',            label: 'Gasto',               decimal: true, info: 'gasto' },
+  { key: 'vendas',           label: 'Vendas',              info: 'vendas' },
+  { key: 'conversas',        label: 'Conversas iniciadas', tipos: ['whatsapp'], info: 'conversas' },
+  { key: 'checkouts',        label: 'Checkouts iniciados', tipos: ['direta'], optional: true, info: 'checkouts' },
+  { key: 'impressoes',       label: 'Impressões',          info: 'cpm' },
+  { key: 'ctr',              label: 'CTR (%)',             decimal: true, optional: true, info: 'ctr', pct: true },
+  { key: 'faturamento',      label: 'Faturamento',         decimal: true, optional: true, extra: true, money: true, info: 'faturamento' },
+  { key: 'frequencia',       label: 'Frequência',          decimal: true, optional: true, extra: true, info: 'frequencia' },
+  { key: 'cliques_link',     label: 'Cliques no link',     tipos: ['direta'], optional: true, extra: true, info: 'cliques' },
+  { key: 'orcamento_diario', label: 'Orçamento diário',    decimal: true, optional: true, extra: true, money: true },
 ]
+METRIC_FIELDS.find(f => f.key === 'gasto').money = true
+
+const fieldsFor = tipo => METRIC_FIELDS.filter(f => !f.tipos || f.tipos.includes(tipo))
 
 function emptyDayForm(date = todayISO()) {
   return { data: date, ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, ''])) }
@@ -28,9 +38,11 @@ function rowToForm(row) {
   return { data: row.data, ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, numToInput(row[m.key])])) }
 }
 
-function formToPayload(form) {
+// Only the fields of the offer's type are sent: an upsert updates just the
+// columns it receives, so hidden fields keep their saved values.
+function formToPayload(form, tipo) {
   const payload = { data: form.data }
-  METRIC_FIELDS.forEach(m => {
+  fieldsFor(tipo).forEach(m => {
     const n = parseNum(form[m.key], m.decimal)
     payload[m.key] = m.optional ? n : (n ?? 0)
   })
@@ -187,30 +199,31 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
 
 // ── Lançar dia ───────────────────────────────────────────────────────────────
 
-function LancarDia({ criativoId, rows, store, moeda }) {
-  const [form, setForm] = useState(() => {
-    const existing = rows.find(r => r.data === todayISO())
-    return existing ? rowToForm(existing) : emptyDayForm()
-  })
+function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
+  const moeda = oferta.moeda || 'BRL'
+  const tipo = tipoOf(oferta)
+  const fields = fieldsFor(tipo)
+  const loadForm = d => {
+    const existing = rows.find(r => r.data === d)
+    return existing ? rowToForm(existing) : emptyDayForm(d)
+  }
+  const [form, setForm] = useState(() => loadForm(date))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [flash, setFlash] = useState(false)
+  const hasExtra = f => fields.some(m => m.extra && String(f[m.key] ?? '').trim())
+  const [moreOpen, setMoreOpen] = useState(() => hasExtra(form))
   const symbol = currency(0, moeda).replace(/[\d\s.,]/g, '')
 
-  // Keep the form in sync when the same day is edited/deleted in the history.
+  // Picking a date (calendar or history) loads that day; saving the same day
+  // or deleting it in the history keeps the form in sync.
   useEffect(() => {
-    const existing = rows.find(r => r.data === form.data)
-    setForm(existing ? rowToForm(existing) : emptyDayForm(form.data))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
-
-  // Picking a date that already has data loads it for editing, so saving
-  // overwrites that day instead of creating a duplicate.
-  function changeDate(date) {
-    const existing = rows.find(r => r.data === date)
-    setForm(existing ? rowToForm(existing) : { ...emptyDayForm(date) })
+    const next = loadForm(date)
+    setForm(next)
     setError(null)
-  }
+    if (hasExtra(next)) setMoreOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, rows])
 
   const existingForDate = rows.some(r => r.data === form.data)
   const rowsByDate = useMemo(() => new Map(rows.map(r => [r.data, r])), [rows])
@@ -220,11 +233,11 @@ function LancarDia({ criativoId, rows, store, moeda }) {
     e.preventDefault()
     if (!form.data) return
     // Something typed that isn't a number would silently become 0 — flag it.
-    const bad = METRIC_FIELDS.find(m => String(form[m.key] ?? '').trim() && parseNum(form[m.key], m.decimal) == null)
-    if (bad) { setError(`"${form[bad.key]}" não é um número válido em ${bad.label}.`); return }
+    const bad = fields.find(m => String(form[m.key] ?? '').trim() && parseNum(form[m.key], m.decimal) == null)
+    if (bad) { setError(`"${form[bad.key]}" não é um número válido em ${bad.label}.`); if (bad.extra) setMoreOpen(true); return }
     setSaving(true)
     setError(null)
-    const res = await store.saveMetrica(criativoId, formToPayload(form))
+    const res = await store.saveMetrica(criativoId, formToPayload(form, tipo))
     setSaving(false)
     if (res.error) { console.error('[saveMetrica]', res.error); setError(saveErrorMessage(res.error)); return }
     setFlash(true)
@@ -233,29 +246,47 @@ function LancarDia({ criativoId, rows, store, moeda }) {
 
   const dayTitle = new Date(`${form.data}T00:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 
+  const input = m => (
+    <Field
+      key={m.key}
+      label={`${m.label}${m.money ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}
+      info={m.info}
+    >
+      <input
+        className={styles.bigInput}
+        inputMode={m.decimal ? 'decimal' : 'numeric'}
+        value={form[m.key]}
+        onChange={e => setForm(prev => ({ ...prev, [m.key]: e.target.value }))}
+        placeholder={
+          m.key === 'faturamento' ? 'vendas × ticket'
+            : m.key === 'cliques_link' ? 'impr. × CTR'
+              : m.pct ? 'ex: 1,8' : m.optional ? '' : '0'
+        }
+      />
+    </Field>
+  )
+
   return (
     <form className={styles.dayForm} onSubmit={save}>
       <div className={styles.dayFormHeader}>
         <h2 className={styles.sectionTitle}>Lançar dia</h2>
         {flash && <span className={styles.flash}>Salvo ✓</span>}
       </div>
-      <MonthCalendar selected={form.data} onSelect={changeDate} rowsByDate={rowsByDate} money={money} />
+      <MonthCalendar selected={form.data} onSelect={onDateChange} rowsByDate={rowsByDate} money={money} />
       <div className={styles.dayEditing}>
         <span>{existingForDate ? 'Editando' : 'Lançando'}: <strong>{dayTitle}</strong></span>
         {existingForDate && <small>Esse dia já tem dados — altere e toque em “Atualizar dia”.</small>}
       </div>
       <div className={styles.dayGrid}>
-        {METRIC_FIELDS.map(m => (
-          <Field key={m.key} label={`${m.label}${m.decimal ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}>
-            <input
-              className={styles.bigInput}
-              inputMode={m.decimal ? 'decimal' : 'numeric'}
-              value={form[m.key]}
-              onChange={e => setForm(prev => ({ ...prev, [m.key]: e.target.value }))}
-              placeholder="0"
-            />
-          </Field>
-        ))}
+        {fields.filter(m => !m.extra).map(input)}
+      </div>
+      <div className={styles.moreBox}>
+        <button type="button" className={styles.moreToggle} aria-expanded={moreOpen} onClick={() => setMoreOpen(o => !o)}>
+          <ChevronDown size={15} className={moreOpen ? styles.moreIconOpen : ''} />
+          Mais dados
+          <span>{fields.filter(m => m.extra).map(m => m.label.toLowerCase()).join(', ')}</span>
+        </button>
+        {moreOpen && <div className={styles.dayGrid}>{fields.filter(m => m.extra).map(input)}</div>}
       </div>
       {error && <div className={styles.error}>{error}</div>}
       <div className={styles.dayActions}>
@@ -267,80 +298,44 @@ function LancarDia({ criativoId, rows, store, moeda }) {
   )
 }
 
-// ── Histórico: cada linha edita no lugar ─────────────────────────────────────
+// ── Histórico: uma linha por dia; editar abre o dia no formulário ───────────
 
-const HISTORY_COLS = ['data', 'gasto', 'impressoes', 'alcance', 'cliques_link', 'conversas', 'vendas', 'faturamento', 'orcamento_diario']
-
-function HistoryRow({ row, oferta, store }) {
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(() => rowToForm(row))
-  const [error, setError] = useState(null)
+function HistoryRow({ row, oferta, store, onEdit }) {
   const money = v => currency(v, oferta.moeda)
   const m = summarize([row], oferta.ticket_medio)
-
-  useEffect(() => { if (!editing) setForm(rowToForm(row)) }, [row, editing])
-
-  async function save() {
-    const res = await store.updateMetrica(row.id, formToPayload(form))
-    if (res.error) { setError(saveErrorMessage(res.error)); return }
-    setError(null)
-    setEditing(false)
-  }
+  const direta = tipoOf(oferta) === 'direta'
 
   async function remove() {
     if (!confirm(`Excluir o lançamento de ${formatDate(row.data)}?`)) return
     await store.deleteMetrica(row.id)
   }
 
-  if (editing) {
-    return (
-      <tr className={styles.rowEditing}>
-        {HISTORY_COLS.map(key => {
-          const field = METRIC_FIELDS.find(f => f.key === key)
-          return (
-            <td key={key}>
-              <input
-                className={styles.cellInput}
-                type={key === 'data' ? 'date' : 'text'}
-                inputMode={key === 'data' ? undefined : field?.decimal ? 'decimal' : 'numeric'}
-                value={form[key]}
-                onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-                title={error || undefined}
-              />
-            </td>
-          )
-        })}
-        <td colSpan={4} className={styles.hintCell}>{error || ''}</td>
-        <td>
-          <div className={styles.rowActions}>
-            <button className={styles.iconBtn} onClick={save} title="Salvar"><Check size={14} /></button>
-            <button className={styles.iconBtn} onClick={() => { setEditing(false); setError(null) }} title="Cancelar"><X size={14} /></button>
-          </div>
-        </td>
-      </tr>
-    )
-  }
-
   return (
     <tr>
       <td className={styles.strong}>{formatDate(row.data)}</td>
       <td className={styles.num}>{money(row.gasto)}</td>
-      <td className={styles.num}>{integer(row.impressoes)}</td>
-      <td className={styles.num}>{integer(row.alcance)}</td>
-      <td className={styles.num}>{integer(row.cliques_link)}</td>
-      <td className={styles.num}>{integer(row.conversas)}</td>
       <td className={`${styles.num} ${styles.strong}`}>{integer(row.vendas)}</td>
-      <td className={styles.num}>{row.faturamento == null ? <span className={styles.muted}>{money(m.faturamento)}</span> : money(row.faturamento)}</td>
-      <td className={styles.num}>{money(row.orcamento_diario)}</td>
-      <td className={styles.num}>{money(m.cpa)}</td>
-      <td className={styles.num}>{multiplier(m.roas)}</td>
+      {direta ? (
+        <>
+          <td className={styles.num}>{row.checkouts == null ? '—' : integer(row.checkouts)}</td>
+          <td className={styles.num}>
+            {m.cliques == null ? '—' : integer(Math.round(m.cliques))}
+            {m.cliquesAprox && <small className={styles.approx}> aprox.</small>}
+          </td>
+        </>
+      ) : (
+        <td className={styles.num}>{integer(row.conversas)}</td>
+      )}
+      <td className={styles.num}>{integer(row.impressoes)}</td>
       <td className={styles.num}>{percent(m.ctr)}</td>
       <td className={styles.num}>{decimal(m.frequencia)}</td>
+      <td className={styles.num}>{row.faturamento == null ? <span className={styles.muted}>{money(m.faturamento)}</span> : money(row.faturamento)}</td>
+      <td className={styles.num}>{money(m.cpa)}</td>
+      <td className={styles.num}>{multiplier(m.roas)}</td>
       <td>
         <div className={styles.rowActions}>
-          <button className={styles.iconBtn} onClick={() => setEditing(true)} title="Editar"><Pencil size={13} /></button>
-          <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={remove} title="Excluir"><Trash2 size={13} /></button>
+          <button className={styles.iconBtn} onClick={() => onEdit(row.data)} title="Editar este dia" aria-label={`Editar ${formatDate(row.data)}`}><Pencil size={13} /></button>
+          <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={remove} title="Excluir" aria-label={`Excluir ${formatDate(row.data)}`}><Trash2 size={13} /></button>
         </div>
       </td>
     </tr>
@@ -381,22 +376,12 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
     onDeleted()
   }
 
-  const cards = [
-    { label: 'Vendas',          value: integer(totals.vendas), highlight: true },
-    { label: 'CPA',             value: money(totals.cpa), highlight: true },
-    { label: 'ROAS',            value: multiplier(totals.roas), highlight: true },
-    { label: 'Lucro',           value: money(totals.lucro), sign: totals.lucro },
-    { label: 'ROI',             value: percent(totals.roi, 1), sign: totals.roi },
-    { label: 'Gasto',           value: money(totals.gasto) },
-    { label: 'Faturamento',     value: money(totals.faturamento) },
-    { label: 'CTR',             value: percent(totals.ctr) },
-    { label: 'CPM',             value: money(totals.cpm) },
-    { label: 'Frequência',      value: decimal(totals.frequencia) },
-    { label: 'Conversas',       value: integer(totals.conversas) },
-    { label: 'Custo/conversa',  value: money(totals.custoConversa) },
-    { label: 'Conversa→venda',  value: percent(totals.taxaConversaVenda) },
-    { label: 'Orçamento atual', value: money(lastBudget) },
-  ]
+  const [dayDate, setDayDate] = useState(todayISO)
+  const formRef = useRef(null)
+  const editDay = d => { setDayDate(d); formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }) }
+  const cpaMax = Number(oferta.cpa_maximo) || null
+  // Only the metrics of the offer type; highlight the ones that decide.
+  const cards = metricCols(oferta).map(c => ({ ...c, highlight: ["vendas", "cpa", "roas"].includes(c.key) }))
 
   return (
     <div className={styles.content}>
@@ -446,11 +431,24 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
           ))}
         </div>
         {verdict.text && (
-          <div className={`${styles.verdict} ${styles[`verdict_${verdict.level}`]}`}>{verdict.text}</div>
+          <div className={`${styles.verdict} ${styles[`verdict_${verdict.level}`]}`}>
+            {verdict.text}
+            {verdict.reason && <span className={styles.verdictReason}>{verdict.reason}</span>}
+          </div>
         )}
       </div>
 
-      <LancarDia key={criativo.id} criativoId={criativo.id} rows={rows} store={store} moeda={moeda} />
+      <div ref={formRef}>
+        <LancarDia
+          key={criativo.id}
+          criativoId={criativo.id}
+          rows={rows}
+          store={store}
+          oferta={oferta}
+          date={dayDate}
+          onDateChange={setDayDate}
+        />
+      </div>
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Histórico diário</h2>
@@ -461,17 +459,17 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Data</th><th className={styles.num}>Gasto</th><th className={styles.num}>Impr.</th>
-                  <th className={styles.num}>Alcance</th><th className={styles.num}>Cliques</th>
-                  <th className={styles.num}>Conv.</th><th className={styles.num}>Vendas</th>
-                  <th className={styles.num}>Faturam.</th><th className={styles.num}>Orçam.</th>
-                  <th className={styles.num}>CPA</th><th className={styles.num}>ROAS</th>
-                  <th className={styles.num}>CTR</th><th className={styles.num}>Freq.</th><th></th>
+                  <th>Data</th><th className={styles.num}>Gasto</th><th className={styles.num}>Vendas</th>
+                  {tipoOf(oferta) === "direta"
+                    ? <><th className={styles.num}>Checkouts</th><th className={styles.num}>Cliques</th></>
+                    : <th className={styles.num}>Conversas</th>}
+                  <th className={styles.num}>Impr.</th><th className={styles.num}>CTR</th><th className={styles.num}>Freq.</th>
+                  <th className={styles.num}>Faturam.</th><th className={styles.num}>CPA</th><th className={styles.num}>ROAS</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {[...rows].reverse().map(row => (
-                  <HistoryRow key={row.id} row={row} oferta={oferta} store={store} />
+                  <HistoryRow key={row.id} row={row} oferta={oferta} store={store} onEdit={editDay} />
                 ))}
               </tbody>
             </table>
@@ -482,12 +480,26 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Resumo acumulado</h2>
         <div className={styles.cards}>
-          {cards.map(c => (
-            <div key={c.label} className={`${styles.card} ${c.highlight ? styles.cardHighlight : ''}`}>
-              <span className={styles.cardLabel}>{c.label}</span>
-              <span className={`${styles.cardValue} ${c.sign > 0 ? styles.positive : c.sign < 0 ? styles.negative : ''}`}>{c.value}</span>
-            </div>
-          ))}
+          {cards.map(c => {
+            const sg = c.sign?.(totals)
+            return (
+              <div key={c.key} className={`${styles.card} ${c.highlight ? styles.cardHighlight : ""}`}>
+                <span className={styles.cardLabelRow}>
+                  <span className={styles.cardLabel}>{c.label}</span>
+                  <InfoTip info={c.info} title={c.label} />
+                </span>
+                <span className={`${styles.cardValue} ${sg > 0 ? styles.positive : sg < 0 ? styles.negative : ""}`}>
+                  {c.fmt(totals)}
+                </span>
+                {c.aprox?.(totals) && <span className={styles.cardSub}>aproximado</span>}
+                {c.key === "cpa" && cpaMax && <span className={styles.cardSub}>máx. {money(cpaMax)}</span>}
+              </div>
+            )
+          })}
+          <div className={styles.card}>
+            <span className={styles.cardLabel}>Orçamento atual</span>
+            <span className={styles.cardValue}>{money(lastBudget)}</span>
+          </div>
         </div>
       </div>
 

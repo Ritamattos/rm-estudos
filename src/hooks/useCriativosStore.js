@@ -86,9 +86,10 @@ export function useCriativosStore(user) {
     if (error) {
       console.error('[updateCriativo]', error)
       alert('Não foi possível salvar as alterações do criativo. Tente de novo.')
-      return
+      return { error }
     }
     setCriativos(prev => prev.map(c => c.id === id ? { ...c, ...fields } : c))
+    return {}
   }, [])
 
   const deleteCriativo = useCallback(async (id) => {

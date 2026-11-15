@@ -132,11 +132,11 @@ function CriativoModal({ criativo, onClose, onSave }) {
   })
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
   async function save() {
-    const fields = { link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim() }
-    if (criativo) {
-      fields.nome = form.nome.trim() || `AD ${criativo.numero}`
-      fields.observacoes = form.observacoes.trim()
+    const fields = {
+      link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim(),
+      observacoes: form.observacoes.trim(),
     }
+    if (criativo) fields.nome = form.nome.trim() || `AD ${criativo.numero}`
     await onSave(fields)
     onClose()
   }
@@ -158,11 +158,15 @@ function CriativoModal({ criativo, onClose, onSave }) {
       <Field label="Ângulo / gancho da copy">
         <input value={form.angulo} onChange={f('angulo')} placeholder="Ex: Dor de não ter tempo" />
       </Field>
-      {criativo ? (
-        <Field label="Observações · opcional">
-          <textarea value={form.observacoes} onChange={f('observacoes')} rows={3} placeholder="Anotações sobre este criativo" />
-        </Field>
-      ) : (
+      <Field label="Descrição · opcional">
+        <textarea
+          value={form.observacoes}
+          onChange={f('observacoes')}
+          rows={3}
+          placeholder="Informações importantes. Ex: criativos salvos no e-mail fulano@gmail.com"
+        />
+      </Field>
+      {!criativo && (
         <p className={styles.hint}>O nome (AD 1, AD 2…) é gerado automaticamente e pode ser editado depois.</p>
       )}
     </Modal>

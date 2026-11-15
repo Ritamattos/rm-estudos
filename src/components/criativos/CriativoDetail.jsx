@@ -360,6 +360,39 @@ function InlineInput({ value, onSave, className, placeholder }) {
   )
 }
 
+// ── Descrição: texto livre do criativo, salva ao sair do campo ──────────────
+// (guardada na coluna `observacoes`).
+
+function DescricaoField({ value, onSave }) {
+  const [v, setV] = useState(value || '')
+  const [saved, setSaved] = useState(false)
+  useEffect(() => { setV(value || '') }, [value])
+  async function commit() {
+    if (v.trim() === (value || '').trim()) return
+    const res = await onSave(v.trim())
+    if (res?.error) return
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+  return (
+    <div className={styles.field}>
+      <span className={styles.fieldLabelRow}>
+        <label className={styles.fieldLabel} htmlFor="criativo-descricao">Descrição</label>
+        {saved && <span className={styles.flash}>Salvo ✓</span>}
+      </span>
+      <textarea
+        id="criativo-descricao"
+        className={styles.descricao}
+        value={v}
+        rows={2}
+        placeholder="Informações importantes. Ex: criativos salvos no e-mail fulano@gmail.com"
+        onChange={e => setV(e.target.value)}
+        onBlur={commit}
+      />
+    </div>
+  )
+}
+
 // ── Detalhe ──────────────────────────────────────────────────────────────────
 
 export default function CriativoDetail({ criativo, oferta, rows, store, onDeleted, onEdit }) {
@@ -414,7 +447,7 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               <InlineInput value={criativo.angulo} onSave={v => update({ angulo: v })} placeholder="Gancho da copy" />
             </Field>
           </div>
-          {criativo.observacoes && <p className={styles.detailNotes}>{criativo.observacoes}</p>}
+          <DescricaoField value={criativo.observacoes} onSave={v => update({ observacoes: v })} />
         </div>
       </div>
 

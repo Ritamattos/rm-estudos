@@ -6,6 +6,8 @@ export function useCriativosStore(user) {
   const [ofertas, setOfertas] = useState([])
   const [criativos, setCriativos] = useState([])
   const [metricas, setMetricas] = useState([])
+  // Sales outside the campaign (referral, organic…): per offer, never per criativo.
+  const [vendasFora, setVendasFora] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -15,12 +17,16 @@ export function useCriativosStore(user) {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }] = await Promise.all([
+    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }, vf] = await Promise.all([
       supabase.from('criativos_pastas').select('*').eq('user_id', user.id).order('ordem').order('created_at'),
       supabase.from('criativos_ofertas').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('criativos').select('*').eq('user_id', user.id).order('numero'),
       supabase.from('criativos_metricas').select('*').eq('user_id', user.id).order('data'),
+      supabase.from('criativos_vendas_fora').select('*').eq('user_id', user.id).order('data'),
     ])
+    // Before migration 019 the table doesn't exist: just show none.
+    if (vf.error) console.warn('[criativos_vendas_fora]', vf.error.message)
+    setVendasFora(vf.data || [])
     setPastas(ps || [])
     setOfertas(os || [])
     setCriativos(cs || [])
@@ -130,8 +136,37 @@ export function useCriativosStore(user) {
     setMetricas(prev => prev.filter(m => m.id !== id))
   }, [])
 
+  // ── Vendas fora da campanha ───────────────────────────────────────────────
+  // One row per offer per day: saving a date that exists overwrites it.
+
+  const sortByDate = list => [...list].sort((a, b) => a.data.localeCompare(b.data))
+
+  const saveVendaFora = useCallback(async (ofertaId, fields) => {
+    const { data, error } = await supabase.from('criativos_vendas_fora')
+      .upsert({ ...fields, oferta_id: ofertaId, user_id: user.id }, { onConflict: 'oferta_id,data' })
+      .select().single()
+    if (error) return { error }
+    setVendasFora(prev => sortByDate([...prev.filter(v => v.id !== data.id && !(v.oferta_id === ofertaId && v.data === data.data)), data]))
+    return { data }
+  }, [user])
+
+  const updateVendaFora = useCallback(async (id, fields) => {
+    const { data, error } = await supabase.from('criativos_vendas_fora').update(fields).eq('id', id).select().single()
+    if (error) return { error }
+    setVendasFora(prev => sortByDate(prev.map(v => (v.id === id ? data : v))))
+    return { data }
+  }, [])
+
+  const deleteVendaFora = useCallback(async (id) => {
+    const { error } = await supabase.from('criativos_vendas_fora').delete().eq('id', id)
+    if (error) return { error }
+    setVendasFora(prev => prev.filter(v => v.id !== id))
+    return {}
+  }, [])
+
   return {
-    pastas, ofertas, criativos, metricas, loading,
+    pastas, ofertas, criativos, metricas, vendasFora, loading,
+    saveVendaFora, updateVendaFora, deleteVendaFora,
     addPasta, updatePasta, deletePasta,
     addOferta, updateOferta, deleteOferta,
     addCriativo, updateCriativo, deleteCriativo,

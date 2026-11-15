@@ -343,6 +343,8 @@ export default function CriativosSection({ user }) {
         oferta={oferta}
         criativos={criativos.filter(c => c.oferta_id === oferta.id)}
         rowsByCriativo={rowsByCriativo}
+        vendasFora={store.vendasFora.filter(v => v.oferta_id === oferta.id)}
+        store={store}
         onOpen={setCriativoId}
         onEdit={c => setModal({ type: 'criativo', target: c })}
         onNew={() => setModal({ type: 'criativo' })}

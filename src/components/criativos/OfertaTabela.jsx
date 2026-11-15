@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react'
 import { Plus, Settings, Pencil } from 'lucide-react'
 import {
   summarize, computeVerdict, rankCompare, filterByPeriodo, PERIODOS,
-
+  summarizeFora, totalOferta, campanhaVerdict, currency,
 } from '../../lib/criativosMetrics'
 import { FaseBadge, DriveThumb, InfoTip } from './shared'
 import { metricCols } from './metricCols'
+import VendasFora from './VendasFora'
 import styles from './Criativos.module.css'
 
 function signClass(v) {
@@ -13,7 +14,7 @@ function signClass(v) {
   return v > 0 ? styles.positive : styles.negative
 }
 
-export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen, onEdit, onNew, onConfig }) {
+export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendasFora = [], store, onOpen, onEdit, onNew, onConfig }) {
   const [periodo, setPeriodo] = useState('total')
   const cols = useMemo(() => metricCols(oferta), [oferta])
   const cell = (c, t) => {
@@ -42,6 +43,16 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
     return summarize(rows, oferta.ticket_medio)
   }, [criativos, rowsByCriativo, periodo, oferta.ticket_medio])
 
+  // "Campanha" = only criativos (decides what to scale or pause).
+  // "Total da oferta" = campanha + vendas fora da campanha (matches the sheet).
+  const fora = useMemo(
+    () => summarizeFora(filterByPeriodo(vendasFora, periodo), oferta.ticket_medio),
+    [vendasFora, periodo, oferta.ticket_medio],
+  )
+  const totalOf = useMemo(() => totalOferta(total, fora), [total, fora])
+  const money = v => currency(v, oferta.moeda || 'BRL')
+  const campVerdict = campanhaVerdict(total, totalOf, oferta, money)
+
   return (
     <div className={styles.content}>
       <div className={styles.tableToolbar}>
@@ -63,6 +74,17 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
           </button>
         </div>
       </div>
+
+      {(criativos.length > 0 || vendasFora.length > 0) && (
+        <div className={`${styles.verdict} ${styles[`verdict_${campVerdict.level}`]} ${styles.campVerdict}`}>
+          <span className={styles.campVerdictHead}>
+            <strong>Campanha:</strong> {campVerdict.text}
+            {total.dias > 0 && <> · {total.lucro >= 0 ? 'lucro' : 'prejuízo'} de {money(Math.abs(total.lucro))}</>}
+            <InfoTip info="campanha" title="Campanha" />
+          </span>
+          {campVerdict.reason && <span className={styles.verdictReason}>{campVerdict.reason}</span>}
+        </div>
+      )}
 
       {criativos.length === 0 ? (
         <div className={styles.empty}>
@@ -121,14 +143,36 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, onOpen
               <tr>
                 <td className={styles.stickyPos}></td>
                 <td className={styles.stickyThumb}></td>
-                <td className={styles.stickyName}>Total</td>
+                <td className={styles.stickyName}>
+                  <span className={styles.thInfo}>Campanha<InfoTip info="campanha" title="Campanha" /></span>
+                  <span className={styles.nameSub}>só criativos</span>
+                </td>
                 <td></td>
                 {cols.map(c => cell(c, total))}
+              </tr>
+              <tr className={styles.totalOfertaRow}>
+                <td className={styles.stickyPos}></td>
+                <td className={styles.stickyThumb}></td>
+                <td className={styles.stickyName}>
+                  <span className={styles.thInfo}>Total da oferta<InfoTip info="totalOferta" title="Total da oferta" /></span>
+                  <span
+                    className={styles.nameSub}
+                    title={fora.vendas || fora.faturamento ? `${fora.vendas} venda(s) fora da campanha: ${money(fora.faturamento)}` : undefined}
+                  >
+                    {fora.vendas || fora.faturamento
+                      ? `+ ${fora.vendas} fora · ${money(fora.faturamento)}`
+                      : 'campanha + vendas fora'}
+                  </span>
+                </td>
+                <td></td>
+                {cols.map(c => cell(c, totalOf))}
               </tr>
             </tfoot>
           </table>
         </div>
       )}
+
+      {store && <VendasFora oferta={oferta} rows={vendasFora} store={store} />}
     </div>
   )
 }

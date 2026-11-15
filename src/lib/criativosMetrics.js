@@ -171,6 +171,9 @@ export const METRIC_INFO = {
   cpm: { oque: 'Custo para aparecer 1.000 vezes.', formula: 'Gasto ÷ impressões × 1.000.', exemplo: 'R$ 110 ÷ 10.000 × 1.000 = R$ 11.', mexer: 'CPM subindo muito costuma ser público saturado ou leilão caro; troque público ou criativo.' },
   ctr: { oque: 'De quem viu o anúncio, quantos % clicaram.', formula: 'Cliques ÷ impressões do período (cliques informados, ou impressões × CTR do dia).', exemplo: '180 cliques ÷ 10.000 impressões = 1,8%.', mexer: 'Abaixo do CTR mínimo da oferta, o problema é o criativo (gancho, primeira cena, imagem).' },
   frequencia: { oque: 'Quantas vezes, em média, a mesma pessoa viu o anúncio (impressões ÷ alcance).', formula: 'Digitada por dia, como no Gerenciador. No período: média dos dias ponderada pelas impressões — aproximada, porque o alcance não soma entre dias.', exemplo: 'Dia 1: 1,2 com 5.000 impr.; dia 2: 1,6 com 5.000 → 1,4.', mexer: 'Na fase de teste não decide nada; só importa ao escalar (acima do limite da oferta = saturando).' },
+  campanha: { oque: 'Resultado só dos criativos (anúncios): vendas atribuídas a eles, gasto e faturamento.', formula: 'Soma dos lançamentos diários de todos os criativos da oferta.', exemplo: '3 criativos: R$ 150 de gasto, 4 vendas → CPA R$ 37,50.', mexer: 'É esta linha que decide escalar, segurar ou pausar — as vendas fora da campanha não entram aqui.' },
+  totalOferta: { oque: 'Tudo o que a oferta vendeu: campanha + vendas fora da campanha (indicação, orgânico, cliente que passou o contato).', formula: 'Vendas e faturamento da campanha + os de fora. O gasto é só o da campanha. CPA, ROI e ROAS recalculados com esse total.', exemplo: 'Campanha: R$ 141 de faturamento, gasto R$ 150 (prejuízo R$ 9). + R$ 20 fora da campanha = R$ 161 → lucro R$ 11.', mexer: 'Use para conferir com a planilha de controle. Não use para decidir criativos: a campanha sozinha é que mostra se o anúncio se paga.' },
+  vendasFora: { oque: 'Vendas que não vieram de nenhum anúncio: indicação, orgânico, cliente que passou o contato.', formula: 'Lançadas por dia na oferta. Faturamento vazio = vendas × ticket médio.', exemplo: '1 venda por indicação no dia 07 = R$ 47 (ticket médio).', mexer: 'Lance aqui, e não num criativo, para não inflar o resultado dos anúncios.' },
   conversas: { oque: 'Conversas iniciadas no WhatsApp.', formula: 'Soma das conversas lançadas.', exemplo: '12 + 8 = 20 conversas.', mexer: 'Muitas conversas e poucas vendas: o problema está no atendimento ou na oferta, não no criativo.' },
   custoConversa: { oque: 'Quanto custa cada conversa iniciada.', formula: 'Gasto ÷ conversas.', exemplo: 'R$ 110 ÷ 20 = R$ 5,50.', mexer: 'Caro com CTR baixo: o criativo atrai pouco. Barato e sem vendas: olhe o atendimento.' },
   taxaConversaVenda: { oque: 'De cada 100 conversas, quantas viram venda.', formula: 'Vendas ÷ conversas.', exemplo: '5 ÷ 20 = 25%.', mexer: 'Baixa: revise script de atendimento, tempo de resposta, preço e prova.' },
@@ -295,6 +298,61 @@ export function computeVerdict(criativo, rows, config) {
   }
 
   return NONE
+}
+
+// ── Campanha × Total da oferta ───────────────────────────────────────────────
+// "Campanha" = só os criativos (é o que decide escalar ou pausar).
+// "Total da oferta" = campanha + vendas fora da campanha (indicação, orgânico)
+// — é o que bate com a planilha de controle. As vendas fora da campanha não
+// têm gasto: só somam vendas e faturamento.
+
+// Totals of the outside-campaign rows: { vendas, faturamento, dias }.
+export function summarizeFora(rows, ticketMedio) {
+  return {
+    dias: rows.length,
+    vendas: rows.reduce((a, r) => a + num(r.vendas), 0),
+    faturamento: rows.reduce((a, r) => a + rowFaturamento(r, ticketMedio), 0),
+  }
+}
+
+// Campaign totals (from summarize) + outside sales → offer total.
+export function totalOferta(campanha, fora) {
+  const vendas = campanha.vendas + fora.vendas
+  const faturamento = campanha.faturamento + fora.faturamento
+  const gasto = campanha.gasto
+  const lucro = faturamento - gasto
+  return {
+    ...campanha,
+    vendas, faturamento, lucro,
+    vendasFora: fora.vendas, faturamentoFora: fora.faturamento,
+    cpa: div(gasto, vendas),
+    roi: div(lucro, gasto),
+    roas: div(faturamento, gasto),
+    // Funnel rates only make sense for the campaign; not for the total.
+    custoConversa: null, taxaConversaVenda: null, cpc: null, taxaCliqueVenda: null,
+    custoCheckout: null, taxaCheckoutVenda: null,
+  }
+}
+
+// Verdict of the whole campaign (criativos only), with a note when the
+// outside sales turn a campaign loss into a profit for the offer.
+export function campanhaVerdict(campanha, total, oferta, money = v => v.toFixed(2)) {
+  const cpaMax = Number(oferta.cpa_maximo) || 0
+  let level = 'gray'
+  let text = ''
+  if (campanha.dias === 0) text = 'Sem lançamentos no período'
+  else if (!cpaMax) text = campanha.lucro >= 0 ? 'Campanha no lucro' : 'Campanha no prejuízo'
+  else if (campanha.gasto < 2 * cpaMax) text = 'Coletando dados — gasto ainda abaixo de 2× o CPA máximo'
+  else if (campanha.cpa != null && campanha.cpa <= cpaMax) { level = 'green'; text = 'Campanha dentro do CPA máximo' }
+  else { level = 'red'; text = 'Campanha acima do CPA máximo' }
+
+  let reason = ''
+  if (campanha.lucro < 0 && total.faturamentoFora > 0 && total.lucro >= 0) {
+    reason = `No total da oferta, com ${money(total.faturamentoFora)} de vendas fora da campanha, o resultado é lucro (${money(total.lucro)}).`
+  } else if (campanha.lucro < 0 && total.faturamentoFora > 0) {
+    reason = `Mesmo com ${money(total.faturamentoFora)} de vendas fora da campanha, o total da oferta ainda é prejuízo (${money(total.lucro)}).`
+  }
+  return { level, text, reason }
 }
 
 // ── Ranking ───────────────────────────────────────────────────────────────────

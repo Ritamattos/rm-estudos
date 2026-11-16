@@ -671,14 +671,20 @@ a.thumb:hover { border-color: var(--accent); }
 .cardForaNote { font-size: 11px; color: var(--text3); margin-top: -4px; }
 
 /* ── Campo com soma (como planilha: 50+30+20) ───────────────── */
-.sumWrap { position: relative; display: flex; }
-.sumWrap > input { flex: 1; min-width: 0; padding-right: 44px; }
-.sumBtn {
-  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-  width: 34px; height: 34px; border-radius: var(--radius);
-  font-size: 19px; font-weight: 700; line-height: 1;
-  color: var(--accent-light); background: var(--accent-dim);
-}
-.sumBtn:hover { background: var(--accent-dim2); }
 .sumTotal { font-size: 12px; font-weight: 600; color: var(--accent-light); }
 .sumBad { font-size: 12px; font-weight: 600; color: var(--danger); }
+
+/* Aviso de dias lançados em outra moeda (converter ou manter). */
+.convertBox {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px; border-radius: var(--radius);
+  border: 1px solid #ca8a04; background: rgba(250, 204, 21, 0.08);
+  font-size: 13px; color: var(--text2); line-height: 1.45;
+}
+.convertBox strong { color: var(--text); }
+.convertBox small { font-size: 11.5px; color: var(--text3); }
+.convertBox > button { align-self: flex-start; }
+.convertOption { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.convertOption input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; padding: 0; }
+.convertOption span { display: flex; flex-direction: column; gap: 2px; color: var(--text); font-weight: 600; }
+.convertOption small { font-weight: 400; }

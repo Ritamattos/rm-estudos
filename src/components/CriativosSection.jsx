@@ -4,7 +4,7 @@ import { useCriativosStore } from '../hooks/useCriativosStore'
 import {
   summarize, currency, integer, TIPOS_OFERTA, tipoOf,
   MOEDAS_CONTA, ACRESCIMO_PADRAO, moedaContaOf, gastoEmReais, fetchCotacaoHoje,
-  summarizeFora, totalOferta,
+  summarizeFora, totalOferta, rowGasto,
 } from '../lib/criativosMetrics'
 import Modal from './Modal'
 import {
@@ -52,7 +52,9 @@ const OFERTA_NUM_FIELDS = [
   { key: 'freq_max_escala',     label: 'Frequência máx. — escala',     fallback: 3 },
 ]
 
-function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
+// `dias`: the saved days of this offer (all its criativos), so a currency
+// switch can offer to convert the ones typed in the other currency.
+function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onSave, onConvert }) {
   const [form, setForm] = useState(() => ({
     tipo: oferta ? tipoOf(oferta) : defaultTipo,
     nome: oferta?.nome || '',
@@ -68,6 +70,11 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
   const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }))
   const [cotacaoMsg, setCotacaoMsg] = useState(null)
   const [erro, setErro] = useState(null)
+  // Days saved in a currency other than the one chosen now.
+  const diasOutraMoeda = dias.filter(d => rowGasto(d).moeda !== form.moeda_conta)
+  const mudouMoeda = oferta && moedaContaOf(oferta) !== form.moeda_conta
+  const [converter, setConverter] = useState(null) // null = not chosen yet
+  const converterEfetivo = converter ?? !!mudouMoeda
 
   // Switching the account currency swaps the acréscimo to the new default
   // only if it was still the old default (a typed value is kept).
@@ -105,6 +112,17 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
     }
     OFERTA_NUM_FIELDS.forEach(c => { payload[c.key] = parseNum(form[c.key]) ?? c.fallback ?? null })
     await onSave(payload)
+    if (oferta && converterEfetivo && diasOutraMoeda.length) {
+      const usd = form.moeda_conta === 'USD'
+      const acrescimo = payload.acrescimo_gasto
+      const res = await onConvert(diasOutraMoeda, {
+        moeda: form.moeda_conta,
+        cotacao: usd ? cotacao : 1,
+        acrescimo,
+        toReais: original => gastoEmReais(original, usd ? cotacao : 1, acrescimo),
+      })
+      if (res?.failed) { setErro(`${res.failed} dia(s) não puderam ser convertidos. Tente salvar de novo.`); return }
+    }
     onClose()
   }
 
@@ -186,8 +204,31 @@ function OfertaModal({ oferta, defaultTipo = 'whatsapp', onClose, onSave }) {
               ? `Exemplo: US$ 10 viram ${currency(exemplo)} (US$ 10 × ${form.cotacao} × (1 + ${form.acrescimo_gasto || 0}%)).`
               : 'Informe a cotação para ver o exemplo.')
             : `Exemplo: R$ 100 de gasto viram ${currency(exemplo)} com o acréscimo.`}
-          {' '}Dias já lançados não mudam.
+          {' '}Mudar a cotação ou o acréscimo não altera os dias já lançados.
         </p>
+        {oferta && diasOutraMoeda.length > 0 && (
+          <div className={styles.convertBox}>
+            <p>
+              <strong>{diasOutraMoeda.length} {diasOutraMoeda.length === 1 ? 'dia foi lançado' : 'dias foram lançados'} em {form.moeda_conta === 'USD' ? 'reais' : 'dólar'}.</strong>
+              {' '}Os valores que você digitou {form.moeda_conta === 'USD' ? 'eram em dólar' : 'eram em reais'}?
+            </p>
+            <label className={styles.convertOption}>
+              <input type="radio" name="converter" checked={converterEfetivo} onChange={() => setConverter(true)} />
+              <span>
+                Sim, converter para {form.moeda_conta === 'USD' ? 'dólar' : 'reais'}
+                <small>
+                  {form.moeda_conta === 'USD'
+                    ? 'O número digitado vira US$ e o gasto em reais é recalculado com a cotação e o acréscimo acima.'
+                    : 'O número digitado vira R$ (cotação 1) com o acréscimo acima.'}
+                </small>
+              </span>
+            </label>
+            <label className={styles.convertOption}>
+              <input type="radio" name="converter" checked={!converterEfetivo} onChange={() => setConverter(false)} />
+              <span>Não, manter esses dias como estão</span>
+            </label>
+          </div>
+        )}
         {erro && <p className={styles.fieldError}>{erro}</p>}
       </div>
       <div className={styles.fieldRow}>
@@ -472,6 +513,8 @@ export default function CriativosSection({ user }) {
       {modal?.type === 'oferta' && (
         <OfertaModal
           oferta={modal.target}
+          dias={modal.target ? criativos.filter(c => c.oferta_id === modal.target.id).flatMap(c => rowsByCriativo[c.id] || []) : []}
+          onConvert={store.convertGastoDias}
           // A new offer starts with the type of the latest offer in this pasta.
           defaultTipo={tipoOf([...ofertas].reverse().find(o => o.pasta_id === pasta?.id))}
           onClose={closeModal}

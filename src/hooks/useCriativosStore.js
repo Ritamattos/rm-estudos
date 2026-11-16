@@ -136,6 +136,27 @@ export function useCriativosStore(user) {
     setMetricas(prev => prev.filter(m => m.id !== id))
   }, [])
 
+  // Re-labels the spend of saved days in another account currency (e.g. the
+  // offer was switched to dollars after days were typed as reais). The typed
+  // number is kept; only its currency, rate, acréscimo and the reais value
+  // change. `toReais(original)` returns the new gasto in reais.
+  const convertGastoDias = useCallback(async (rows, { moeda, cotacao, acrescimo, toReais }) => {
+    const updates = rows.map(r => {
+      const original = r.gasto_original != null && r.gasto_original !== '' ? Number(r.gasto_original) : Number(r.gasto || 0)
+      return {
+        id: r.id,
+        fields: { gasto_original: original, moeda_gasto: moeda, cotacao, acrescimo, gasto: toReais(original) },
+      }
+    })
+    const results = await Promise.all(updates.map(u =>
+      supabase.from('criativos_metricas').update(u.fields).eq('id', u.id).select().single()))
+    const failed = results.filter(r => r.error)
+    if (failed.length) console.error('[convertGastoDias]', failed.map(r => r.error))
+    const ok = new Map(results.filter(r => !r.error).map(r => [r.data.id, r.data]))
+    setMetricas(prev => prev.map(m => ok.get(m.id) ?? m))
+    return { converted: ok.size, failed: failed.length }
+  }, [])
+
   // ── Vendas fora da campanha ───────────────────────────────────────────────
   // One row per offer per day: saving a date that exists overwrites it.
 
@@ -166,7 +187,7 @@ export function useCriativosStore(user) {
 
   return {
     pastas, ofertas, criativos, metricas, vendasFora, loading,
-    saveVendaFora, updateVendaFora, deleteVendaFora,
+    saveVendaFora, updateVendaFora, deleteVendaFora, convertGastoDias,
     addPasta, updatePasta, deletePasta,
     addOferta, updateOferta, deleteOferta,
     addCriativo, updateCriativo, deleteCriativo,

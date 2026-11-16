@@ -72,42 +72,21 @@ function parseSingle(v, isDecimal) {
 }
 
 // Number input that also takes a sum, like a spreadsheet ("50+30+20").
-// The ＋ button types the "+" (phone numeric keyboards don't have it) and
-// keeps the keyboard open; the total shows below while it's a sum.
+// The total shows below while it's a sum.
 export function SumInput({ value, onChange, isDecimal = true, format = n => String(n), className = '', placeholder, ...rest }) {
-  const ref = useRef(null)
   const expr = isExpression(value)
   const total = expr ? parseNum(value, isDecimal) : null
-  function addPlus(e) {
-    e.preventDefault()
-    const v = String(value ?? '').trim()
-    if (v && !/[+]$/.test(v)) onChange(`${v}+`)
-    ref.current?.focus()
-  }
   return (
     <>
-      <div className={styles.sumWrap}>
-        <input
-          ref={ref}
-          className={className}
-          inputMode={isDecimal ? 'decimal' : 'numeric'}
-          value={value}
-          placeholder={placeholder}
-          onChange={e => onChange(e.target.value)}
-          {...rest}
-        />
-        <button
-          type="button"
-          className={styles.sumBtn}
-          onMouseDown={e => e.preventDefault()}
-          onClick={addPlus}
-          title="Somar outro valor (ex: 50+30+20)"
-          aria-label="Somar outro valor"
-          tabIndex={-1}
-        >
-          +
-        </button>
-      </div>
+      <input
+        className={className}
+        inputMode={isDecimal ? 'decimal' : 'numeric'}
+        value={value}
+        placeholder={placeholder}
+        title="Aceita soma, como na planilha: 50+30+20"
+        onChange={e => onChange(e.target.value)}
+        {...rest}
+      />
       {expr && (
         <span className={total == null ? styles.sumBad : styles.sumTotal} aria-live="polite">
           {total == null ? 'Conta inválida' : `= ${format(total)}`}

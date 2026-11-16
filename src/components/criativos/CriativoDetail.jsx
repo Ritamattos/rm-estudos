@@ -293,6 +293,19 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
       : `= ${money(reais)}  (US$ ${numToInput(parseNum(form.gasto) ?? 0)} × ${form.cotacao} × (1 + ${form.acrescimo || 0}%))`)
     : (parseNum(form.acrescimo) ? `= ${money(reais)} com acréscimo de ${form.acrescimo}%` : null)
   const gastoSymbol = usd ? 'US$' : 'R$'
+  // A day saved in a currency other than the offer's (e.g. the offer was
+  // switched to dollars later): one tap re-labels it before "Atualizar dia".
+  const moedaOferta = moedaContaOf(oferta)
+  const diaEmOutraMoeda = existingForDate && form.moeda_gasto !== moedaOferta
+  function usarMoedaDaOferta() {
+    setForm(prev => ({
+      ...prev,
+      moeda_gasto: moedaOferta,
+      cotacao: moedaOferta === 'USD' ? numToInput(oferta.cotacao ?? null) : '1',
+      acrescimo: numToInput(Number(oferta.acrescimo_gasto ?? 0)),
+    }))
+    if (moedaOferta === 'USD' && !(Number(oferta.cotacao) > 0)) setMoreOpen(true)
+  }
 
   // Gasto takes two columns so its live conversion line doesn't push the
   // neighbouring field out of line.
@@ -355,6 +368,18 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         <span>{existingForDate ? 'Editando' : 'Lançando'}: <strong>{dayTitle}</strong></span>
         {existingForDate && <small>Esse dia já tem dados — altere e toque em “Atualizar dia”.</small>}
       </div>
+      {diaEmOutraMoeda && (
+        <div className={styles.convertBox}>
+          <p>
+            Este dia foi salvo com o gasto em <strong>{form.moeda_gasto === 'USD' ? 'dólar' : 'reais'}</strong>, mas a oferta agora é em{' '}
+            <strong>{moedaOferta === 'USD' ? 'dólar' : 'reais'}</strong>.
+          </p>
+          <button type="button" className={styles.editBtn} onClick={usarMoedaDaOferta}>
+            O valor era em {moedaOferta === 'USD' ? 'dólar' : 'reais'} — usar {moedaOferta === 'USD' ? 'US$' : 'R$'} neste dia
+          </button>
+          <small>Depois toque em “Atualizar dia”. Para converter todos os dias de uma vez, use a engrenagem ⚙ da oferta.</small>
+        </div>
+      )}
       <div className={styles.dayGrid}>
         {fields.filter(m => !m.extra).map(input)}
       </div>

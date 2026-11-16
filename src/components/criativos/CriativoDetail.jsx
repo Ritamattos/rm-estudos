@@ -6,7 +6,7 @@ import {
   currency, percent, multiplier, decimal, integer,
 } from '../../lib/criativosMetrics'
 import {
-  FASES, FORMATOS, Field, DriveThumb, InfoTip, parseNum, numToInput, formatDate,
+  FASES, FORMATOS, Field, DriveThumb, InfoTip, SumInput, parseNum, numToInput, formatDate,
 } from './shared'
 import { metricCols } from './metricCols'
 import styles from './Criativos.module.css'
@@ -17,16 +17,16 @@ import styles from './Criativos.module.css'
 // `extra` fields live in the collapsed "Mais dados" block.
 const METRIC_FIELDS = [
   // Gasto is typed in the ad account currency and converted (see below).
-  { key: 'gasto',            label: 'Gasto',               decimal: true, info: 'gasto', special: true },
-  { key: 'vendas',           label: 'Vendas',              info: 'vendas' },
+  { key: 'gasto',            label: 'Gasto',               decimal: true, info: 'gasto', special: true, sum: true },
+  { key: 'vendas',           label: 'Vendas',              info: 'vendas', sum: true },
   { key: 'conversas',        label: 'Conversas iniciadas', tipos: ['whatsapp'], info: 'conversas' },
   { key: 'checkouts',        label: 'Checkouts iniciados', tipos: ['direta'], optional: true, info: 'checkouts' },
   { key: 'impressoes',       label: 'Impressões',          info: 'cpm' },
   { key: 'ctr',              label: 'CTR (%)',             decimal: true, optional: true, info: 'ctr', pct: true },
-  { key: 'faturamento',      label: 'Faturamento',         decimal: true, optional: true, extra: true, money: true, info: 'faturamento' },
+  { key: 'faturamento',      label: 'Faturamento',         decimal: true, optional: true, extra: true, money: true, info: 'faturamento', sum: true },
   { key: 'frequencia',       label: 'Frequência',          decimal: true, optional: true, extra: true, info: 'frequencia' },
   { key: 'cliques_link',     label: 'Cliques no link',     tipos: ['direta'], optional: true, extra: true, info: 'cliques' },
-  { key: 'orcamento_diario', label: 'Orçamento diário',    decimal: true, optional: true, extra: true, money: true },
+  { key: 'orcamento_diario', label: 'Orçamento diário',    decimal: true, optional: true, extra: true, money: true, sum: true },
 ]
 
 const fieldsFor = tipo => METRIC_FIELDS.filter(f => !f.tipos || f.tipos.includes(tipo))
@@ -290,7 +290,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
   const gastoHint = usd
     ? (reais == null
       ? 'Informe a cotação em “Mais dados” para converter.'
-      : `= ${money(reais)}  (US$ ${form.gasto || 0} × ${form.cotacao} × (1 + ${form.acrescimo || 0}%))`)
+      : `= ${money(reais)}  (US$ ${numToInput(parseNum(form.gasto) ?? 0)} × ${form.cotacao} × (1 + ${form.acrescimo || 0}%))`)
     : (parseNum(form.acrescimo) ? `= ${money(reais)} com acréscimo de ${form.acrescimo}%` : null)
   const gastoSymbol = usd ? 'US$' : 'R$'
 
@@ -306,17 +306,28 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
       label={`${m.label}${m.key === 'gasto' ? ` (${gastoSymbol})` : m.money ? ` (${symbol})` : ''}${m.optional ? ' · opcional' : ''}`}
       info={m.info}
     >
-      <input
-        className={styles.bigInput}
-        inputMode={m.decimal ? 'decimal' : 'numeric'}
-        value={form[m.key]}
-        onChange={e => setForm(prev => ({ ...prev, [m.key]: e.target.value }))}
-        placeholder={
-          m.key === 'faturamento' ? 'vendas × ticket'
-            : m.key === 'cliques_link' ? 'impr. × CTR'
+      {m.sum ? (
+        <SumInput
+          className={styles.bigInput}
+          isDecimal={!!m.decimal}
+          value={form[m.key]}
+          onChange={v => setForm(prev => ({ ...prev, [m.key]: v }))}
+          // gasto shows its own line (sum + conversion) below
+          format={m.key === 'gasto' ? (usd ? n => `US$ ${numToInput(n)}` : money) : m.decimal ? money : n => String(n)}
+          placeholder={m.key === 'faturamento' ? 'vendas × ticket' : m.optional ? 'ex: 50+30' : '0'}
+        />
+      ) : (
+        <input
+          className={styles.bigInput}
+          inputMode={m.decimal ? 'decimal' : 'numeric'}
+          value={form[m.key]}
+          onChange={e => setForm(prev => ({ ...prev, [m.key]: e.target.value }))}
+          placeholder={
+            m.key === 'cliques_link' ? 'impr. × CTR'
               : m.pct ? 'ex: 1,8' : m.optional ? '' : '0'
-        }
-      />
+          }
+        />
+      )}
       {m.key === 'gasto' && gastoHint && <span className={styles.gastoReais} aria-live="polite">{gastoHint}</span>}
     </Field>
   )

@@ -35,7 +35,33 @@ export const MOEDAS = [
 // Reads what people type in Brazil: "50", "50,90", "R$ 1.234,56", "1.500"
 // (thousands), "US$ 12.50". Currency symbols and spaces are ignored.
 // Returns null when there's no number at all (so it can be flagged).
+//
+// Like a spreadsheet, a sum can be typed: "50+30+20" or "=50+30+20" → 100
+// (also "100-20"). Each part is read with the rules above; if any part
+// isn't a number, the whole thing is null.
 export function parseNum(v, isDecimal = true) {
+  const raw = String(v ?? '').trim().replace(/^=/, '')
+  // "+" anywhere, or "-" after the first character, means an expression.
+  if (/\+/.test(raw) || /.-/.test(raw.replace(/\s/g, ''))) {
+    const parts = raw.replace(/\s/g, '').split(/(?=[+-])/).filter(p => p !== '+' && p !== '-')
+    if (!parts.length) return null
+    let total = 0
+    for (const p of parts) {
+      const sign = p.startsWith('-') ? -1 : 1
+      const n = parseSingle(p.replace(/^[+-]/, ''), isDecimal)
+      if (n == null) return null
+      total += sign * n
+    }
+    return Math.round(total * 1e6) / 1e6
+  }
+  return parseSingle(raw, isDecimal)
+}
+
+// True when the text is a sum/subtraction (so the UI can show its total).
+// ("47+abc" counts too, so the field can say the sum is invalid.)
+export const isExpression = v => /\d\s*[+-]/.test(String(v ?? '').replace(/^=/, ''))
+
+function parseSingle(v, isDecimal) {
   let s = String(v ?? '').replace(/[^\d.,-]/g, '')
   if (!s || !/\d/.test(s)) return null
   if (!isDecimal) s = s.replace(/[.,]/g, '')
@@ -43,6 +69,52 @@ export function parseNum(v, isDecimal = true) {
   else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')         // 1.500 → 1500
   const n = Number(s)
   return Number.isFinite(n) ? n : null
+}
+
+// Number input that also takes a sum, like a spreadsheet ("50+30+20").
+// The ＋ button types the "+" (phone numeric keyboards don't have it) and
+// keeps the keyboard open; the total shows below while it's a sum.
+export function SumInput({ value, onChange, isDecimal = true, format = n => String(n), className = '', placeholder, ...rest }) {
+  const ref = useRef(null)
+  const expr = isExpression(value)
+  const total = expr ? parseNum(value, isDecimal) : null
+  function addPlus(e) {
+    e.preventDefault()
+    const v = String(value ?? '').trim()
+    if (v && !/[+]$/.test(v)) onChange(`${v}+`)
+    ref.current?.focus()
+  }
+  return (
+    <>
+      <div className={styles.sumWrap}>
+        <input
+          ref={ref}
+          className={className}
+          inputMode={isDecimal ? 'decimal' : 'numeric'}
+          value={value}
+          placeholder={placeholder}
+          onChange={e => onChange(e.target.value)}
+          {...rest}
+        />
+        <button
+          type="button"
+          className={styles.sumBtn}
+          onMouseDown={e => e.preventDefault()}
+          onClick={addPlus}
+          title="Somar outro valor (ex: 50+30+20)"
+          aria-label="Somar outro valor"
+          tabIndex={-1}
+        >
+          +
+        </button>
+      </div>
+      {expr && (
+        <span className={total == null ? styles.sumBad : styles.sumTotal} aria-live="polite">
+          {total == null ? 'Conta inválida' : `= ${format(total)}`}
+        </span>
+      )}
+    </>
+  )
 }
 
 export function numToInput(v) {

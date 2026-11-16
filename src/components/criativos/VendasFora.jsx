@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { todayISO, currency, integer } from '../../lib/criativosMetrics'
-import { Field, InfoTip, parseNum, numToInput, formatDate } from './shared'
+import { Field, InfoTip, SumInput, parseNum, numToInput, formatDate } from './shared'
 import styles from './Criativos.module.css'
 
 const empty = data => ({ data, vendas: '', faturamento: '', observacao: '' })
@@ -90,12 +90,12 @@ export default function VendasFora({ oferta, rows, store }) {
             <input type="date" value={form.data} max={todayISO()} onChange={e => e.target.value && pickDate(e.target.value)} />
           </Field>
           <Field label="Vendas">
-            <input inputMode="numeric" value={form.vendas} placeholder="0"
-              onChange={e => setForm(p => ({ ...p, vendas: e.target.value }))} />
+            <SumInput isDecimal={false} value={form.vendas} placeholder="0"
+              onChange={v => setForm(p => ({ ...p, vendas: v }))} />
           </Field>
           <Field label={`Faturamento (${money(0).replace(/[\d\s.,]/g, '')}) · opcional`} info="faturamento">
-            <input inputMode="decimal" value={form.faturamento} placeholder="vendas × ticket"
-              onChange={e => setForm(p => ({ ...p, faturamento: e.target.value }))} />
+            <SumInput value={form.faturamento} placeholder="vendas × ticket" format={money}
+              onChange={v => setForm(p => ({ ...p, faturamento: v }))} />
           </Field>
           <Field label="Observação · opcional">
             <input value={form.observacao} placeholder="Ex: indicação da Ana" maxLength={120}

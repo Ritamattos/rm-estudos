@@ -617,7 +617,11 @@ a.thumb:hover { border-color: var(--accent); }
 }
 
 /* Rótulos que quebram linha não desalinham os campos da mesma fileira. */
-.dayGrid { align-items: end; }
+.dayGrid { align-items: start; }
+/* Rótulos com a mesma altura: os campos ficam alinhados mesmo quando um
+   rótulo quebra linha ou um campo mostra o total da soma embaixo. */
+.dayGrid .fieldLabelRow { min-height: 18px; align-items: flex-end; }
+@media (max-width: 719px) { .dayGrid .fieldLabelRow { min-height: 32px; } }
 
 .inputError, .inputError:focus { border-color: var(--danger) !important; box-shadow: 0 0 0 3px var(--danger-dim) !important; }
 .fieldError { font-size: 12px; color: var(--danger); margin-top: -6px; }
@@ -665,3 +669,16 @@ a.thumb:hover { border-color: var(--accent); }
 .cardPrejuizo { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger) inset; }
 .cardPrejuizo:hover { border-color: var(--danger); }
 .cardForaNote { font-size: 11px; color: var(--text3); margin-top: -4px; }
+
+/* ── Campo com soma (como planilha: 50+30+20) ───────────────── */
+.sumWrap { position: relative; display: flex; }
+.sumWrap > input { flex: 1; min-width: 0; padding-right: 44px; }
+.sumBtn {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: var(--radius);
+  font-size: 19px; font-weight: 700; line-height: 1;
+  color: var(--accent-light); background: var(--accent-dim);
+}
+.sumBtn:hover { background: var(--accent-dim2); }
+.sumTotal { font-size: 12px; font-weight: 600; color: var(--accent-light); }
+.sumBad { font-size: 12px; font-weight: 600; color: var(--danger); }

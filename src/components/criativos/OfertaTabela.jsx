@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react'
 import { Plus, Settings, Pencil } from 'lucide-react'
 import {
-  summarize, computeVerdict, rankCompare, filterByPeriodo, PERIODOS,
+  summarize, computeVerdict, rankCompare,
   summarizeFora, totalOferta, campanhaVerdict, currency,
 } from '../../lib/criativosMetrics'
 import { FaseBadge, DriveThumb, InfoTip } from './shared'
 import { metricCols } from './metricCols'
 import VendasFora from './VendasFora'
+import PeriodoFiltro from './PeriodoFiltro'
+import { filtrarPeriodo, periodoLabel, periodoFrase } from '../../lib/periodo'
 import styles from './Criativos.module.css'
 
 function signClass(v) {
@@ -15,7 +17,12 @@ function signClass(v) {
 }
 
 export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendasFora = [], store, onOpen, onEdit, onNew, onConfig }) {
-  const [periodo, setPeriodo] = useState('total')
+  // null = "Todos" (always the default when the screen opens).
+  const [periodo, setPeriodo] = useState(null)
+  const datasComDados = useMemo(() => new Set([
+    ...criativos.flatMap(c => (rowsByCriativo[c.id] || []).map(r => r.data)),
+    ...vendasFora.map(v => v.data),
+  ]), [criativos, rowsByCriativo, vendasFora])
   const cols = useMemo(() => metricCols(oferta), [oferta])
   const cell = (c, t) => {
     const sg = c.sign?.(t)
@@ -28,7 +35,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
 
   const ranked = useMemo(() => criativos.map(c => {
     const all = rowsByCriativo[c.id] || []
-    const rows = filterByPeriodo(all, periodo)
+    const rows = filtrarPeriodo(all, periodo)
     return {
       criativo: c,
       totals: summarize(rows, oferta.ticket_medio),
@@ -39,32 +46,25 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
   }).sort(rankCompare), [criativos, rowsByCriativo, periodo, oferta])
 
   const total = useMemo(() => {
-    const rows = criativos.flatMap(c => filterByPeriodo(rowsByCriativo[c.id] || [], periodo))
+    const rows = criativos.flatMap(c => filtrarPeriodo(rowsByCriativo[c.id] || [], periodo))
     return summarize(rows, oferta.ticket_medio)
   }, [criativos, rowsByCriativo, periodo, oferta.ticket_medio])
 
   // "Campanha" = only criativos (decides what to scale or pause).
   // "Total da oferta" = campanha + vendas fora da campanha (matches the sheet).
   const fora = useMemo(
-    () => summarizeFora(filterByPeriodo(vendasFora, periodo), oferta.ticket_medio),
+    () => summarizeFora(filtrarPeriodo(vendasFora, periodo), oferta.ticket_medio),
     [vendasFora, periodo, oferta.ticket_medio],
   )
   const totalOf = useMemo(() => totalOferta(total, fora), [total, fora])
   const money = v => currency(v, oferta.moeda || 'BRL')
   const campVerdict = campanhaVerdict(total, totalOf, oferta, money)
+  const vazio = total.dias === 0 && fora.dias === 0
 
   return (
     <div className={styles.content}>
       <div className={styles.tableToolbar}>
-        <div className={styles.viewToggle}>
-          {PERIODOS.map(p => (
-            <button
-              key={p.id}
-              className={periodo === p.id ? styles.viewToggleActive : ''}
-              onClick={() => setPeriodo(p.id)}
-            >{p.label}</button>
-          ))}
-        </div>
+        <PeriodoFiltro periodo={periodo} onChange={setPeriodo} datasComDados={datasComDados} />
         <div className={styles.controls}>
           <button className={styles.iconBtnLg} onClick={onConfig} title="Configurações da oferta">
             <Settings size={17} />
@@ -75,10 +75,30 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
         </div>
       </div>
 
-      {(criativos.length > 0 || vendasFora.length > 0) && (
+      {periodo && (
+        <div className={styles.periodoResumo} aria-live="polite">
+          <span className={styles.periodoResumoTitle}>{periodoLabel(periodo)}</span>
+          {vazio ? (
+            <p className={styles.hint}>Sem lançamentos neste período.</p>
+          ) : (
+            <div className={styles.periodoResumoGrid}>
+              <div><small>Gasto</small><strong>{money(totalOf.gasto)}</strong></div>
+              <div><small>Vendas</small><strong>{totalOf.vendas}</strong></div>
+              <div><small>Faturamento</small><strong>{money(totalOf.faturamento)}</strong></div>
+              <div>
+                <small>{totalOf.lucro < 0 ? 'Prejuízo' : 'Lucro'}</small>
+                <strong className={totalOf.lucro < 0 ? styles.negative : totalOf.lucro > 0 ? styles.positive : ''}>{money(Math.abs(totalOf.lucro))}</strong>
+              </div>
+            </div>
+          )}
+          {!vazio && fora.vendas > 0 && <span className={styles.hint}>inclui {fora.vendas} venda(s) fora da campanha ({money(fora.faturamento)})</span>}
+        </div>
+      )}
+
+      {(criativos.length > 0 || vendasFora.length > 0) && !(periodo && vazio) && (
         <div className={`${styles.verdict} ${styles[`verdict_${campVerdict.level}`]} ${styles.campVerdict}`}>
           <span className={styles.campVerdictHead}>
-            <strong>Campanha:</strong> {campVerdict.text}
+            <strong>Campanha{periodo ? ` ${periodoFrase(periodo)}` : ''}:</strong> {campVerdict.text}
             {total.dias > 0 && <> · {total.lucro >= 0 ? 'lucro' : 'prejuízo'} de {money(Math.abs(total.lucro))}</>}
             <InfoTip info="campanha" title="Campanha" />
           </span>
@@ -134,6 +154,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
                       <span className={`${styles.suggestion} ${styles[`sug_${verdict.level}`]}`}>{verdict.text}</span>
                     )}
                     {verdict.reason && <span className={styles.suggestionReason}>{verdict.reason}</span>}
+                    {periodo && <span className={styles.statusAcumulado}>baseado em todos os dias</span>}
                   </td>
                   {cols.map(c => cell(c, totals))}
                 </tr>
@@ -172,7 +193,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
         </div>
       )}
 
-      {store && <VendasFora oferta={oferta} rows={vendasFora} store={store} />}
+      {store && <VendasFora oferta={oferta} rows={vendasFora} store={store} periodo={periodo} />}
     </div>
   )
 }

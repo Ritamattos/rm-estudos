@@ -6,12 +6,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { todayISO, currency, integer } from '../../lib/criativosMetrics'
 import { Field, InfoTip, SumInput, parseNum, numToInput, formatDate } from './shared'
+import { filtrarPeriodo, periodoLabel } from '../../lib/periodo'
 import styles from './Criativos.module.css'
 
 const empty = data => ({ data, vendas: '', faturamento: '', observacao: '' })
 const toForm = r => ({ data: r.data, vendas: numToInput(r.vendas), faturamento: numToInput(r.faturamento), observacao: r.observacao || '' })
 
-export default function VendasFora({ oferta, rows, store }) {
+export default function VendasFora({ oferta, rows, store, periodo = null }) {
   const money = v => currency(v, oferta.moeda || 'BRL')
   const ticket = Number(oferta.ticket_medio) || 0
   const byDate = new Map(rows.map(r => [r.data, r]))
@@ -21,6 +22,8 @@ export default function VendasFora({ oferta, rows, store }) {
   const [saving, setSaving] = useState(false)
   const formRef = useRef(null)
   const existing = byDate.get(form.data)
+  // The history follows the screen's period filter; the form doesn't.
+  const visiveis = filtrarPeriodo(rows, periodo)
 
   // Picking a date that already has a row loads it, so saving edits it.
   function pickDate(d) {
@@ -116,8 +119,9 @@ export default function VendasFora({ oferta, rows, store }) {
         {error && <div className={styles.error}>{error}</div>}
       </form>
 
-      {rows.length === 0 ? (
-        <p className={styles.hint}>Nenhuma venda fora da campanha lançada.</p>
+      {periodo && rows.length > 0 && <p className={styles.hint}>Mostrando: <strong>{periodoLabel(periodo)}</strong></p>}
+      {visiveis.length === 0 ? (
+        <p className={styles.hint}>{periodo && rows.length ? 'Sem vendas fora da campanha neste período.' : 'Nenhuma venda fora da campanha lançada.'}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -125,7 +129,7 @@ export default function VendasFora({ oferta, rows, store }) {
               <tr><th>Data</th><th className={styles.num}>Vendas</th><th className={styles.num}>Faturamento</th><th>Observação</th><th></th></tr>
             </thead>
             <tbody>
-              {[...rows].reverse().map(r => (
+              {[...visiveis].reverse().map(r => (
                 <tr key={r.id} className={r.data === form.data ? styles.foraRowActive : ''}>
                   <td className={styles.strong}>{formatDate(r.data)}</td>
                   <td className={styles.num}>{integer(r.vendas)}</td>

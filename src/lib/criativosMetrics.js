@@ -1,3 +1,4 @@
+import { hojeSP } from './periodo'
 // Cálculos e veredito (semáforo) dos criativos do Meta Ads.
 // Todos os derivados retornam null quando o denominador é zero — a UI
 // mostra "—" nesses casos.
@@ -215,31 +216,8 @@ export function diagnose(t, oferta) {
 
 // ── Período ───────────────────────────────────────────────────────────────────
 
-export function todayISO() {
-  const d = new Date()
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
-  return d.toISOString().slice(0, 10)
-}
-
-function daysAgoISO(n) {
-  const d = new Date(`${todayISO()}T00:00:00`)
-  d.setDate(d.getDate() - n)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-export const PERIODOS = [
-  { id: 'hoje',  label: 'Hoje' },
-  { id: '7d',    label: '7 dias' },
-  { id: '30d',   label: '30 dias' },
-  { id: 'total', label: 'Total' },
-]
-
-// "7 dias" = hoje + os 6 dias anteriores.
-export function filterByPeriodo(rows, periodo) {
-  if (periodo === 'total') return rows
-  const from = periodo === 'hoje' ? todayISO() : daysAgoISO(periodo === '7d' ? 6 : 29)
-  return rows.filter(r => r.data >= from)
-}
+// Today in America/Sao_Paulo as "YYYY-MM-DD" (never toISOString()).
+export const todayISO = hojeSP
 
 // ── Veredito ──────────────────────────────────────────────────────────────────
 

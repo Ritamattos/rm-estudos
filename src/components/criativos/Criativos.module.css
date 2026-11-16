@@ -688,3 +688,48 @@ a.thumb:hover { border-color: var(--accent); }
 .convertOption input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; padding: 0; }
 .convertOption span { display: flex; flex-direction: column; gap: 2px; color: var(--text); font-weight: 600; }
 .convertOption small { font-weight: 400; }
+
+/* ── Filtro de período (Todos / dia / semana / intervalo) ───── */
+.periodoBar { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.periodoBar .viewToggle button { display: inline-flex; align-items: center; justify-content: center; }
+.periodoAtivo { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 10px; padding: 2px; background: var(--card-bg); }
+.periodoAtivo button:disabled { opacity: 0.35; cursor: default; }
+.periodoLabel { background: none; border: none; color: var(--text); font-weight: 600; font-size: 13px; padding: 4px 6px; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.periodoLabel:hover { color: var(--accent-light); }
+.periodoPop {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 40;
+  width: min(330px, calc(100vw - 32px));
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28); padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.periodoPopFoot { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.pDay {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 38px; border-radius: 8px; border: 1px solid transparent;
+  background: transparent; cursor: pointer; padding: 4px 0; font-family: inherit;
+}
+.pDay:hover:not(:disabled) { border-color: var(--accent); }
+.pDay:disabled { opacity: 0.3; cursor: default; }
+.pDayIn { background: var(--accent-dim); }
+.pDayIn .calNum { color: var(--text); }
+.pDayEdge, .pDayEdge:hover { background: var(--accent); border-color: var(--accent) !important; }
+.pDayEdge .calNum { color: #fff; }
+.pDot, .pDotEmpty { width: 5px; height: 5px; border-radius: 50%; }
+.pDot { background: var(--success); }
+.pDayEdge .pDot { background: #fff; }
+.periodoResumo {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px;
+  border: 1px solid var(--accent-dim2); border-radius: 12px; background: var(--accent-dim);
+}
+.periodoResumoTitle { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); }
+.periodoResumoGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.periodoResumoGrid div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.periodoResumoGrid small { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text3); }
+.periodoResumoGrid strong { font-size: 16px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.periodoResumoGrid strong.positive { color: var(--success); }
+.periodoResumoGrid strong.negative { color: var(--danger); }
+.statusAcumulado { display: block; font-size: 10.5px; color: var(--text3); font-style: italic; margin-top: 2px; }
+@media (max-width: 560px) {
+  .periodoResumoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,9 +1,9 @@
-// Period filter of the offer screen: "Todos" or a day / week / range picked
+// Period filter of the offer screen: "Todos" or a day / range picked
 // on a calendar. Days with entries get a dot.
 import { useState, useEffect, useRef } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import {
-  hojeSP, isoOf, semanaDe, diaPeriodo, intervalo, deslocar, periodoLabel, ddmm,
+  hojeSP, isoOf, diaPeriodo, intervalo, deslocar, periodoLabel, ddmm,
 } from '../../lib/periodo'
 import styles from './Criativos.module.css'
 
@@ -52,8 +52,8 @@ export default function PeriodoFiltro({ periodo, onChange, datasComDados }) {
           className={periodo ? styles.viewToggleActive : ''}
           onClick={abrir}
           aria-expanded={open}
-          aria-label="Escolher dia ou semana no calendário"
-          title="Filtrar por dia ou semana"
+          aria-label="Escolher dia ou período no calendário"
+          title="Filtrar por dia ou período"
         >
           <CalendarDays size={15} />
         </button>
@@ -84,15 +84,6 @@ export default function PeriodoFiltro({ periodo, onChange, datasComDados }) {
             onTap={tocar}
           />
           <div className={styles.periodoPopFoot}>
-            {periodo?.tipo === 'dia' && (
-              <button
-                type="button"
-                className={styles.editBtn}
-                onClick={() => { onChange(semanaDe(periodo.from)); setAnchor(null); setOpen(false) }}
-              >
-                Semana inteira ({ddmm(semanaDe(periodo.from).from)} a {ddmm(semanaDe(periodo.from).to)})
-              </button>
-            )}
             <button type="button" className={styles.primaryBtn} onClick={() => setOpen(false)}>Pronto</button>
           </div>
           <p className={styles.hint}>

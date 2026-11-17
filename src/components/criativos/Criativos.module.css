@@ -735,4 +735,4 @@ a.thumb:hover { border-color: var(--accent); }
 }
 
 .cotFalha { color: var(--warning, #d97706) !important; }
-.linkBtn + .linkBtn { margin-left: 8px; }
+.field > .linkBtn { align-self: flex-start; }

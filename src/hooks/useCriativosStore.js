@@ -9,6 +9,8 @@ export function useCriativosStore(user) {
   const [metricas, setMetricas] = useState([])
   // Sales outside the campaign (referral, organic…): per offer, never per criativo.
   const [vendasFora, setVendasFora] = useState([])
+  // Changes typed in the "Análise" tab (budget up, split, paused…).
+  const [eventos, setEventos] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,13 +20,17 @@ export function useCriativosStore(user) {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }, vf] = await Promise.all([
+    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }, vf, ev] = await Promise.all([
       supabase.from('criativos_pastas').select('*').eq('user_id', user.id).order('ordem').order('created_at'),
       supabase.from('criativos_ofertas').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('criativos').select('*').eq('user_id', user.id).order('numero'),
       supabase.from('criativos_metricas').select('*').eq('user_id', user.id).order('data'),
       supabase.from('criativos_vendas_fora').select('*').eq('user_id', user.id).order('data'),
+      supabase.from('criativos_eventos').select('*').eq('user_id', user.id).order('data'),
     ])
+    // Before migration 021 the table doesn't exist: just show none.
+    if (ev.error) console.warn('[criativos_eventos]', ev.error.message)
+    setEventos(ev.data || [])
     // Before migration 019 the table doesn't exist: just show none.
     if (vf.error) console.warn('[criativos_vendas_fora]', vf.error.message)
     setVendasFora(vf.data || [])
@@ -84,10 +90,11 @@ export function useCriativosStore(user) {
   // highest number in use so deleting one never reuses an old name.
   const addCriativo = useCallback(async (ofertaId, fields) => {
     const numero = Math.max(0, ...criativos.filter(c => c.oferta_id === ofertaId).map(c => c.numero || 0)) + 1
-    const { data } = await supabase.from('criativos').insert({
+    const { data, error } = await supabase.from('criativos').insert({
       // `numero` only orders the criativos; the name is the one the user typed.
       nome: `AD ${numero}`, ...fields, oferta_id: ofertaId, numero, user_id: user.id,
     }).select().single()
+    if (error) { console.error('[addCriativo]', error); return { error } }
     if (data) setCriativos(prev => [...prev, data])
     return data
   }, [user, criativos])
@@ -211,7 +218,25 @@ export function useCriativosStore(user) {
     return {}
   }, [])
 
+  // ── Mudanças (aba Análise) ─────────────────────────────────────────────────
+
+  const addEvento = useCallback(async (ofertaId, fields) => {
+    const { data, error } = await supabase.from('criativos_eventos')
+      .insert({ ...fields, oferta_id: ofertaId, user_id: user.id }).select().single()
+    if (error) { console.error('[addEvento]', error); return { error } }
+    setEventos(prev => sortByDate([...prev, data]))
+    return { data }
+  }, [user])
+
+  const deleteEvento = useCallback(async (id) => {
+    const { error } = await supabase.from('criativos_eventos').delete().eq('id', id)
+    if (error) return { error }
+    setEventos(prev => prev.filter(e => e.id !== id))
+    return {}
+  }, [])
+
   return {
+    eventos, addEvento, deleteEvento,
     pastas, ofertas, criativos, metricas, vendasFora, loading,
     saveVendaFora, updateVendaFora, deleteVendaFora, convertGastoDias, recalcAcrescimoDias,
     addPasta, updatePasta, deletePasta,

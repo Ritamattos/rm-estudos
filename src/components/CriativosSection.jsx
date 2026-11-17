@@ -293,14 +293,16 @@ function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onS
 }
 
 // Creates a criativo, or edits one already saved (`criativo` given).
-function CriativoModal({ criativo, onClose, onSave }) {
+function CriativoModal({ criativo, grupos = [], onClose, onSave }) {
   const [form, setForm] = useState({
     nome: criativo?.nome ?? '',
     link_drive: criativo?.link_drive ?? '',
     formato: criativo?.formato ?? 'video',
     angulo: criativo?.angulo ?? '',
     observacoes: criativo?.observacoes ?? '',
+    grupo_meta: criativo?.grupo_meta ?? '',
   })
+  const [saveError, setSaveError] = useState(null)
   const [nomeError, setNomeError] = useState(false)
   const f = key => e => {
     setForm(prev => ({ ...prev, [key]: e.target.value }))
@@ -310,11 +312,21 @@ function CriativoModal({ criativo, onClose, onSave }) {
     // The name is always chosen by the user — never generated.
     const nome = form.nome.trim()
     if (!nome) { setNomeError(true); return }
-    await onSave({
+    const fields = {
       nome,
       link_drive: form.link_drive.trim(), formato: form.formato, angulo: form.angulo.trim(),
       observacoes: form.observacoes.trim(),
-    })
+    }
+    // Only sent when filled or changed, so saving works before migration 021.
+    const grupo = form.grupo_meta.trim()
+    if (grupo !== (criativo?.grupo_meta ?? '')) fields.grupo_meta = grupo
+    const res = await onSave(fields)
+    if (res?.error) {
+      setSaveError(String(res?.error?.message || '').includes('grupo_meta')
+        ? 'Para salvar o grupo na Meta, rode primeiro a migration 021 no Supabase.'
+        : 'Não foi possível salvar. Tente de novo.')
+      return
+    }
     onClose()
   }
   return (
@@ -341,6 +353,12 @@ function CriativoModal({ criativo, onClose, onSave }) {
       <Field label="Ângulo / gancho da copy">
         <input value={form.angulo} onChange={f('angulo')} placeholder="Ex: Dor de não ter tempo" />
       </Field>
+      <Field label="Grupo na Meta · opcional" info={{ oque: 'Em qual campanha ou CBO este anúncio está no Gerenciador. Criativos com o mesmo grupo dividem o mesmo orçamento.', formula: 'Escreva igual para todos do mesmo grupo (ex.: “CBO 1”). As sugestões mostram os grupos já usados nesta oferta.', exemplo: 'AD 03 e AD 02 em “CBO 1”, AD 10 em “CBO 2”.', mexer: 'Com o grupo preenchido, a aba Análise consegue sugerir separar um criativo bom que divide o orçamento com um pior.' }}>
+        <input value={form.grupo_meta} onChange={f('grupo_meta')} list="grupos-meta" placeholder="Ex: CBO 1" />
+        <datalist id="grupos-meta">
+          {grupos.map(g => <option key={g} value={g} />)}
+        </datalist>
+      </Field>
       <Field label="Descrição · opcional">
         <textarea
           value={form.observacoes}
@@ -349,6 +367,7 @@ function CriativoModal({ criativo, onClose, onSave }) {
           placeholder="Informações importantes. Ex: criativos salvos no e-mail fulano@gmail.com"
         />
       </Field>
+      {saveError && <p className={styles.fieldError}>{saveError}</p>}
     </Modal>
   )
 }
@@ -436,6 +455,7 @@ export default function CriativosSection({ user }) {
         criativos={criativos.filter(c => c.oferta_id === oferta.id)}
         rowsByCriativo={rowsByCriativo}
         vendasFora={store.vendasFora.filter(v => v.oferta_id === oferta.id)}
+        eventos={store.eventos.filter(e => e.oferta_id === oferta.id)}
         store={store}
         onOpen={setCriativoId}
         onEdit={c => setModal({ type: 'criativo', target: c })}
@@ -572,6 +592,7 @@ export default function CriativosSection({ user }) {
       {modal?.type === 'criativo' && oferta && (
         <CriativoModal
           criativo={modal.target}
+          grupos={[...new Set(criativos.filter(c => c.oferta_id === oferta.id).map(c => (c.grupo_meta || '').trim()).filter(Boolean))].sort()}
           onClose={closeModal}
           onSave={fields => modal.target ? store.updateCriativo(modal.target.id, fields) : store.addCriativo(oferta.id, fields)}
         />

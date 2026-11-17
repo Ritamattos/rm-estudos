@@ -8,6 +8,7 @@ import { FaseBadge, DriveThumb, InfoTip } from './shared'
 import { metricCols } from './metricCols'
 import VendasFora from './VendasFora'
 import PeriodoFiltro from './PeriodoFiltro'
+import AnaliseOferta from './AnaliseOferta'
 import { filtrarPeriodo, periodoLabel, periodoFrase } from '../../lib/periodo'
 import styles from './Criativos.module.css'
 
@@ -16,9 +17,11 @@ function signClass(v) {
   return v > 0 ? styles.positive : styles.negative
 }
 
-export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendasFora = [], store, onOpen, onEdit, onNew, onConfig }) {
+export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendasFora = [], eventos = [], store, onOpen, onEdit, onNew, onConfig }) {
   // null = "Todos" (always the default when the screen opens).
   const [periodo, setPeriodo] = useState(null)
+  // Tabela | Análise
+  const [aba, setAba] = useState('tabela')
   const datasComDados = useMemo(() => new Set([
     ...criativos.flatMap(c => (rowsByCriativo[c.id] || []).map(r => r.data)),
     ...vendasFora.map(v => v.data),
@@ -64,7 +67,11 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
   return (
     <div className={styles.content}>
       <div className={styles.tableToolbar}>
-        <PeriodoFiltro periodo={periodo} onChange={setPeriodo} datasComDados={datasComDados} />
+        <div className={`${styles.viewToggle} ${styles.abas}`} role="tablist" aria-label="Visão da oferta">
+          <button role="tab" aria-selected={aba === 'tabela'} className={aba === 'tabela' ? styles.viewToggleActive : ''} onClick={() => setAba('tabela')}>Tabela</button>
+          <button role="tab" aria-selected={aba === 'analise'} className={aba === 'analise' ? styles.viewToggleActive : ''} onClick={() => setAba('analise')}>Análise</button>
+        </div>
+        {aba === 'tabela' && <PeriodoFiltro periodo={periodo} onChange={setPeriodo} datasComDados={datasComDados} />}
         <div className={styles.controls}>
           <button className={styles.iconBtnLg} onClick={onConfig} title="Configurações da oferta">
             <Settings size={17} />
@@ -75,6 +82,11 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
         </div>
       </div>
 
+      {aba === 'analise' && (
+        <AnaliseOferta oferta={oferta} criativos={criativos} rowsByCriativo={rowsByCriativo} eventos={eventos} store={store} />
+      )}
+
+      {aba === 'tabela' && <>
       {periodo && (
         <div className={styles.periodoResumo} aria-live="polite">
           <span className={styles.periodoResumoTitle}>{periodoLabel(periodo)}</span>
@@ -194,6 +206,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
       )}
 
       {store && <VendasFora oferta={oferta} rows={vendasFora} store={store} periodo={periodo} />}
+      </>}
     </div>
   )
 }

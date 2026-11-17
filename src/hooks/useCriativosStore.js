@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { rowGasto, gastoEmReais } from '../lib/criativosMetrics'
 
 export function useCriativosStore(user) {
   const [pastas, setPastas] = useState([])
@@ -58,15 +59,18 @@ export function useCriativosStore(user) {
   // ── Ofertas ─────────────────────────────────────────────────────────────────
 
   const addOferta = useCallback(async (pastaId, fields) => {
-    const { data } = await supabase.from('criativos_ofertas')
+    const { data, error } = await supabase.from('criativos_ofertas')
       .insert({ ...fields, pasta_id: pastaId, user_id: user.id }).select().single()
+    if (error) { console.error('[addOferta]', error); return { error } }
     if (data) setOfertas(prev => [...prev, data])
     return data
   }, [user])
 
   const updateOferta = useCallback(async (id, fields) => {
-    await supabase.from('criativos_ofertas').update(fields).eq('id', id)
+    const { error } = await supabase.from('criativos_ofertas').update(fields).eq('id', id)
+    if (error) { console.error('[updateOferta]', error); return { error } }
     setOfertas(prev => prev.map(o => o.id === id ? { ...o, ...fields } : o))
+    return {}
   }, [])
 
   const deleteOferta = useCallback(async (id) => {
@@ -145,7 +149,11 @@ export function useCriativosStore(user) {
       const original = r.gasto_original != null && r.gasto_original !== '' ? Number(r.gasto_original) : Number(r.gasto || 0)
       return {
         id: r.id,
-        fields: { gasto_original: original, moeda_gasto: moeda, cotacao, acrescimo, gasto: toReais(original) },
+        // `acrescimo` may be a function of the day's date (start date rule).
+        fields: (() => {
+          const ac = typeof acrescimo === 'function' ? acrescimo(r.data) : acrescimo
+          return { gasto_original: original, moeda_gasto: moeda, cotacao, acrescimo: ac, gasto: toReais(original, ac) }
+        })(),
       }
     })
     const results = await Promise.all(updates.map(u =>
@@ -155,6 +163,24 @@ export function useCriativosStore(user) {
     const ok = new Map(results.filter(r => !r.error).map(r => [r.data.id, r.data]))
     setMetricas(prev => prev.map(m => ok.get(m.id) ?? m))
     return { converted: ok.size, failed: failed.length }
+  }, [])
+
+  // Re-applies the acréscimo of saved days (e.g. 0% before the offer's start
+  // date). The typed spend, currency and rate are kept.
+  const recalcAcrescimoDias = useCallback(async (rows, acrescimoDe) => {
+    const results = await Promise.all(rows.map(r => {
+      const g = rowGasto(r)
+      const ac = acrescimoDe(r.data)
+      return supabase.from('criativos_metricas').update({
+        gasto_original: g.original, moeda_gasto: g.moeda, cotacao: g.cotacao, acrescimo: ac,
+        gasto: gastoEmReais(g.original, g.cotacao, ac),
+      }).eq('id', r.id).select().single()
+    }))
+    const failed = results.filter(r => r.error)
+    if (failed.length) console.error('[recalcAcrescimoDias]', failed.map(r => r.error))
+    const ok = new Map(results.filter(r => !r.error).map(r => [r.data.id, r.data]))
+    setMetricas(prev => prev.map(m => ok.get(m.id) ?? m))
+    return { updated: ok.size, failed: failed.length }
   }, [])
 
   // ── Vendas fora da campanha ───────────────────────────────────────────────
@@ -187,7 +213,7 @@ export function useCriativosStore(user) {
 
   return {
     pastas, ofertas, criativos, metricas, vendasFora, loading,
-    saveVendaFora, updateVendaFora, deleteVendaFora, convertGastoDias,
+    saveVendaFora, updateVendaFora, deleteVendaFora, convertGastoDias, recalcAcrescimoDias,
     addPasta, updatePasta, deletePasta,
     addOferta, updateOferta, deleteOferta,
     addCriativo, updateCriativo, deleteCriativo,

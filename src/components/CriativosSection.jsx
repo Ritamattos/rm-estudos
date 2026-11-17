@@ -3,12 +3,12 @@ import { Plus, Pencil, Trash2, Folder, ArrowLeft } from 'lucide-react'
 import { useCriativosStore } from '../hooks/useCriativosStore'
 import {
   summarize, currency, integer, TIPOS_OFERTA, tipoOf,
-  MOEDAS_CONTA, ACRESCIMO_PADRAO, moedaContaOf, gastoEmReais, fetchCotacaoHoje,
+  MOEDAS_CONTA, ACRESCIMO_PADRAO, moedaContaOf, gastoEmReais, acrescimoNaData, fetchCotacaoHoje,
   summarizeFora, totalOferta, rowGasto,
 } from '../lib/criativosMetrics'
 import Modal from './Modal'
 import {
-  FORMATOS, IDIOMAS, MOEDAS, Field, Breadcrumb, parseNum, numToInput,
+  FORMATOS, IDIOMAS, MOEDAS, Field, Breadcrumb, parseNum, numToInput, formatDate,
 } from './criativos/shared'
 import OfertaTabela from './criativos/OfertaTabela'
 import CriativoDetail from './criativos/CriativoDetail'
@@ -54,7 +54,7 @@ const OFERTA_NUM_FIELDS = [
 
 // `dias`: the saved days of this offer (all its criativos), so a currency
 // switch can offer to convert the ones typed in the other currency.
-function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onSave, onConvert }) {
+function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onSave, onConvert, onRecalcAcrescimo }) {
   const [form, setForm] = useState(() => ({
     tipo: oferta ? tipoOf(oferta) : defaultTipo,
     nome: oferta?.nome || '',
@@ -63,6 +63,7 @@ function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onS
     moeda_conta: moedaContaOf(oferta),
     cotacao: numToInput(oferta?.cotacao ?? null),
     acrescimo_gasto: numToInput(oferta ? Number(oferta.acrescimo_gasto ?? 0) : ACRESCIMO_PADRAO.BRL),
+    acrescimo_desde: oferta?.acrescimo_desde || '',
     ...Object.fromEntries(OFERTA_NUM_FIELDS.map(f => [
       f.key, numToInput(oferta ? oferta[f.key] : f.fallback ?? null),
     ])),
@@ -75,6 +76,15 @@ function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onS
   const mudouMoeda = oferta && moedaContaOf(oferta) !== form.moeda_conta
   const [converter, setConverter] = useState(null) // null = not chosen yet
   const converterEfetivo = converter ?? !!mudouMoeda
+  // Acréscimo the new settings give a day (0 before "acrescimo_desde").
+  const regra = { acrescimo_gasto: parseNum(form.acrescimo_gasto) ?? 0, acrescimo_desde: form.acrescimo_desde || null }
+  // Days saved before the start date that still carry an acréscimo — only
+  // recalculated if confirmed below. (Days being converted get it anyway.)
+  const diasAntesDesde = oferta && form.acrescimo_desde
+    ? dias.filter(d => d.data < form.acrescimo_desde && Number(rowGasto(d).acrescimo) !== 0
+      && !(converterEfetivo && diasOutraMoeda.includes(d)))
+    : []
+  const [recalcular, setRecalcular] = useState(false)
 
   // Switching the account currency swaps the acréscimo to the new default
   // only if it was still the old default (a typed value is kept).
@@ -109,19 +119,29 @@ function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onS
       moeda_conta: form.moeda_conta,
       cotacao: form.moeda_conta === 'USD' ? cotacao : (oferta?.cotacao ?? null),
       acrescimo_gasto: parseNum(form.acrescimo_gasto) ?? 0,
+      acrescimo_desde: form.acrescimo_desde || null,
     }
     OFERTA_NUM_FIELDS.forEach(c => { payload[c.key] = parseNum(form[c.key]) ?? c.fallback ?? null })
-    await onSave(payload)
+    const saved = await onSave(payload)
+    if (saved?.error) {
+      setErro(/acrescimo_desde/.test(saved.error.message || '')
+        ? 'Falta rodar o SQL da migração 020 no Supabase (coluna “acrescimo_desde”).'
+        : `Não foi possível salvar: ${saved.error.message || 'erro'}.`)
+      return
+    }
     if (oferta && converterEfetivo && diasOutraMoeda.length) {
       const usd = form.moeda_conta === 'USD'
-      const acrescimo = payload.acrescimo_gasto
       const res = await onConvert(diasOutraMoeda, {
         moeda: form.moeda_conta,
         cotacao: usd ? cotacao : 1,
-        acrescimo,
-        toReais: original => gastoEmReais(original, usd ? cotacao : 1, acrescimo),
+        acrescimo: data => acrescimoNaData(regra, data),
+        toReais: (original, acrescimo) => gastoEmReais(original, usd ? cotacao : 1, acrescimo),
       })
       if (res?.failed) { setErro(`${res.failed} dia(s) não puderam ser convertidos. Tente salvar de novo.`); return }
+    }
+    if (oferta && recalcular && diasAntesDesde.length) {
+      const res = await onRecalcAcrescimo(diasAntesDesde, () => 0)
+      if (res?.failed) { setErro(`${res.failed} dia(s) não puderam ser recalculados. Tente salvar de novo.`); return }
     }
     onClose()
   }
@@ -192,6 +212,33 @@ function OfertaModal({ oferta, dias = [], defaultTipo = 'whatsapp', onClose, onS
             <input inputMode="decimal" value={form.acrescimo_gasto} onChange={f('acrescimo_gasto')} placeholder="0" />
           </Field>
         </div>
+        <Field label="Aplicar o acréscimo a partir de · opcional" info="acrescimoDesde">
+          <div className={styles.cotacaoRow}>
+            <input type="date" value={form.acrescimo_desde} onChange={e => { setForm(prev => ({ ...prev, acrescimo_desde: e.target.value })); setRecalcular(false) }} />
+            {form.acrescimo_desde && <button type="button" className={styles.linkBtn} onClick={() => setForm(prev => ({ ...prev, acrescimo_desde: '' }))}>Limpar</button>}
+          </div>
+          <span className={styles.hint}>
+            {form.acrescimo_desde
+              ? `Antes de ${formatDate(form.acrescimo_desde)} o gasto entra sem acréscimo; a partir dessa data, com ${form.acrescimo_gasto || 0}%.`
+              : 'Vazio = o acréscimo vale para todos os dias.'}
+          </span>
+        </Field>
+        {diasAntesDesde.length > 0 && (
+          <div className={styles.convertBox}>
+            <p>
+              <strong>{diasAntesDesde.length} {diasAntesDesde.length === 1 ? 'lançamento antes' : 'lançamentos antes'} de {formatDate(form.acrescimo_desde)}</strong>
+              {' '}{diasAntesDesde.length === 1 ? 'está' : 'estão'} com acréscimo. Recalcular sem acréscimo (0%)?
+            </p>
+            <label className={styles.convertOption}>
+              <input type="radio" name="recalcular" checked={recalcular} onChange={() => setRecalcular(true)} />
+              <span>Sim, recalcular {diasAntesDesde.length} {diasAntesDesde.length === 1 ? 'dia' : 'dias'}<small>O gasto digitado não muda; só o valor em reais, sem o acréscimo.</small></span>
+            </label>
+            <label className={styles.convertOption}>
+              <input type="radio" name="recalcular" checked={!recalcular} onChange={() => setRecalcular(false)} />
+              <span>Não, manter como estão</span>
+            </label>
+          </div>
+        )}
         {form.moeda_conta === 'USD' && (
           <div className={styles.cotacaoRow}>
             <button type="button" className={styles.linkBtn} onClick={usarCotacaoHoje}>Usar cotação de hoje</button>
@@ -515,6 +562,7 @@ export default function CriativosSection({ user }) {
           oferta={modal.target}
           dias={modal.target ? criativos.filter(c => c.oferta_id === modal.target.id).flatMap(c => rowsByCriativo[c.id] || []) : []}
           onConvert={store.convertGastoDias}
+          onRecalcAcrescimo={store.recalcAcrescimoDias}
           // A new offer starts with the type of the latest offer in this pasta.
           defaultTipo={tipoOf([...ofertas].reverse().find(o => o.pasta_id === pasta?.id))}
           onClose={closeModal}

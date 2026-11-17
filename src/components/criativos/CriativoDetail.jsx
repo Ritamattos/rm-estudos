@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Pencil, Trash2, TrendingUp, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import {
   summarize, computeVerdict, todayISO, tipoOf,
-  moedaContaOf, rowGasto, gastoEmReais,
+  moedaContaOf, rowGasto, gastoEmReais, acrescimoNaData,
   currency, percent, multiplier, decimal, integer,
 } from '../../lib/criativosMetrics'
 import {
@@ -39,7 +39,7 @@ function emptyDayForm(date, oferta) {
     ...Object.fromEntries(METRIC_FIELDS.map(m => [m.key, ''])),
     moeda_gasto: moeda,
     cotacao: moeda === 'USD' ? numToInput(oferta.cotacao ?? null) : '1',
-    acrescimo: numToInput(Number(oferta.acrescimo_gasto ?? 0)),
+    acrescimo: numToInput(acrescimoNaData(oferta, date)),
   }
 }
 
@@ -302,7 +302,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
       ...prev,
       moeda_gasto: moedaOferta,
       cotacao: moedaOferta === 'USD' ? numToInput(oferta.cotacao ?? null) : '1',
-      acrescimo: numToInput(Number(oferta.acrescimo_gasto ?? 0)),
+      acrescimo: numToInput(acrescimoNaData(oferta, prev.data)),
     }))
     if (moedaOferta === 'USD' && !(Number(oferta.cotacao) > 0)) setMoreOpen(true)
   }
@@ -342,6 +342,27 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         />
       )}
       {m.key === 'gasto' && gastoHint && <span className={styles.gastoReais} aria-live="polite">{gastoHint}</span>}
+    </Field>
+  )
+
+  // Acréscimo of this day: editable, and shows what the offer's rule would use.
+  const acrescimoRegra = acrescimoNaData(oferta, form.data)
+  const acrescimoAtual = parseNum(form.acrescimo) ?? 0
+  const acrescimoField = (
+    <Field key="acrescimo" label="Acréscimo deste dia (%)" info="acrescimoDia">
+      <input
+        className={styles.bigInput}
+        inputMode="decimal"
+        value={form.acrescimo}
+        onChange={e => setForm(prev => ({ ...prev, acrescimo: e.target.value }))}
+        placeholder="0"
+      />
+      <span className={styles.gastoReais}>
+        Aplicado: {numToInput(acrescimoAtual)}%
+        {acrescimoAtual !== acrescimoRegra && <> · pela oferta seria {numToInput(acrescimoRegra)}%{' '}
+          <button type="button" className={styles.linkBtn} onClick={() => setForm(prev => ({ ...prev, acrescimo: numToInput(acrescimoRegra) }))}>usar</button></>}
+        {acrescimoAtual === acrescimoRegra && oferta.acrescimo_desde && form.data < oferta.acrescimo_desde && <> (antes do início do acréscimo)</>}
+      </span>
     </Field>
   )
 
@@ -387,9 +408,9 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         <button type="button" className={styles.moreToggle} aria-expanded={moreOpen} onClick={() => setMoreOpen(o => !o)}>
           <ChevronDown size={15} className={moreOpen ? styles.moreIconOpen : ''} />
           Mais dados
-          <span>{[...(usd ? ['cotação do dia'] : []), ...fields.filter(m => m.extra).map(m => m.label.toLowerCase())].join(', ')}</span>
+          <span>{[...(usd ? ['cotação do dia'] : []), `acréscimo ${numToInput(acrescimoAtual)}%`, ...fields.filter(m => m.extra).map(m => m.label.toLowerCase())].join(', ')}</span>
         </button>
-        {moreOpen && <div className={styles.dayGrid}>{cotacaoField}{fields.filter(m => m.extra).map(input)}</div>}
+        {moreOpen && <div className={styles.dayGrid}>{cotacaoField}{acrescimoField}{fields.filter(m => m.extra).map(input)}</div>}
       </div>
       {error && <div className={styles.error}>{error}</div>}
       <div className={styles.dayActions}>

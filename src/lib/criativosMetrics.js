@@ -36,6 +36,13 @@ export const MOEDAS_CONTA = [
 export const ACRESCIMO_PADRAO = { USD: 7.64, BRL: 0 }
 export const moedaContaOf = oferta => (oferta?.moeda_conta === 'USD' ? 'USD' : 'BRL')
 
+// Acréscimo that applies to a day: 0 before the offer's "acrescimo_desde"
+// date (e.g. IOF only from day 6), the configured % from it on.
+export function acrescimoNaData(oferta, data) {
+  if (oferta?.acrescimo_desde && data && data < oferta.acrescimo_desde) return 0
+  return Number(oferta?.acrescimo_gasto ?? 0) || 0
+}
+
 export function gastoEmReais(original, cotacao, acrescimo) {
   const v = num(original) * (num(cotacao) || 1) * (1 + num(acrescimo) / 100)
   return Math.round(v * 100) / 100
@@ -163,6 +170,8 @@ export const METRIC_INFO = {
   gasto: { oque: 'Quanto foi investido em anúncio, em reais (já com cotação e acréscimo do cartão).', formula: 'Soma do gasto em reais dos dias. Cada dia: gasto digitado × cotação × (1 + acréscimo%).', exemplo: 'US$ 10 × 5,00 × 1,0764 = R$ 53,82.', mexer: 'Na fase de teste, só julgue depois de gastar pelo menos 2× o CPA máximo (em reais).' },
   moedaConta: { oque: 'Em que moeda a conta de anúncios cobra (o que aparece no Gerenciador). A "Moeda" da oferta continua sendo a da venda.', formula: 'Real: o gasto digitado já é em reais. Dólar: o gasto é convertido pela cotação.', exemplo: 'Conta em dólar: você digita US$ 10 e o app usa R$ 53,82.', mexer: 'Mude só se a conta de anúncios mudar de moeda; os dias já lançados não mudam.' },
   cotacao: { oque: 'Quantos reais custa 1 dólar.', formula: 'Gasto em reais = gasto em US$ × cotação × (1 + acréscimo%).', exemplo: 'Cotação 5,00: US$ 10 → R$ 50 antes do acréscimo.', mexer: 'Atualize quando o dólar mudar (ou use "cotação de hoje"). Cada dia guarda a cotação usada, então mudar depois não altera o passado.' },
+  acrescimoDesde: { oque: 'Data em que o acréscimo (IOF + spread ou imposto) começou a ser cobrado. Antes dela o gasto entra sem acréscimo; a partir dela, com o percentual acima.', formula: 'Dia antes da data → gasto × cotação. Dia na data ou depois → gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'Na planilha “IOF desde dia 6”: escolha 06/11. Dias 1 a 5 ficam sem acréscimo e do dia 6 em diante com 7,64%.', mexer: 'Deixe vazio se o acréscimo vale para todos os dias.' },
+  acrescimoDia: { oque: 'Acréscimo aplicado ao gasto deste dia. Vem da configuração da oferta (0% antes da data de início do acréscimo), mas pode ser mudado só para este dia.', formula: 'Gasto em reais = gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'US$ 10 × 5,40 × (1 + 7,64%) = R$ 58,13. Com 0%: R$ 54,00.', mexer: 'Mude só se neste dia o banco cobrou diferente.' },
   acrescimoGasto: { oque: 'O que o cartão ou a conta cobra a mais sobre o gasto: IOF + spread no dólar, ou impostos numa conta em real.', formula: 'Gasto em reais = gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'Dólar: 7,64% (IOF + spread). Conta em real com imposto: 12,15%. Sem acréscimo: 0.', mexer: 'Ajuste se o banco ou o imposto mudar. Cada dia guarda o acréscimo usado.' },
   faturamento: { oque: 'Quanto entrou com as vendas.', formula: 'Valor lançado; se o dia ficou vazio, vendas × ticket médio.', exemplo: '3 vendas × R$ 47 = R$ 141.', mexer: 'Preencha quando o valor real for diferente do ticket médio (upsell, desconto).' },
   lucro: { oque: 'O que sobra depois de pagar os anúncios.', formula: 'Faturamento − gasto.', exemplo: 'R$ 141 − R$ 110 = R$ 31.', mexer: 'Negativo por vários dias com gasto suficiente: hora de cortar ou mexer no funil.' },

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Pencil, Trash2, TrendingUp, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import {
   summarize, computeVerdict, todayISO, tipoOf,
-  moedaContaOf, rowGasto, gastoEmReais, acrescimoNaData,
+  moedaContaOf, rowGasto, gastoEmReais, acrescimoNaData, cotacaoAtual, cotacaoQuando,
   currency, percent, multiplier, decimal, integer,
 } from '../../lib/criativosMetrics'
 import {
@@ -250,13 +250,39 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
 
   // Picking a date (calendar or history) loads that day; saving the same day
   // or deleting it in the history keeps the form in sync.
+  // Cotação: a new day gets today's rate (the day you're typing it in, like
+  // the sheet), whatever date it is for. A saved day keeps its own rate.
+  // cotInfo.tipo: carregando | hoje | salva | manual | falha
+  const [cotInfo, setCotInfo] = useState(null)
+  const cotEditada = useRef(false)
   useEffect(() => {
     const next = loadForm(date)
     setForm(next)
     setError(null)
     if (hasExtra(next)) setMoreOpen(true)
+    cotEditada.current = false
+    const saved = rows.some(r => r.data === date)
+    if (saved || next.moeda_gasto !== 'USD') { setCotInfo(saved ? { tipo: 'salva' } : null); return }
+    let cancel = false
+    setCotInfo({ tipo: 'carregando' })
+    cotacaoAtual().then(r => {
+      if (cancel) return
+      if (!r) { setCotInfo({ tipo: 'falha' }); return }
+      if (!cotEditada.current) setForm(prev => (prev.data === date ? { ...prev, cotacao: numToInput(r.valor) } : prev))
+      setCotInfo(cotEditada.current ? { tipo: 'manual' } : { tipo: 'hoje', ...r })
+    })
+    return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, rows])
+
+  async function usarCotacaoHoje() {
+    setCotInfo({ tipo: 'carregando' })
+    const r = await cotacaoAtual({ force: true })
+    if (!r) { setCotInfo({ tipo: 'falha', manter: true }); return }
+    cotEditada.current = false
+    setForm(prev => ({ ...prev, cotacao: numToInput(r.valor) }))
+    setCotInfo({ tipo: 'hoje', ...r })
+  }
 
   const existingForDate = rows.some(r => r.data === form.data)
   const rowsByDate = useMemo(() => new Map(rows.map(r => [r.data, r])), [rows])
@@ -366,15 +392,33 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
     </Field>
   )
 
+  const ultimaCotacao = Number(oferta.cotacao) > 0 ? numToInput(oferta.cotacao) : null
+  const cotTexto = {
+    carregando: 'Buscando a cotação de hoje…',
+    hoje: cotInfo?.quando && `Cotação de hoje, ${cotacaoQuando(cotInfo.quando)} · ${cotInfo.fonte}`,
+    salva: 'Cotação gravada neste dia',
+    manual: 'Ajustada manualmente',
+    falha: cotInfo?.manter
+      ? 'Não foi possível buscar a cotação de hoje agora. A cotação do campo foi mantida.'
+      : `Não foi possível buscar a cotação de hoje. Usando a última cotação usada${ultimaCotacao ? ` (R$ ${ultimaCotacao})` : ''}: ela não é a de hoje, confira.`,
+  }[cotInfo?.tipo] || ''
   const cotacaoField = usd && (
-    <Field key="cotacao" label="Cotação do dia (R$ por US$)" info="cotacao">
+    <Field key="cotacao" label="Cotação (R$ por US$)" info="cotacao">
       <input
         className={styles.bigInput}
         inputMode="decimal"
         value={form.cotacao}
-        onChange={e => setForm(prev => ({ ...prev, cotacao: e.target.value }))}
+        onChange={e => {
+          cotEditada.current = true
+          setForm(prev => ({ ...prev, cotacao: e.target.value }))
+          setCotInfo({ tipo: 'manual' })
+        }}
         placeholder="ex: 5,40"
       />
+      {cotTexto && <span className={`${styles.gastoReais} ${cotInfo?.tipo === 'falha' ? styles.cotFalha : ''}`} aria-live="polite">{cotTexto}</span>}
+      {cotInfo?.tipo !== 'hoje' && cotInfo?.tipo !== 'carregando' && (
+        <button type="button" className={styles.linkBtn} onClick={usarCotacaoHoje}>Usar cotação de hoje</button>
+      )}
     </Field>
   )
 
@@ -408,7 +452,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         <button type="button" className={styles.moreToggle} aria-expanded={moreOpen} onClick={() => setMoreOpen(o => !o)}>
           <ChevronDown size={15} className={moreOpen ? styles.moreIconOpen : ''} />
           Mais dados
-          <span>{[...(usd ? ['cotação do dia'] : []), `acréscimo ${numToInput(acrescimoAtual)}%`, ...fields.filter(m => m.extra).map(m => m.label.toLowerCase())].join(', ')}</span>
+          <span>{[...(usd ? [`cotação ${form.cotacao || '?'}${cotInfo?.tipo === 'hoje' ? ' (hoje)' : ''}`] : []), `acréscimo ${numToInput(acrescimoAtual)}%`, ...fields.filter(m => m.extra).map(m => m.label.toLowerCase())].join(', ')}</span>
         </button>
         {moreOpen && <div className={styles.dayGrid}>{cotacaoField}{acrescimoField}{fields.filter(m => m.extra).map(input)}</div>}
       </div>

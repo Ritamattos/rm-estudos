@@ -63,15 +63,74 @@ export function rowGasto(row) {
 
 // Today's USD→BRL rate from a free public source (AwesomeAPI). Returns a
 // number, or null if it fails (manual typing keeps working).
-export async function fetchCotacaoHoje() {
-  try {
-    const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL')
-    if (!res.ok) return null
-    const v = Number((await res.json())?.USDBRL?.bid)
-    return v > 0 ? Math.round(v * 10000) / 10000 : null
-  } catch {
+// ── Cotação USD→BRL de agora ─────────────────────────────────────────────────
+// Public sources, no key: AwesomeAPI (near real time, close to Google's) and,
+// if it fails, the Banco Central PTAX (last bulletin). Kept ~10 minutes so
+// opening several days doesn't fetch again.
+// → { valor, fonte, quando: Date } or null when both fail.
+
+const COTACAO_TTL = 10 * 60 * 1000
+let cotacaoCache = null // { at, data }
+let cotacaoPending = null
+
+const round4 = v => Math.round(v * 10000) / 10000
+
+async function fromAwesome() {
+  const res = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { cache: 'no-store' })
+  if (!res.ok) throw new Error(`AwesomeAPI ${res.status}`)
+  const q = (await res.json())?.USDBRL
+  const v = Number(q?.bid)
+  if (!(v > 0)) throw new Error('AwesomeAPI sem valor')
+  const ts = Number(q.timestamp)
+  return { valor: round4(v), fonte: 'AwesomeAPI', quando: ts > 0 ? new Date(ts * 1000) : new Date() }
+}
+
+async function fromPtax() {
+  const mdY = iso => { const [y, m, d] = iso.split('-'); return `${m}-${d}-${y}` }
+  const hoje = todayISO()
+  const ini = new Date(`${hoje}T12:00:00Z`)
+  ini.setUTCDate(ini.getUTCDate() - 7)
+  const from = `${ini.getUTCFullYear()}-${String(ini.getUTCMonth() + 1).padStart(2, '0')}-${String(ini.getUTCDate()).padStart(2, '0')}`
+  const url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)'
+    + `?@moeda='USD'&@dataInicial='${mdY(from)}'&@dataFinalCotacao='${mdY(hoje)}'&$format=json&$top=500`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`PTAX ${res.status}`)
+  const list = (await res.json())?.value || []
+  const last = list[list.length - 1]
+  const v = Number(last?.cotacaoVenda)
+  if (!(v > 0)) throw new Error('PTAX sem valor')
+  // "2026-11-17 13:04:57.123" is Brasília time (UTC-3).
+  const quando = new Date(`${String(last.dataHoraCotacao).slice(0, 19).replace(' ', 'T')}-03:00`)
+  return { valor: round4(v), fonte: 'PTAX do Banco Central', quando }
+}
+
+export async function cotacaoAtual({ force = false } = {}) {
+  if (!force && cotacaoCache && Date.now() - cotacaoCache.at < COTACAO_TTL) return cotacaoCache.data
+  if (cotacaoPending) return cotacaoPending
+  cotacaoPending = (async () => {
+    for (const src of [fromAwesome, fromPtax]) {
+      try {
+        const data = await src()
+        cotacaoCache = { at: Date.now(), data }
+        return data
+      } catch (e) {
+        console.warn('[cotacao]', e?.message || e)
+      }
+    }
     return null
-  }
+  })()
+  try { return await cotacaoPending } finally { cotacaoPending = null }
+}
+
+// "17/11 às 16:30" in São Paulo time.
+export function cotacaoQuando(d) {
+  const f = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const p = Object.fromEntries(f.formatToParts(d).map(x => [x.type, x.value]))
+  return `${p.day}/${p.month} às ${p.hour}:${p.minute}`
+}
+
+export async function fetchCotacaoHoje() {
+  return (await cotacaoAtual())?.valor ?? null
 }
 
 // Cliques de um dia: o valor informado; se vazio, impressões × CTR do dia.
@@ -169,7 +228,7 @@ export const METRIC_INFO = {
   vendas: { oque: 'Quantas vendas esse criativo trouxe.', formula: 'Soma das vendas lançadas nos dias.', exemplo: '3 + 2 + 0 = 5 vendas.', mexer: 'É o que decide o ranking: mais vendas primeiro; no empate, o menor CPA.' },
   gasto: { oque: 'Quanto foi investido em anúncio, em reais (já com cotação e acréscimo do cartão).', formula: 'Soma do gasto em reais dos dias. Cada dia: gasto digitado × cotação × (1 + acréscimo%).', exemplo: 'US$ 10 × 5,00 × 1,0764 = R$ 53,82.', mexer: 'Na fase de teste, só julgue depois de gastar pelo menos 2× o CPA máximo (em reais).' },
   moedaConta: { oque: 'Em que moeda a conta de anúncios cobra (o que aparece no Gerenciador). A "Moeda" da oferta continua sendo a da venda.', formula: 'Real: o gasto digitado já é em reais. Dólar: o gasto é convertido pela cotação.', exemplo: 'Conta em dólar: você digita US$ 10 e o app usa R$ 53,82.', mexer: 'Mude só se a conta de anúncios mudar de moeda; os dias já lançados não mudam.' },
-  cotacao: { oque: 'Quantos reais custa 1 dólar.', formula: 'Gasto em reais = gasto em US$ × cotação × (1 + acréscimo%).', exemplo: 'Cotação 5,00: US$ 10 → R$ 50 antes do acréscimo.', mexer: 'Atualize quando o dólar mudar (ou use "cotação de hoje"). Cada dia guarda a cotação usada, então mudar depois não altera o passado.' },
+  cotacao: { oque: 'Quantos reais custa 1 dólar. Um dia novo vem com a cotação de hoje (o dia em que você está lançando), igual à planilha — mesmo que seja o gasto de ontem.', formula: 'Gasto em reais = gasto em US$ × cotação × (1 + acréscimo%).', exemplo: 'Cotação 5,00: US$ 10 → R$ 50 antes do acréscimo.', mexer: 'Pode digitar outra. Um dia já lançado mantém a cotação gravada; toque em “Usar cotação de hoje” para atualizá-lo.' },
   acrescimoDesde: { oque: 'Data em que o acréscimo (IOF + spread ou imposto) começou a ser cobrado. Antes dela o gasto entra sem acréscimo; a partir dela, com o percentual acima.', formula: 'Dia antes da data → gasto × cotação. Dia na data ou depois → gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'Na planilha “IOF desde dia 6”: escolha 06/11. Dias 1 a 5 ficam sem acréscimo e do dia 6 em diante com 7,64%.', mexer: 'Deixe vazio se o acréscimo vale para todos os dias.' },
   acrescimoDia: { oque: 'Acréscimo aplicado ao gasto deste dia. Vem da configuração da oferta (0% antes da data de início do acréscimo), mas pode ser mudado só para este dia.', formula: 'Gasto em reais = gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'US$ 10 × 5,40 × (1 + 7,64%) = R$ 58,13. Com 0%: R$ 54,00.', mexer: 'Mude só se neste dia o banco cobrou diferente.' },
   acrescimoGasto: { oque: 'O que o cartão ou a conta cobra a mais sobre o gasto: IOF + spread no dólar, ou impostos numa conta em real.', formula: 'Gasto em reais = gasto × cotação × (1 + acréscimo ÷ 100).', exemplo: 'Dólar: 7,64% (IOF + spread). Conta em real com imposto: 12,15%. Sem acréscimo: 0.', mexer: 'Ajuste se o banco ou o imposto mudar. Cada dia guarda o acréscimo usado.' },

@@ -733,3 +733,6 @@ a.thumb:hover { border-color: var(--accent); }
 @media (max-width: 560px) {
   .periodoResumoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.cotFalha { color: var(--warning, #d97706) !important; }
+.linkBtn + .linkBtn { margin-left: 8px; }

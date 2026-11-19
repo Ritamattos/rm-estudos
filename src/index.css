@@ -116,6 +116,29 @@ mark, .rm-pdf-export {
   --tc-gray: #4b5563;
 }
 
+/* Marcadores de mudança dos criativos (separou, aumentou, ...). Tons
+   escolhidos para não se confundirem com as etiquetas de status (azul,
+   amarelo, verde, cinza e vermelho) nem com a cor de destaque; cada tipo
+   também tem um ícone próprio. Claros no tema escuro, escuros no claro. */
+:root, [data-theme="dark"] {
+  --ev-separou: #e879f9;   /* fúcsia */
+  --ev-aumentou: #a3e635;  /* verde-lima */
+  --ev-reduziu: #fb923c;   /* laranja */
+  --ev-pausou: #fb7185;    /* rosa-avermelhado */
+  --ev-reativou: #818cf8;  /* índigo */
+  --ev-novo: #22d3ee;      /* ciano */
+  --ev-outro: #a8a29e;     /* cinza quente */
+}
+[data-theme="light"] {
+  --ev-separou: #a21caf;
+  --ev-aumentou: #4d7c0f;
+  --ev-reduziu: #c2410c;
+  --ev-pausou: #be123c;
+  --ev-reativou: #4338ca;
+  --ev-novo: #0e7490;
+  --ev-outro: #78716c;
+}
+
 /* Verde + escuro: fundo quase preto, neutros levemente esverdeados. */
 [data-theme="dark"][data-accent="green"] {
   --bg: #0a0c0b;

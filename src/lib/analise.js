@@ -375,7 +375,7 @@ export function resumoParaClaude(an, oferta) {
     L.push('')
     L.push('## Mudanças registradas (7 dias antes × desde a mudança)')
     for (const e of an.eventos) {
-      L.push(`- ${ddmm(e.ev.data)} · ${e.nome} · ${e.tipoLabel}${e.ev.nota ? ` · “${e.ev.nota}”` : ''}: lucro/dia ${money(e.antes.lucroDia)} → ${money(e.depois.lucroDia)}; ROI ${P(e.antes.roi)} → ${P(e.depois.roi)}; CPA ${money(e.antes.cpa)} → ${money(e.depois.cpa)}`)
+      L.push(`- ${ddmm(e.ev.data)} · ${e.nome} · ${e.tipoLabel}${e.ev.nota ? ` · “${e.ev.nota}”` : ''}${e.ev.orcamento_anterior != null || e.ev.orcamento_novo != null ? ` · orçamento ${money(e.ev.orcamento_anterior)} → ${money(e.ev.orcamento_novo)}/dia` : ''}: lucro/dia ${money(e.antes.lucroDia)} → ${money(e.depois.lucroDia)}; ROI ${P(e.antes.roi)} → ${P(e.depois.roi)}; CPA ${money(e.antes.cpa)} → ${money(e.depois.cpa)}`)
     }
   }
   L.push('')

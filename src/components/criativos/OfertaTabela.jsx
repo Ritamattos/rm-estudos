@@ -9,6 +9,7 @@ import { metricCols } from './metricCols'
 import VendasFora from './VendasFora'
 import PeriodoFiltro from './PeriodoFiltro'
 import AnaliseOferta from './AnaliseOferta'
+import { EventoMarcador, eventosPorData, eventosRecentes } from './mudancas'
 import { filtrarPeriodo, periodoLabel, periodoFrase } from '../../lib/periodo'
 import styles from './Criativos.module.css'
 
@@ -26,6 +27,14 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
     ...criativos.flatMap(c => (rowsByCriativo[c.id] || []).map(r => r.data)),
     ...vendasFora.map(v => v.data),
   ]), [criativos, rowsByCriativo, vendasFora])
+  const mudancasPorData = useMemo(() => eventosPorData(eventos), [eventos])
+  const nomeDe = e => (e.criativo_id ? (criativos.find(c => c.id === e.criativo_id)?.nome || 'Criativo excluído') : 'Campanha inteira')
+  // Changes of the last 7 days per criativo (icon next to the name).
+  const recentesPorCriativo = useMemo(() => {
+    const m = {}
+    for (const e of eventosRecentes(eventos)) if (e.criativo_id) (m[e.criativo_id] ||= []).push(e)
+    return m
+  }, [eventos])
   const cols = useMemo(() => metricCols(oferta), [oferta])
   const cell = (c, t) => {
     const sg = c.sign?.(t)
@@ -71,7 +80,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
           <button role="tab" aria-selected={aba === 'tabela'} className={aba === 'tabela' ? styles.viewToggleActive : ''} onClick={() => setAba('tabela')}>Tabela</button>
           <button role="tab" aria-selected={aba === 'analise'} className={aba === 'analise' ? styles.viewToggleActive : ''} onClick={() => setAba('analise')}>Análise</button>
         </div>
-        {aba === 'tabela' && <PeriodoFiltro periodo={periodo} onChange={setPeriodo} datasComDados={datasComDados} />}
+        {aba === 'tabela' && <PeriodoFiltro periodo={periodo} onChange={setPeriodo} datasComDados={datasComDados} mudancasPorData={mudancasPorData} nomeDe={nomeDe} />}
         <div className={styles.controls}>
           <button className={styles.iconBtnLg} onClick={onConfig} title="Configurações da oferta">
             <Settings size={17} />
@@ -150,6 +159,15 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
                   </td>
                   <td className={styles.stickyName}>
                     <button className={styles.nameLink} onClick={() => onOpen(criativo.id)}>{criativo.nome}</button>
+                    {recentesPorCriativo[criativo.id] && (
+                      <EventoMarcador
+                        eventos={recentesPorCriativo[criativo.id]}
+                        maxIcones={1}
+                        comData
+                        money={money}
+                        titulo={`Mudanças nos últimos 7 dias (${recentesPorCriativo[criativo.id].length})`}
+                      />
+                    )}
                     <button
                       className={`${styles.iconBtn} ${styles.rowEditBtn}`}
                       onClick={() => onEdit(criativo)}

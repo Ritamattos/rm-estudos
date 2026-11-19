@@ -876,10 +876,10 @@ a.thumb:hover { border-color: var(--accent); }
 .anEvento::before {
   content: ""; position: absolute; left: -21px; top: 14px;
   width: 10px; height: 10px; border-radius: 50%;
-  background: var(--accent); border: 2px solid var(--bg);
+  background: var(--ev, var(--accent)); border: 2px solid var(--bg);
 }
 .anEventoHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--text); }
-.anEventoHead > button { margin-left: auto; }
+.anEventoHead > button, .evItemBtns { margin-left: auto; }
 .anEventoData { font-family: var(--font-display); font-weight: 700; color: var(--accent-light); }
 .anEventoNota { font-size: 12.5px; color: var(--text2); font-style: italic; }
 .anAntesDepois {
@@ -914,4 +914,110 @@ a.thumb:hover { border-color: var(--accent); }
   .anFormGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .anSimCen, .anSim .anFormGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .anRegraCampos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ── Mudanças registradas: marcadores coloridos por tipo ─────────────────────
+   As cores vêm de --ev-<tipo> (index.css), com tons próprios para o tema
+   claro e o escuro. Cada elemento recebe --ev inline. */
+.evIcon {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%;
+  color: var(--ev);
+  background: color-mix(in srgb, var(--ev) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ev) 55%, transparent);
+}
+.evMarcadorWrap { display: inline-flex; vertical-align: middle; }
+.evMarcador {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 2px; margin: -3px 0; border-radius: 999px; flex-shrink: 0;
+}
+.evMarcador .evIcon { width: 18px; height: 18px; }
+.evMarcador:hover, .evMarcador[aria-expanded="true"] { background: var(--bg3); }
+.evTipList { display: flex; flex-direction: column; gap: 6px; }
+.evTipItem { display: flex; align-items: flex-start; gap: 6px; color: var(--text); }
+.evTipItem .evIcon { width: 18px; height: 18px; }
+
+.evTag {
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  padding: 3px 8px; border-radius: 6px;
+  color: var(--ev, var(--text2));
+  background: color-mix(in srgb, var(--ev, var(--text3)) 13%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--ev, var(--text3)) 50%, transparent);
+}
+.evOrc { font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+.evItemBtns { display: inline-flex; gap: 2px; }
+
+.evTimeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.evItem {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; background: var(--card-bg);
+  border: 1px solid var(--border); border-left: 3px solid var(--ev);
+  border-radius: var(--radius);
+}
+.evItem > .evIcon { margin-top: 1px; }
+.evItem > .anForm { flex: 1; min-width: 0; }
+.evItemBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.evLegenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px; color: var(--text3); margin-top: 8px; }
+.evLegendaItem { display: inline-flex; align-items: center; gap: 5px; }
+.evLegendaItem .evIcon { width: 16px; height: 16px; }
+
+.evAviso {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px; border-radius: var(--radius);
+  background: var(--danger-dim); border: 1px solid var(--danger);
+  font-size: 13px; color: var(--text);
+}
+.evAviso > p:first-child { display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; }
+.evAviso > p:first-child svg { color: var(--danger); flex-shrink: 0; margin-top: 2px; }
+.evSql {
+  margin-top: 8px; padding: 10px; max-height: 280px; overflow: auto;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 11.5px; line-height: 1.45; color: var(--text2);
+  white-space: pre; user-select: text; -webkit-user-select: text;
+}
+
+/* Gráfico: linhas verticais tracejadas + datas tocáveis embaixo */
+.chartMudanca { cursor: help; }
+.chartMudancasDias { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; }
+.chartMudancaDia { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--text3); }
+
+/* Calendário de lançamento: pontinhos ao lado do número do dia */
+.calNumRow { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; max-width: 100%; }
+.evDots { display: inline-flex; gap: 2px; flex-wrap: wrap; }
+.evDot {
+  width: 7px; height: 7px; transform: rotate(45deg); border-radius: 1px;
+  background: var(--ev); box-shadow: 0 0 0 1px var(--bg2);
+}
+
+/* Lançamento: aviso discreto do dia com mudança */
+.evDiaAviso {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: var(--radius);
+  font-size: 12.5px; color: var(--text2);
+  background: color-mix(in srgb, var(--ev) 9%, transparent);
+  border-left: 3px solid var(--ev);
+}
+.evDiaAviso strong { color: var(--text); }
+.evDiaAviso .evIcon { width: 18px; height: 18px; }
+
+/* Histórico diário: linha do dia com mudança */
+.dataCell { display: inline-flex; align-items: center; gap: 6px; }
+.rowMudanca td { background-image: linear-gradient(color-mix(in srgb, var(--ev) 7%, transparent), color-mix(in srgb, var(--ev) 7%, transparent)); }
+.rowMudanca td:first-child { box-shadow: inset 3px 0 0 var(--ev); }
+
+/* Calendário do filtro: losangos coloridos (≠ do ponto verde de lançamento) */
+.pMarks { display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; max-width: 100%; min-height: 5px; }
+.pEv {
+  display: inline-block; width: 6px; height: 6px; flex-shrink: 0;
+  transform: rotate(45deg); border-radius: 1px; background: var(--ev);
+}
+.pDayEdge .pEv { box-shadow: 0 0 0 1px #fff; }
+.pEvLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text2); }
+.pEvLista li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pEvLista strong { color: var(--text); }
+
+@media (max-width: 480px) {
+  .evDot { width: 5px; height: 5px; }
+  .evItem { padding: 9px 10px; gap: 8px; }
 }

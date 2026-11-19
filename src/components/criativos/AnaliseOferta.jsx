@@ -3,10 +3,11 @@
 // file only shows it. Uses every day typed — the period filter of the
 // table doesn't apply here.
 import { useState, useMemo, useEffect } from 'react'
-import { Copy, Check, Plus, Trash2, ChevronDown } from 'lucide-react'
+import { Copy, Check, Plus, Trash2, Pencil, ChevronDown } from 'lucide-react'
 import { analisarOferta, resumoParaClaude, simular, VEREDITOS, P, X, pl } from '../../lib/analise'
-import { REGRAS_INFO, REGRAS_PADRAO, regrasDaOferta, TIPOS_EVENTO } from '../../lib/analiseConfig'
-import { hojeSP, ddmm } from '../../lib/periodo'
+import { REGRAS_INFO, REGRAS_PADRAO, regrasDaOferta } from '../../lib/analiseConfig'
+import { MudancaForm, AvisoMigracao, EventoIcon, evCor, orcamentoTexto, copiarTexto } from './mudancas'
+import { ddmm } from '../../lib/periodo'
 import { InfoTip, Field, parseNum, numToInput } from './shared'
 import styles from './Criativos.module.css'
 
@@ -31,23 +32,6 @@ function Secao({ letra, titulo, info, children, extra }) {
   )
 }
 
-async function copiarTexto(texto) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(texto); return true }
-  } catch { /* falls back below */ }
-  // Older phones / non-secure contexts.
-  const ta = document.createElement('textarea')
-  ta.value = texto
-  ta.setAttribute('readonly', '')
-  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px'
-  document.body.appendChild(ta)
-  ta.select()
-  ta.setSelectionRange(0, texto.length)
-  let ok = false
-  try { ok = document.execCommand('copy') } catch { ok = false }
-  ta.remove()
-  return ok
-}
 
 export default function AnaliseOferta({ oferta, criativos, rowsByCriativo, eventos = [], store }) {
   const an = useMemo(
@@ -305,11 +289,12 @@ export default function AnaliseOferta({ oferta, criativos, rowsByCriativo, event
           <button type="button" className={styles.linkBtn} onClick={() => setMudancaAberta(true)}><Plus size={13} /> Registrar mudança</button>
         )}
       >
+        <AvisoMigracao schema={store.eventosSchema} />
         {mudancaAberta && <MudancaForm oferta={oferta} criativos={criativos} store={store} onClose={() => setMudancaAberta(false)} />}
         {an.eventos.length === 0 && !mudancaAberta && <p className={styles.hint}>Nenhuma mudança registrada. Sem elas a análise funciona igual; com elas você vê o antes × depois.</p>}
         {an.eventos.length > 0 && (
           <ol className={styles.anTimeline}>
-            {an.eventos.map(e => <EventoItem key={e.ev.id} e={e} an={an} store={store} />)}
+            {an.eventos.map(e => <EventoItem key={e.ev.id} e={e} an={an} oferta={oferta} criativos={criativos} store={store} />)}
           </ol>
         )}
       </Secao>
@@ -333,56 +318,10 @@ function arrow(a, b, cfg) {
   return a > b ? '↑' : '↓'
 }
 
-function MudancaForm({ oferta, criativos, store, onClose }) {
-  const [form, setForm] = useState({ data: hojeSP(), criativo_id: criativos[0]?.id || '', tipo: 'separou', nota: '' })
-  const [erro, setErro] = useState(null)
-  const [salvando, setSalvando] = useState(false)
-  const f = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
-  async function salvar() {
-    if (!form.data) { setErro('Escolha a data da mudança.'); return }
-    setSalvando(true)
-    const res = await store.addEvento(oferta.id, { data: form.data, criativo_id: form.criativo_id || null, tipo: form.tipo, nota: form.nota.trim() })
-    setSalvando(false)
-    if (res?.error) {
-      setErro(/criativos_eventos|relation|schema cache/i.test(res.error.message || '')
-        ? 'Para registrar mudanças, rode primeiro a migration 021 no Supabase.'
-        : 'Não foi possível salvar. Tente de novo.')
-      return
-    }
-    onClose()
-  }
-  return (
-    <div className={styles.anForm}>
-      <div className={styles.anFormGrid}>
-        <Field label="Data">
-          <input type="date" value={form.data} max={hojeSP()} onChange={f('data')} />
-        </Field>
-        <Field label="Criativo">
-          <select value={form.criativo_id} onChange={f('criativo_id')}>
-            {criativos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            <option value="">Campanha inteira</option>
-          </select>
-        </Field>
-        <Field label="O que mudou">
-          <select value={form.tipo} onChange={f('tipo')}>
-            {TIPOS_EVENTO.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Nota · opcional">
-          <input value={form.nota} onChange={f('nota')} placeholder="Ex: CBO própria com R$ 30/dia" />
-        </Field>
-      </div>
-      {erro && <p className={styles.fieldError}>{erro}</p>}
-      <div className={styles.anFormBtns}>
-        <button type="button" className={styles.linkBtn} onClick={onClose}>Cancelar</button>
-        <button type="button" className={styles.primaryBtn} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar mudança'}</button>
-      </div>
-    </div>
-  )
-}
 
-function EventoItem({ e, an, store }) {
+function EventoItem({ e, an, oferta, criativos, store }) {
   const { money } = an
+  const [editando, setEditando] = useState(false)
   const taxaLabel = an.tipo === 'direta' ? 'Clique→venda' : 'Conversa→venda'
   const linhas = [
     { k: 'Lucro por dia', a: e.antes.lucroDia, d: e.depois.lucroDia, fmt: money, maior: true },
@@ -395,14 +334,27 @@ function EventoItem({ e, an, store }) {
     await store.deleteEvento(e.ev.id)
   }
   const semDepois = e.depois.dias === 0
+  const orc = orcamentoTexto(e.ev, money)
+  if (editando) {
+    return (
+      <li className={styles.anEvento} style={{ '--ev': evCor(e.ev.tipo) }}>
+        <MudancaForm oferta={oferta} criativos={criativos} evento={e.ev} store={store} onClose={() => setEditando(false)} />
+      </li>
+    )
+  }
   return (
-    <li className={styles.anEvento}>
+    <li className={styles.anEvento} style={{ '--ev': evCor(e.ev.tipo) }}>
       <div className={styles.anEventoHead}>
+        <EventoIcon tipo={e.ev.tipo} size={12} />
         <span className={styles.anEventoData}>{ddmm(e.ev.data)}</span>
         <strong>{e.nome}</strong>
-        <span className={styles.anTag}>{e.tipoLabel}</span>
-        <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={apagar} aria-label="Apagar mudança" title="Apagar mudança"><Trash2 size={13} /></button>
+        <span className={styles.evTag}>{e.tipoLabel}</span>
+        <span className={styles.evItemBtns}>
+          <button type="button" className={styles.iconBtn} onClick={() => setEditando(true)} aria-label="Editar mudança" title="Editar mudança"><Pencil size={13} /></button>
+          <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={apagar} aria-label="Apagar mudança" title="Apagar mudança"><Trash2 size={13} /></button>
+        </span>
       </div>
+      {orc && <span className={styles.evOrc}>Orçamento: {orc}</span>}
       {e.ev.nota && <p className={styles.anEventoNota}>{e.ev.nota}</p>}
       {semDepois ? (
         <p className={styles.hint}>Ainda não há dias lançados depois desta mudança.</p>

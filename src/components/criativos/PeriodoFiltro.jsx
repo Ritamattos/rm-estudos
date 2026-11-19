@@ -5,11 +5,13 @@ import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import {
   hojeSP, isoOf, diaPeriodo, intervalo, deslocar, periodoLabel, ddmm,
 } from '../../lib/periodo'
+import { evCor, tipoLabel } from './mudancas'
 import styles from './Criativos.module.css'
 
 const WEEK_HEAD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export default function PeriodoFiltro({ periodo, onChange, datasComDados }) {
+// mudancasPorData: Map day → changes of the offer (colored diamonds).
+export default function PeriodoFiltro({ periodo, onChange, datasComDados, mudancasPorData, nomeDe }) {
   const [open, setOpen] = useState(false)
   // First tap of a range (the second tap closes it).
   const [anchor, setAnchor] = useState(null)
@@ -81,6 +83,8 @@ export default function PeriodoFiltro({ periodo, onChange, datasComDados }) {
             anchor={anchor}
             hoje={hoje}
             datasComDados={datasComDados}
+            mudancasPorData={mudancasPorData}
+            nomeDe={nomeDe}
             onTap={tocar}
           />
           <div className={styles.periodoPopFoot}>
@@ -90,15 +94,31 @@ export default function PeriodoFiltro({ periodo, onChange, datasComDados }) {
             {anchor
               ? `Filtrando ${ddmm(anchor)}. Toque em outro dia para escolher um intervalo.`
               : 'Toque em um dia. Toque em um segundo dia para filtrar o intervalo.'}
-            {' '}• = dia com lançamento.
+            {' '}• = dia com lançamento{mudancasPorData?.size ? ', ◆ colorido = mudança registrada' : ''}.
           </p>
+          {/* Touch screens can't hover: list the changes of the picked day. */}
+          {(() => {
+            const dia = anchor || (periodo?.tipo === 'dia' ? periodo.from : null)
+            const evs = dia && mudancasPorData?.get(dia)
+            if (!evs) return null
+            return (
+              <ul className={styles.pEvLista}>
+                {evs.map(e => (
+                  <li key={e.id}>
+                    <i className={styles.pEv} style={{ '--ev': evCor(e.tipo) }} />
+                    {ddmm(dia)}: <strong>{tipoLabel(e.tipo)}</strong>{nomeDe ? ` · ${nomeDe(e)}` : ''}{e.nota ? ` · ${e.nota}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )
+          })()}
         </div>
       )}
     </div>
   )
 }
 
-function Calendario({ periodo, anchor, hoje, datasComDados, onTap }) {
+function Calendario({ periodo, anchor, hoje, datasComDados, mudancasPorData, nomeDe, onTap }) {
   const [view, setView] = useState(() => {
     const [y, m] = (periodo?.to || hoje).split('-').map(Number)
     return { y, m: m - 1 }
@@ -129,6 +149,8 @@ function Calendario({ periodo, anchor, hoje, datasComDados, onTap }) {
           const inRange = periodo && iso >= periodo.from && iso <= periodo.to
           const edge = periodo && (iso === periodo.from || iso === periodo.to)
           const temDados = datasComDados.has(iso)
+          const evs = mudancasPorData?.get(iso)
+          const evTexto = evs?.map(e => `${tipoLabel(e.tipo)}${nomeDe ? ` (${nomeDe(e)})` : ''}`)
           return (
             <button
               type="button"
@@ -136,7 +158,8 @@ function Calendario({ periodo, anchor, hoje, datasComDados, onTap }) {
               disabled={iso > hoje}
               onClick={() => onTap(iso)}
               aria-pressed={!!inRange}
-              aria-label={`${ddmm(iso)}${temDados ? ', tem lançamento' : ''}`}
+              aria-label={`${ddmm(iso)}${temDados ? ', tem lançamento' : ''}${evs ? `, mudança: ${evTexto.join('; ')}` : ''}`}
+              title={evs ? evTexto.join('\n') : undefined}
               className={[
                 styles.pDay,
                 inRange ? styles.pDayIn : '',
@@ -145,7 +168,10 @@ function Calendario({ periodo, anchor, hoje, datasComDados, onTap }) {
               ].join(' ')}
             >
               <span className={styles.calNum}>{d}</span>
-              <span className={temDados ? styles.pDot : styles.pDotEmpty} />
+              <span className={styles.pMarks}>
+                <span className={temDados ? styles.pDot : styles.pDotEmpty} />
+                {evs?.map(e => <i key={e.id} className={styles.pEv} style={{ '--ev': evCor(e.tipo) }} />)}
+              </span>
             </button>
           )
         })}

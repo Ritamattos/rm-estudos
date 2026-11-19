@@ -9,6 +9,7 @@ import {
   FASES, FORMATOS, Field, DriveThumb, InfoTip, SumInput, parseNum, numToInput, formatDate,
 } from './shared'
 import { metricCols } from './metricCols'
+import { MudancasCriativo, EventoMarcador, EventoIcon, LegendaEventos, eventosPorData, evCor, eventoTexto, tipoLabel } from './mudancas'
 import styles from './Criativos.module.css'
 
 // Fields typed per day, per criativo. `tipos` limits a field to one offer
@@ -89,7 +90,16 @@ function saveErrorMessage(error) {
 
 // ── Gráfico de linha simples ─────────────────────────────────────────────────
 
-function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
+// x position (0..W) of a change on the chart: on its day when the day has
+// data, halfway between the neighbouring days otherwise; null outside.
+function xDaMudanca(data, coords, W) {
+  if (!coords.length || data < coords[0].date || data > coords[coords.length - 1].date) return null
+  const i = coords.findIndex(c => c.date >= data)
+  if (coords[i].date === data || i === 0) return coords[i].x
+  return Math.min(W, (coords[i - 1].x + coords[i].x) / 2)
+}
+
+function MiniLineChart({ label, points, format, color = 'var(--accent)', mudancas = [], money }) {
   const valid = points.filter(p => p.value != null)
   if (valid.length === 0) {
     return (
@@ -119,6 +129,14 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
     else current.push(c)
   })
   if (current.length) segments.push(current)
+  // Same-day changes sit side by side so every color shows.
+  const porDia = {}
+  const marcas = mudancas.map(ev => {
+    const x = xDaMudanca(ev.data, coords, W)
+    if (x == null) return null
+    const k = porDia[ev.data] = (porDia[ev.data] ?? -1) + 1
+    return { ev, x: Math.max(0, Math.min(W, x + k * 1.2)) }
+  }).filter(Boolean)
 
   return (
     <div className={styles.chartCard}>
@@ -127,6 +145,14 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
         <span className={styles.chartLast}>{format(valid[valid.length - 1].value)}</span>
       </div>
       <svg viewBox={`-2 -6 ${W + 4} ${H + 12}`} preserveAspectRatio="none" className={styles.chartSvg}>
+        {marcas.map(({ ev, x }) => (
+          <g key={ev.id} className={styles.chartMudanca}>
+            <title>{`${formatDate(ev.data)}: ${eventoTexto(ev, money)}`}</title>
+            <line x1={x} x2={x} y1={-6} y2={H + 6} style={{ stroke: evCor(ev.tipo) }} strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+            {/* wider invisible line: easier to hover */}
+            <line x1={x} x2={x} y1={-6} y2={H + 6} stroke="transparent" strokeWidth="12" vectorEffect="non-scaling-stroke" />
+          </g>
+        ))}
         {segments.map((seg, i) => (
           <polyline
             key={i}
@@ -144,6 +170,17 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)' }) {
         <span>{formatDate(points[0].date)}</span>
         {points.length > 1 && <span>{formatDate(points[points.length - 1].date)}</span>}
       </div>
+      {marcas.length > 0 && (
+        // Touch screens can't hover the lines: the dates below open the details.
+        <div className={styles.chartMudancasDias}>
+          {[...new Set(marcas.map(m => m.ev.data))].map(d => (
+            <span key={d} className={styles.chartMudancaDia}>
+              {formatDate(d)}
+              <EventoMarcador eventos={marcas.filter(m => m.ev.data === d).map(m => m.ev)} money={money} size={10} />
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -156,7 +193,7 @@ const WEEK_HEAD = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const pad2 = n => String(n).padStart(2, '0')
 const isoOf = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`
 
-function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
+function MonthCalendar({ selected, onSelect, rowsByDate, money, mudancasPorData }) {
   const today = todayISO()
   const [view, setView] = useState(() => {
     const [y, m] = (selected || today).split('-').map(Number)
@@ -198,6 +235,7 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
           if (!d) return <span key={`e${i}`} />
           const iso = isoOf(view.y, view.m, d)
           const row = rowsByDate.get(iso)
+          const evs = mudancasPorData?.get(iso)
           const future = iso > today
           return (
             <button
@@ -206,7 +244,8 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
               disabled={future}
               onClick={() => onSelect(iso)}
               aria-pressed={iso === selected}
-              aria-label={`${d}${row ? `: gasto ${money(row.gasto)}, ${row.vendas} vendas` : ': sem dados'}`}
+              aria-label={`${d}${row ? `: gasto ${money(row.gasto)}, ${row.vendas} vendas` : ': sem dados'}${evs ? `. Mudança: ${evs.map(e => tipoLabel(e.tipo)).join(', ')}` : ''}`}
+              title={evs ? evs.map(e => eventoTexto(e, money)).join('\n') : undefined}
               className={[
                 styles.calDay,
                 row ? styles.calDayFilled : '',
@@ -214,7 +253,14 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
                 iso === today ? styles.calDayToday : '',
               ].join(' ')}
             >
-              <span className={styles.calNum}>{d}</span>
+              <span className={styles.calNumRow}>
+                <span className={styles.calNum}>{d}</span>
+                {evs && (
+                  <span className={styles.evDots} aria-hidden="true">
+                    {evs.map(e => <i key={e.id} className={styles.evDot} style={{ '--ev': evCor(e.tipo) }} />)}
+                  </span>
+                )}
+              </span>
               {row && (
                 <>
                   <span className={styles.calGasto}>{money(row.gasto)}</span>
@@ -225,14 +271,17 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money }) {
           )
         })}
       </div>
-      <p className={styles.hint}>Toque em um dia para lançar ou corrigir os dados. Dias marcados já têm lançamento.</p>
+      <p className={styles.hint}>
+        Toque em um dia para lançar ou corrigir os dados. Dias marcados já têm lançamento.
+        {mudancasPorData?.size > 0 && ' Pontos coloridos = mudança registrada.'}
+      </p>
     </div>
   )
 }
 
 // ── Lançar dia ───────────────────────────────────────────────────────────────
 
-function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
+function LancarDia({ criativoId, rows, store, oferta, date, onDateChange, mudancasPorData }) {
   const moeda = oferta.moeda || 'BRL'
   const tipo = tipoOf(oferta)
   const fields = fieldsFor(tipo)
@@ -407,11 +456,20 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
         <h2 className={styles.sectionTitle}>Lançar dia</h2>
         {flash && <span className={styles.flash}>Salvo ✓</span>}
       </div>
-      <MonthCalendar selected={form.data} onSelect={onDateChange} rowsByDate={rowsByDate} money={money} />
+      <MonthCalendar selected={form.data} onSelect={onDateChange} rowsByDate={rowsByDate} money={money} mudancasPorData={mudancasPorData} />
       <div className={styles.dayEditing}>
         <span>{existingForDate ? 'Editando' : 'Lançando'}: <strong>{dayTitle}</strong></span>
         {existingForDate && <small>Esse dia já tem dados — altere e toque em “Atualizar dia”.</small>}
       </div>
+      {(mudancasPorData?.get(form.data) || []).map(ev => (
+        <div key={ev.id} className={styles.evDiaAviso} style={{ '--ev': evCor(ev.tipo) }}>
+          <EventoIcon tipo={ev.tipo} size={11} />
+          <span>
+            Mudança neste dia: <strong>{tipoLabel(ev.tipo)}</strong>
+            {ev.nota && <> · {ev.nota}</>}
+          </span>
+        </div>
+      ))}
       {diaEmOutraMoeda && (
         <div className={styles.convertBox}>
           <p>
@@ -447,7 +505,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange }) {
 
 // ── Histórico: uma linha por dia; editar abre o dia no formulário ───────────
 
-function HistoryRow({ row, oferta, store, onEdit }) {
+function HistoryRow({ row, oferta, store, onEdit, mudancas }) {
   const money = v => currency(v, oferta.moeda)
   const m = summarize([row], oferta.ticket_medio)
   const direta = tipoOf(oferta) === 'direta'
@@ -462,8 +520,13 @@ function HistoryRow({ row, oferta, store, onEdit }) {
   }
 
   return (
-    <tr>
-      <td className={styles.strong}>{formatDate(row.data)}</td>
+    <tr className={mudancas ? styles.rowMudanca : ''} style={mudancas ? { '--ev': evCor(mudancas[mudancas.length - 1].tipo) } : undefined}>
+      <td className={styles.strong}>
+        <span className={styles.dataCell}>
+          {formatDate(row.data)}
+          {mudancas && <EventoMarcador eventos={mudancas} money={money} />}
+        </span>
+      </td>
       <td className={styles.num} title={gastoTitle}>
         {money(row.gasto)}
         {g.moeda === 'USD' && <small className={styles.cellSub}>US$ {numToInput(g.original)}</small>}
@@ -560,9 +623,17 @@ function DescricaoField({ value, onSave }) {
 
 // ── Detalhe ──────────────────────────────────────────────────────────────────
 
-export default function CriativoDetail({ criativo, oferta, rows, store, onDeleted, onEdit }) {
+export default function CriativoDetail({ criativo, oferta, rows, eventos = [], store, onDeleted, onEdit }) {
   const moeda = oferta.moeda || 'BRL'
   const money = v => currency(v, moeda)
+  // Changes registered for this criativo (campaign-wide ones stay in Análise).
+  const mudancas = useMemo(() => eventos.filter(e => e.criativo_id === criativo.id), [eventos, criativo.id])
+  const mudancasPorData = useMemo(() => eventosPorData(mudancas), [mudancas])
+  const tiposNoGrafico = useMemo(() => {
+    if (!rows.length) return []
+    const [ini, fim] = [rows[0].data, rows[rows.length - 1].data]
+    return [...new Set(mudancas.filter(e => e.data >= ini && e.data <= fim).map(e => e.tipo))]
+  }, [mudancas, rows])
   const totals = useMemo(() => summarize(rows, oferta.ticket_medio), [rows, oferta.ticket_medio])
   const verdict = computeVerdict(criativo, rows, oferta)
   const lastBudget = [...rows].reverse().find(r => r.orcamento_diario != null)?.orcamento_diario
@@ -646,6 +717,7 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
           oferta={oferta}
           date={dayDate}
           onDateChange={setDayDate}
+          mudancasPorData={mudancasPorData}
         />
       </div>
 
@@ -670,13 +742,22 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               </thead>
               <tbody>
                 {[...rows].reverse().map(row => (
-                  <HistoryRow key={row.id} row={row} oferta={oferta} store={store} onEdit={editDay} />
+                  <HistoryRow key={row.id} row={row} oferta={oferta} store={store} onEdit={editDay} mudancas={mudancasPorData.get(row.data)} />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      <MudancasCriativo
+        criativo={criativo}
+        oferta={oferta}
+        eventos={mudancas}
+        store={store}
+        money={money}
+        orcamentoAtual={lastBudget}
+      />
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Resumo acumulado</h2>
@@ -713,14 +794,19 @@ export default function CriativoDetail({ criativo, oferta, rows, store, onDelete
               label="CPA por dia"
               points={rows.map(r => ({ date: r.data, value: summarize([r], oferta.ticket_medio).cpa }))}
               format={money}
+              mudancas={mudancas}
+              money={money}
             />
             <MiniLineChart
               label="Vendas por dia"
               points={rows.map(r => ({ date: r.data, value: Number(r.vendas || 0) }))}
               format={integer}
               color="#4ade80"
+              mudancas={mudancas}
+              money={money}
             />
           </div>
+          {tiposNoGrafico.length > 0 && <LegendaEventos tipos={tiposNoGrafico} />}
         </div>
       )}
     </div>

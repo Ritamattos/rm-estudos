@@ -119,7 +119,8 @@ export function Field({ label, children, info }) {
 // ⓘ — explains a metric: what it is, formula, example and when to act.
 // `info` is a METRIC_INFO key or an { oque, formula, exemplo, mexer } object.
 // Opens on tap (works on phones); closes on outside tap, Esc or scroll.
-export function InfoTip({ info, title = '' }) {
+// `children` replaces the ⓘ trigger (e.g. a change marker); `label` its aria-label.
+export function InfoTip({ info, title = '', children, className, label }) {
   const data = typeof info === 'string' ? METRIC_INFO[info] : info
   const [pos, setPos] = useState(null)
   const btn = useRef(null)
@@ -159,13 +160,13 @@ export function InfoTip({ info, title = '' }) {
       <button
         type="button"
         ref={btn}
-        className={styles.infoBtn}
+        className={className || styles.infoBtn}
         onClick={toggle}
-        aria-label={`O que é ${title || 'esta métrica'}?`}
+        aria-label={label || `O que é ${title || 'esta métrica'}?`}
         aria-expanded={!!pos}
         aria-describedby={pos ? id : undefined}
       >
-        <Info size={13} />
+        {children || <Info size={13} />}
       </button>
       {pos && (
         <div

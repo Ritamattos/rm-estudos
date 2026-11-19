@@ -443,6 +443,7 @@ export default function CriativosSection({ user }) {
         criativo={criativo}
         oferta={oferta}
         rows={rowsByCriativo[criativo.id] || NO_ROWS}
+        eventos={store.eventos.filter(e => e.oferta_id === oferta.id)}
         store={store}
         onDeleted={goOferta}
         onEdit={() => setModal({ type: 'criativo', target: criativo })}

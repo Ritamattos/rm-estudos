@@ -11,6 +11,9 @@ export function useCriativosStore(user) {
   const [vendasFora, setVendasFora] = useState([])
   // Changes typed in the "Análise" tab (budget up, split, paused…).
   const [eventos, setEventos] = useState([])
+  // Database schema for changes: 'ok' | 'sem021' (no table) | 'sem022'
+  // (no budget columns) | null while unknown. Drives the on-screen notice.
+  const [eventosSchema, setEventosSchema] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,17 +23,20 @@ export function useCriativosStore(user) {
 
   async function loadAll() {
     setLoading(true)
-    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }, vf, ev] = await Promise.all([
+    const [{ data: ps }, { data: os }, { data: cs }, { data: ms }, vf, ev, probe] = await Promise.all([
       supabase.from('criativos_pastas').select('*').eq('user_id', user.id).order('ordem').order('created_at'),
       supabase.from('criativos_ofertas').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('criativos').select('*').eq('user_id', user.id).order('numero'),
       supabase.from('criativos_metricas').select('*').eq('user_id', user.id).order('data'),
       supabase.from('criativos_vendas_fora').select('*').eq('user_id', user.id).order('data'),
       supabase.from('criativos_eventos').select('*').eq('user_id', user.id).order('data'),
+      // Probes the budget columns of migration 022 (fails if they're missing).
+      supabase.from('criativos_eventos').select('id, orcamento_anterior, orcamento_novo').limit(1),
     ])
     // Before migration 021 the table doesn't exist: just show none.
     if (ev.error) console.warn('[criativos_eventos]', ev.error.message)
     setEventos(ev.data || [])
+    setEventosSchema(ev.error ? 'sem021' : probe.error ? 'sem022' : 'ok')
     // Before migration 019 the table doesn't exist: just show none.
     if (vf.error) console.warn('[criativos_vendas_fora]', vf.error.message)
     setVendasFora(vf.data || [])
@@ -228,6 +234,13 @@ export function useCriativosStore(user) {
     return { data }
   }, [user])
 
+  const updateEvento = useCallback(async (id, fields) => {
+    const { data, error } = await supabase.from('criativos_eventos').update(fields).eq('id', id).select().single()
+    if (error) { console.error('[updateEvento]', error); return { error } }
+    setEventos(prev => sortByDate(prev.map(e => (e.id === id ? data : e))))
+    return { data }
+  }, [])
+
   const deleteEvento = useCallback(async (id) => {
     const { error } = await supabase.from('criativos_eventos').delete().eq('id', id)
     if (error) return { error }
@@ -236,7 +249,7 @@ export function useCriativosStore(user) {
   }, [])
 
   return {
-    eventos, addEvento, deleteEvento,
+    eventos, eventosSchema, addEvento, updateEvento, deleteEvento,
     pastas, ofertas, criativos, metricas, vendasFora, loading,
     saveVendaFora, updateVendaFora, deleteVendaFora, convertGastoDias, recalcAcrescimoDias,
     addPasta, updatePasta, deletePasta,

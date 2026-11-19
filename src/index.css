@@ -90,6 +90,32 @@
   --scrollbar: #ddd6fe;
 }
 
+/* Cores de texto das notas (marcação "textColor" do editor). Tons claros
+   para o tema escuro e tons escuros para o tema claro — todos legíveis
+   sobre o fundo do app. */
+:root, [data-theme="dark"] {
+  --tc-red: #f87171;
+  --tc-orange: #fb923c;
+  --tc-yellow: #facc15;
+  --tc-green: #4ade80;
+  --tc-blue: #60a5fa;
+  --tc-purple: #c084fc;
+  --tc-pink: #f472b6;
+  --tc-gray: #9ca3af;
+}
+/* Também usados dentro do marca-texto (fundo claro) e no PDF (fundo branco). */
+[data-theme="light"],
+mark, .rm-pdf-export {
+  --tc-red: #dc2626;
+  --tc-orange: #c2410c;
+  --tc-yellow: #a16207;
+  --tc-green: #15803d;
+  --tc-blue: #1d4ed8;
+  --tc-purple: #7e22ce;
+  --tc-pink: #be185d;
+  --tc-gray: #4b5563;
+}
+
 /* Verde + escuro: fundo quase preto, neutros levemente esverdeados. */
 [data-theme="dark"][data-accent="green"] {
   --bg: #0a0c0b;

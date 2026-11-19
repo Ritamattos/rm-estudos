@@ -134,6 +134,28 @@
 }
 .colorSwatch:hover { transform: scale(1.15); }
 
+/* Cor da letra: ícone com barrinha mostrando a cor atual */
+.toolbar .colorBtn { flex-direction: column; gap: 2px; }
+.colorLetter { font-weight: 700; font-size: 14px; line-height: 1; }
+.colorBar {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.toolbar .textColorSwatch {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 0.15s;
+}
+.toolbar .textColorSwatch:hover { transform: scale(1.12); }
+.toolbar .textColorSwatchOn { border-color: currentColor; box-shadow: 0 0 0 1px currentColor; }
+
 .colorSwatchClear {
   width: 22px; height: 22px;
   display: flex; align-items: center; justify-content: center;

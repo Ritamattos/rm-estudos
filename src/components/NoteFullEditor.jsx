@@ -9,6 +9,7 @@ import {
   Highlighter, FileDown,
 } from 'lucide-react'
 import ResizableImage from './ResizableImage'
+import TextColor, { TEXT_COLORS } from './TextColor'
 import Modal from './Modal'
 import styles from './NoteFullEditor.module.css'
 import { exportNoteToPdf } from '../lib/exportNotePdf'
@@ -43,8 +44,10 @@ export default function NoteFullEditor({ note, store, onClose }) {
   const [uploadingImg, setUploadingImg] = useState(false)
   const [linkModal, setLinkModal] = useState(null)
   const [highlightOpen, setHighlightOpen] = useState(false)
+  const [colorOpen, setColorOpen] = useState(false)
   const imgInputRef = useRef()
   const highlightRef = useRef()
+  const colorRef = useRef()
   const contentAreaRef = useRef()
 
   const editor = useEditor({
@@ -57,6 +60,9 @@ export default function NoteFullEditor({ note, store, onClose }) {
       }),
       ResizableImage,
       Highlight.configure({ multicolor: true }),
+      // After Highlight so the color span nests inside <mark> and picks the
+      // darker shades there (see --tc-* in index.css).
+      TextColor,
     ],
     content: note.content || '',
   })
@@ -71,6 +77,19 @@ export default function NoteFullEditor({ note, store, onClose }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [highlightOpen])
+
+  useEffect(() => {
+    if (!colorOpen) return
+    function handleClick(e) {
+      if (colorRef.current && !colorRef.current.contains(e.target)) {
+        setColorOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [colorOpen])
+
+  const activeTextColor = editor?.getAttributes('textColor').color || null
 
   function openLinkModal() {
     if (!editor) return
@@ -229,6 +248,46 @@ export default function NoteFullEditor({ note, store, onClose }) {
           title="Lista numerada"
         ><ListOrdered size={15} /></button>
         <div className={styles.sep} />
+        <div className={styles.highlightWrap} ref={colorRef}>
+          <button
+            type="button"
+            className={`${styles.colorBtn} ${activeTextColor ? styles.active : ''}`}
+            onClick={() => setColorOpen(o => !o)}
+            title="Cor da letra"
+          >
+            <span className={styles.colorLetter}>A</span>
+            <span
+              className={styles.colorBar}
+              style={{ background: activeTextColor ? `var(--tc-${activeTextColor})` : 'var(--text)' }}
+            />
+          </button>
+          {colorOpen && (
+            <div className={styles.highlightPopover}>
+              {TEXT_COLORS.map(c => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`${styles.textColorSwatch} ${activeTextColor === c.key ? styles.textColorSwatchOn : ''}`}
+                  style={{ color: `var(--tc-${c.key})` }}
+                  title={c.label}
+                  onClick={() => {
+                    editor.chain().focus().setTextColor(c.key).run()
+                    setColorOpen(false)
+                  }}
+                >A</button>
+              ))}
+              <button
+                type="button"
+                className={styles.colorSwatchClear}
+                title="Cor padrão"
+                onClick={() => {
+                  editor.chain().focus().unsetTextColor().run()
+                  setColorOpen(false)
+                }}
+              >✕</button>
+            </div>
+          )}
+        </div>
         <div className={styles.highlightWrap} ref={highlightRef}>
           <button
             type="button"

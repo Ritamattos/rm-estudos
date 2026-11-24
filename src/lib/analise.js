@@ -5,7 +5,7 @@
 //
 // Uses the Campanha (criativos only), all days, never the "Total da oferta".
 // Trend = last 7 days (ending on the latest day typed) × the 7 before.
-import { summarize, tipoOf, currency, percent, decimal } from './criativosMetrics'
+import { summarize, tipoOf, currency, percent, decimal, moedaContaOf } from './criativosMetrics'
 import { addDays, diffDays, ddmm } from './periodo'
 import { regrasDaOferta, TIPO_EVENTO_LABEL } from './analiseConfig'
 
@@ -337,6 +337,12 @@ export function analisarOferta({ oferta, criativos, rowsByCriativo, eventos = []
 // no customer data (vendas fora and their notes are not included).
 export function resumoParaClaude(an, oferta) {
   const { money, cfg, tipo } = an
+  // Budget of a change in the currency it was typed in (US$ or R$).
+  const orcTxt = (ev, v) => {
+    if (v == null) return '–'
+    const usd = (ev.orcamento_moeda || moedaContaOf(oferta)) === 'USD'
+    return `${usd ? 'US$' : 'R$'} ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
   const L = []
   L.push(`Oferta: ${oferta.nome}`)
   L.push(`Tipo: ${tipo === 'direta' ? 'Direta (anúncio leva para página de venda / checkout)' : 'WhatsApp (anúncio leva para conversa)'}`)
@@ -375,7 +381,7 @@ export function resumoParaClaude(an, oferta) {
     L.push('')
     L.push('## Mudanças registradas (7 dias antes × desde a mudança)')
     for (const e of an.eventos) {
-      L.push(`- ${ddmm(e.ev.data)} · ${e.nome} · ${e.tipoLabel}${e.ev.nota ? ` · “${e.ev.nota}”` : ''}${e.ev.orcamento_anterior != null || e.ev.orcamento_novo != null ? ` · orçamento ${money(e.ev.orcamento_anterior)} → ${money(e.ev.orcamento_novo)}/dia` : ''}: lucro/dia ${money(e.antes.lucroDia)} → ${money(e.depois.lucroDia)}; ROI ${P(e.antes.roi)} → ${P(e.depois.roi)}; CPA ${money(e.antes.cpa)} → ${money(e.depois.cpa)}`)
+      L.push(`- ${ddmm(e.ev.data)} · ${e.nome} · ${e.tipoLabel}${e.ev.nota ? ` · “${e.ev.nota}”` : ''}${e.ev.orcamento_anterior != null || e.ev.orcamento_novo != null ? ` · orçamento ${orcTxt(e.ev, e.ev.orcamento_anterior)} → ${orcTxt(e.ev, e.ev.orcamento_novo)}/dia` : ''}: lucro/dia ${money(e.antes.lucroDia)} → ${money(e.depois.lucroDia)}; ROI ${P(e.antes.roi)} → ${P(e.depois.roi)}; CPA ${money(e.antes.cpa)} → ${money(e.depois.cpa)}`)
     }
   }
   L.push('')

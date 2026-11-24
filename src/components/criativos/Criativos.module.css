@@ -1044,3 +1044,9 @@ a.thumb:hover { border-color: var(--accent); }
 .seloLucro { color: #a16207; background: rgba(234,179,8,0.14); }
 .seloVendas { color: var(--accent-light); background: var(--accent-dim); }
 [data-theme="dark"] .seloLucro { color: #facc15; }
+
+/* Formulário de mudança: no computador, a moeda fica sozinha na linha e os
+   dois orçamentos lado a lado embaixo. */
+.anFormGap { display: none; }
+@media (min-width: 720px) { .anFormGap { display: block; } }
+.anFormGrid .viewToggle { align-self: flex-start; }

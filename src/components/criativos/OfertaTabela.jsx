@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Settings, Pencil, ArrowDown, ArrowUp, ArrowUpDown, Trophy, ShoppingCart } from 'lucide-react'
 import {
-  summarize, computeVerdict, rankCompare, RANK_SORTS, RANK_DEFAULT,
+  summarize, computeVerdict, rankCompare, RANK_SORTS, RANK_DEFAULT, moedaContaOf,
   summarizeFora, totalOferta, campanhaVerdict, currency,
 } from '../../lib/criativosMetrics'
 import { FaseBadge, DriveThumb, InfoTip } from './shared'
@@ -201,7 +201,7 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
                         eventos={recentesPorCriativo[criativo.id]}
                         maxIcones={1}
                         comData
-                        money={money}
+                        moeda={moedaContaOf(oferta)}
                         titulo={`Mudanças nos últimos 7 dias (${recentesPorCriativo[criativo.id].length})`}
                       />
                     )}

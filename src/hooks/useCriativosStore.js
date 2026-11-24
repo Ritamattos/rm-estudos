@@ -11,8 +11,8 @@ export function useCriativosStore(user) {
   const [vendasFora, setVendasFora] = useState([])
   // Changes typed in the "Análise" tab (budget up, split, paused…).
   const [eventos, setEventos] = useState([])
-  // Database schema for changes: 'ok' | 'sem021' (no table) | 'sem022'
-  // (no budget columns) | null while unknown. Drives the on-screen notice.
+  // Database schema for changes: 'ok' | 'sem021' (no table) | 'semOrc'
+  // (no budget/currency columns, migrations 022-023) | null while unknown.
   const [eventosSchema, setEventosSchema] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -30,13 +30,13 @@ export function useCriativosStore(user) {
       supabase.from('criativos_metricas').select('*').eq('user_id', user.id).order('data'),
       supabase.from('criativos_vendas_fora').select('*').eq('user_id', user.id).order('data'),
       supabase.from('criativos_eventos').select('*').eq('user_id', user.id).order('data'),
-      // Probes the budget columns of migration 022 (fails if they're missing).
-      supabase.from('criativos_eventos').select('id, orcamento_anterior, orcamento_novo').limit(1),
+      // Probes the budget columns of migrations 022/023 (fails if any is missing).
+      supabase.from('criativos_eventos').select('id, orcamento_anterior, orcamento_novo, orcamento_moeda').limit(1),
     ])
     // Before migration 021 the table doesn't exist: just show none.
     if (ev.error) console.warn('[criativos_eventos]', ev.error.message)
     setEventos(ev.data || [])
-    setEventosSchema(ev.error ? 'sem021' : probe.error ? 'sem022' : 'ok')
+    setEventosSchema(ev.error ? 'sem021' : probe.error ? 'semOrc' : 'ok')
     // Before migration 019 the table doesn't exist: just show none.
     if (vf.error) console.warn('[criativos_vendas_fora]', vf.error.message)
     setVendasFora(vf.data || [])

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react'
+import { createPortal } from 'react-dom'
 import { Play, ImageOff, Link2, Info } from 'lucide-react'
 import { driveThumbUrl, METRIC_INFO } from '../../lib/criativosMetrics'
 import styles from './Criativos.module.css'
@@ -168,20 +169,25 @@ export function InfoTip({ info, title = '', children, className, label }) {
       >
         {children || <Info size={13} />}
       </button>
-      {pos && (
+      {/* Rendered at the end of <body>: inside a sticky table cell (or any
+          parent with its own stacking context) the rows below would paint
+          over it. Clicks inside don't reach the cell/card behind it. */}
+      {pos && createPortal(
         <div
           id={id}
           data-tip={id}
           role="tooltip"
           className={styles.infoPop}
           style={{ left: pos.left, width: pos.width, top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto' }}
+          onClick={e => e.stopPropagation()}
         >
           {title && <strong className={styles.infoTitle}>{title}</strong>}
           <p>{data.oque}</p>
           {data.formula && <p><b>Fórmula:</b> {data.formula}</p>}
           {data.exemplo && <p><b>Exemplo:</b> {data.exemplo}</p>}
           {data.mexer && <p><b>Quando mexer:</b> {data.mexer}</p>}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )

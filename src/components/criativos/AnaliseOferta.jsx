@@ -7,6 +7,7 @@ import { Copy, Check, Plus, Trash2, Pencil, ChevronDown } from 'lucide-react'
 import { analisarOferta, resumoParaClaude, simular, VEREDITOS, P, X, pl } from '../../lib/analise'
 import { REGRAS_INFO, REGRAS_PADRAO, regrasDaOferta } from '../../lib/analiseConfig'
 import { MudancaForm, AvisoMigracao, EventoIcon, evCor, orcamentoTexto, copiarTexto } from './mudancas'
+import { moedaContaOf } from '../../lib/criativosMetrics'
 import { ddmm } from '../../lib/periodo'
 import { InfoTip, Field, parseNum, numToInput } from './shared'
 import styles from './Criativos.module.css'
@@ -334,7 +335,7 @@ function EventoItem({ e, an, oferta, criativos, store }) {
     await store.deleteEvento(e.ev.id)
   }
   const semDepois = e.depois.dias === 0
-  const orc = orcamentoTexto(e.ev, money)
+  const orc = orcamentoTexto(e.ev, moedaContaOf(oferta))
   if (editando) {
     return (
       <li className={styles.anEvento} style={{ '--ev': evCor(e.ev.tipo) }}>

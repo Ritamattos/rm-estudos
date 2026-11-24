@@ -11,7 +11,8 @@ import {
 import { TIPOS_EVENTO, TIPO_EVENTO_LABEL } from '../../lib/analiseConfig'
 import { hojeSP, addDays, ddmm } from '../../lib/periodo'
 import { Field, InfoTip, parseNum, numToInput } from './shared'
-import sqlMigracao from '../../../supabase/migrations/022_criativos_eventos_orcamento.sql?raw'
+import { moedaContaOf } from '../../lib/criativosMetrics'
+import sqlMigracao from '../../../supabase/migrations/023_criativos_eventos_moeda.sql?raw'
 import styles from './Criativos.module.css'
 
 // ── Tipos: cor (CSS var por tema, em index.css) + ícone ─────────────────────
@@ -62,16 +63,27 @@ export function eventosRecentes(evs, dias = 7) {
   return ordenarEventos(evs.filter(e => e.data >= desde && e.data <= hoje))
 }
 
-export function orcamentoTexto(ev, money) {
+// Currency of a change's budget: the one saved with it (migration 023) or,
+// for older changes, `padrao` — the offer's ad account currency.
+export const moedaOrcamento = (ev, padrao = 'BRL') =>
+  (ev.orcamento_moeda === 'USD' || ev.orcamento_moeda === 'BRL' ? ev.orcamento_moeda : padrao)
+
+const n2 = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+export const fmtOrcamento = (v, moeda) => (v == null ? '–' : `${moeda === 'USD' ? 'US$' : 'R$'} ${n2(v)}`)
+
+// moeda = default currency (offer's ad account), used when the change has none.
+export function orcamentoTexto(ev, moeda = 'BRL') {
   const a = ev.orcamento_anterior, n = ev.orcamento_novo
   if (a == null && n == null) return null
-  if (a != null && n != null) return `${money(a)} → ${money(n)}/dia`
-  return a != null ? `antes ${money(a)}/dia` : `novo ${money(n)}/dia`
+  const m = moedaOrcamento(ev, moeda)
+  const f = v => fmtOrcamento(v, m)
+  if (a != null && n != null) return `${f(a)} → ${f(n)}/dia`
+  return a != null ? `antes ${f(a)}/dia` : `novo ${f(n)}/dia`
 }
 
 // One line of text: "Separou em campanha própria · nota (R$ 30 → R$ 50/dia)".
-export function eventoTexto(ev, money, nome) {
-  const orc = money ? orcamentoTexto(ev, money) : null
+export function eventoTexto(ev, moeda, nome) {
+  const orc = orcamentoTexto(ev, moeda)
   return `${nome ? `${nome}: ` : ''}${tipoLabel(ev.tipo)}${ev.nota ? ` · ${ev.nota}` : ''}${orc ? ` (${orc})` : ''}`
 }
 
@@ -81,9 +93,9 @@ export function eventoTexto(ev, money, nome) {
 
 // maxIcones: icons shown on the trigger (the tooltip always lists them all).
 // comData: prefixes each line with its date (lists spanning several days).
-export function EventoMarcador({ eventos, money, nomeDe, titulo, size = 11, maxIcones = 9, comData = false }) {
+export function EventoMarcador({ eventos, moeda, nomeDe, titulo, size = 11, maxIcones = 9, comData = false }) {
   if (!eventos?.length) return null
-  const linhas = eventos.map(e => `${comData ? `${ddmm(e.data)} · ` : ''}${eventoTexto(e, money, nomeDe?.(e))}`)
+  const linhas = eventos.map(e => `${comData ? `${ddmm(e.data)} · ` : ''}${eventoTexto(e, moeda, nomeDe?.(e))}`)
   const info = {
     oque: (
       <span className={styles.evTipList}>
@@ -148,7 +160,7 @@ export const isErroMigracao = error => /criativos_eventos|orcamento_(anterior|no
 
 export function AvisoMigracao({ schema }) {
   const [copiado, setCopiado] = useState(null)
-  if (schema !== 'sem021' && schema !== 'sem022') return null
+  if (schema !== 'sem021' && schema !== 'semOrc') return null
   async function copiar() {
     const ok = await copiarTexto(sqlMigracao)
     setCopiado(ok ? 'ok' : 'erro')
@@ -158,7 +170,7 @@ export function AvisoMigracao({ schema }) {
     <div className={styles.evAviso} role="alert">
       <p>
         <AlertTriangle size={15} />{' '}
-        <strong>Falta rodar a migration 022 no Supabase.</strong>{' '}
+        <strong>Falta rodar a migration 023 no Supabase.</strong>{' '}
         {schema === 'sem021'
           ? 'Sem ela não dá para registrar mudanças.'
           : 'As mudanças funcionam, mas o orçamento anterior e o novo só são salvos depois dela.'}
@@ -183,7 +195,12 @@ export function AvisoMigracao({ schema }) {
 
 export function MudancaForm({ oferta, criativos = [], criativoFixo, evento, orcamentoAtual, store, onClose }) {
   const schema = store.eventosSchema
-  const semOrcamento = schema === 'sem022'
+  const semOrcamento = schema === 'semOrc'
+  // Budget currency: the one saved with the change, else the ad account's.
+  const moedaPadrao = moedaContaOf(oferta)
+  // The last daily budget typed in the days is in the offer currency: only
+  // prefill it when that's the same currency.
+  const prefill = orcamentoAtual != null && (oferta.moeda || 'BRL') === moedaPadrao
   const [form, setForm] = useState(() => (evento ? {
     data: evento.data,
     criativo_id: evento.criativo_id || '',
@@ -191,13 +208,15 @@ export function MudancaForm({ oferta, criativos = [], criativoFixo, evento, orca
     nota: evento.nota || '',
     orcamento_anterior: numToInput(evento.orcamento_anterior),
     orcamento_novo: numToInput(evento.orcamento_novo),
+    orcamento_moeda: moedaOrcamento(evento, moedaPadrao),
   } : {
     data: hojeSP(),
     criativo_id: criativoFixo?.id ?? criativos[0]?.id ?? '',
     tipo: 'separou',
     nota: '',
-    orcamento_anterior: orcamentoAtual != null ? numToInput(orcamentoAtual) : '',
+    orcamento_anterior: prefill ? numToInput(orcamentoAtual) : '',
     orcamento_novo: '',
+    orcamento_moeda: moedaPadrao,
   }))
   const [erro, setErro] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -220,13 +239,14 @@ export function MudancaForm({ oferta, criativos = [], criativoFixo, evento, orca
       }
       payload.orcamento_anterior = ant
       payload.orcamento_novo = novo
+      payload.orcamento_moeda = ant != null || novo != null ? form.orcamento_moeda : null
     }
     setSalvando(true)
     const res = evento ? await store.updateEvento(evento.id, payload) : await store.addEvento(oferta.id, payload)
     setSalvando(false)
     if (res?.error) {
       setErro(isErroMigracao(res.error)
-        ? 'Para salvar mudanças, rode primeiro a migration 022 no Supabase (o SQL está no aviso acima).'
+        ? 'Para salvar mudanças, rode primeiro a migration 023 no Supabase (o SQL está no aviso acima).'
         : 'Não foi possível salvar. Verifique a conexão e tente de novo.')
       return
     }
@@ -257,16 +277,31 @@ export function MudancaForm({ oferta, criativos = [], criativoFixo, evento, orca
         </Field>
         {comOrcamento && !semOrcamento && (
           <>
-            <Field label="Orçamento anterior por dia · opcional">
+            <Field label="Moeda do orçamento">
+              <div className={styles.viewToggle} role="radiogroup" aria-label="Moeda do orçamento">
+                {[['BRL', 'R$ reais'], ['USD', 'US$ dólar']].map(([m, l]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={form.orcamento_moeda === m}
+                    className={form.orcamento_moeda === m ? styles.viewToggleActive : ''}
+                    onClick={() => setForm(prev => ({ ...prev, orcamento_moeda: m }))}
+                  >{l}</button>
+                ))}
+              </div>
+            </Field>
+            <span className={styles.anFormGap} aria-hidden="true" />
+            <Field label={`Orçamento anterior por dia (${form.orcamento_moeda === 'USD' ? 'US$' : 'R$'}) · opcional`}>
               <input inputMode="decimal" value={form.orcamento_anterior} onChange={f('orcamento_anterior')} placeholder="Ex: 30" />
             </Field>
-            <Field label="Orçamento novo por dia · opcional">
+            <Field label={`Orçamento novo por dia (${form.orcamento_moeda === 'USD' ? 'US$' : 'R$'}) · opcional`}>
               <input inputMode="decimal" value={form.orcamento_novo} onChange={f('orcamento_novo')} placeholder="Ex: 45" />
             </Field>
           </>
         )}
       </div>
-      {comOrcamento && semOrcamento && <p className={styles.hint}>O orçamento anterior e o novo aparecem aqui depois da migration 022.</p>}
+      {comOrcamento && semOrcamento && <p className={styles.hint}>O orçamento anterior e o novo aparecem aqui depois da migration 023.</p>}
       {erro && <p className={styles.fieldError}>{erro}</p>}
       <div className={styles.anFormBtns}>
         <button type="button" className={styles.linkBtn} onClick={onClose}>Cancelar</button>
@@ -280,7 +315,8 @@ export function MudancaForm({ oferta, criativos = [], criativoFixo, evento, orca
 
 // ── Seção "Mudanças" dentro do criativo ─────────────────────────────────────
 
-export function MudancasCriativo({ criativo, oferta, eventos, store, money, orcamentoAtual }) {
+export function MudancasCriativo({ criativo, oferta, eventos, store, orcamentoAtual }) {
+  const moeda = moedaContaOf(oferta)
   const [novaAberta, setNovaAberta] = useState(false)
   const [editando, setEditando] = useState(null)
   const lista = ordenarEventos(eventos)
@@ -329,7 +365,7 @@ export function MudancasCriativo({ criativo, oferta, eventos, store, money, orca
                       <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => apagar(ev)} aria-label="Excluir mudança" title="Excluir"><Trash2 size={13} /></button>
                     </span>
                   </div>
-                  {orcamentoTexto(ev, money) && <span className={styles.evOrc}>Orçamento: {orcamentoTexto(ev, money)}</span>}
+                  {orcamentoTexto(ev, moeda) && <span className={styles.evOrc}>Orçamento: {orcamentoTexto(ev, moeda)}</span>}
                   {ev.nota && <p className={styles.anEventoNota}>{ev.nota}</p>}
                 </div>
               )}

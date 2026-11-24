@@ -99,7 +99,7 @@ function xDaMudanca(data, coords, W) {
   return Math.min(W, (coords[i - 1].x + coords[i].x) / 2)
 }
 
-function MiniLineChart({ label, points, format, color = 'var(--accent)', mudancas = [], money }) {
+function MiniLineChart({ label, points, format, color = 'var(--accent)', mudancas = [], moedaOrc }) {
   const valid = points.filter(p => p.value != null)
   if (valid.length === 0) {
     return (
@@ -147,7 +147,7 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)', mudanca
       <svg viewBox={`-2 -6 ${W + 4} ${H + 12}`} preserveAspectRatio="none" className={styles.chartSvg}>
         {marcas.map(({ ev, x }) => (
           <g key={ev.id} className={styles.chartMudanca}>
-            <title>{`${formatDate(ev.data)}: ${eventoTexto(ev, money)}`}</title>
+            <title>{`${formatDate(ev.data)}: ${eventoTexto(ev, moedaOrc)}`}</title>
             <line x1={x} x2={x} y1={-6} y2={H + 6} style={{ stroke: evCor(ev.tipo) }} strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
             {/* wider invisible line: easier to hover */}
             <line x1={x} x2={x} y1={-6} y2={H + 6} stroke="transparent" strokeWidth="12" vectorEffect="non-scaling-stroke" />
@@ -176,7 +176,7 @@ function MiniLineChart({ label, points, format, color = 'var(--accent)', mudanca
           {[...new Set(marcas.map(m => m.ev.data))].map(d => (
             <span key={d} className={styles.chartMudancaDia}>
               {formatDate(d)}
-              <EventoMarcador eventos={marcas.filter(m => m.ev.data === d).map(m => m.ev)} money={money} size={10} />
+              <EventoMarcador eventos={marcas.filter(m => m.ev.data === d).map(m => m.ev)} moeda={moedaOrc} size={10} />
             </span>
           ))}
         </div>
@@ -193,7 +193,7 @@ const WEEK_HEAD = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const pad2 = n => String(n).padStart(2, '0')
 const isoOf = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`
 
-function MonthCalendar({ selected, onSelect, rowsByDate, money, mudancasPorData }) {
+function MonthCalendar({ selected, onSelect, rowsByDate, money, mudancasPorData, moedaOrc }) {
   const today = todayISO()
   const [view, setView] = useState(() => {
     const [y, m] = (selected || today).split('-').map(Number)
@@ -245,7 +245,7 @@ function MonthCalendar({ selected, onSelect, rowsByDate, money, mudancasPorData 
               onClick={() => onSelect(iso)}
               aria-pressed={iso === selected}
               aria-label={`${d}${row ? `: gasto ${money(row.gasto)}, ${row.vendas} vendas` : ': sem dados'}${evs ? `. Mudança: ${evs.map(e => tipoLabel(e.tipo)).join(', ')}` : ''}`}
-              title={evs ? evs.map(e => eventoTexto(e, money)).join('\n') : undefined}
+              title={evs ? evs.map(e => eventoTexto(e, moedaOrc)).join('\n') : undefined}
               className={[
                 styles.calDay,
                 row ? styles.calDayFilled : '',
@@ -456,7 +456,7 @@ function LancarDia({ criativoId, rows, store, oferta, date, onDateChange, mudanc
         <h2 className={styles.sectionTitle}>Lançar dia</h2>
         {flash && <span className={styles.flash}>Salvo ✓</span>}
       </div>
-      <MonthCalendar selected={form.data} onSelect={onDateChange} rowsByDate={rowsByDate} money={money} mudancasPorData={mudancasPorData} />
+      <MonthCalendar selected={form.data} onSelect={onDateChange} rowsByDate={rowsByDate} money={money} mudancasPorData={mudancasPorData} moedaOrc={moedaContaOf(oferta)} />
       <div className={styles.dayEditing}>
         <span>{existingForDate ? 'Editando' : 'Lançando'}: <strong>{dayTitle}</strong></span>
         {existingForDate && <small>Esse dia já tem dados — altere e toque em “Atualizar dia”.</small>}
@@ -524,7 +524,7 @@ function HistoryRow({ row, oferta, store, onEdit, mudancas }) {
       <td className={styles.strong}>
         <span className={styles.dataCell}>
           {formatDate(row.data)}
-          {mudancas && <EventoMarcador eventos={mudancas} money={money} />}
+          {mudancas && <EventoMarcador eventos={mudancas} moeda={moedaContaOf(oferta)} />}
         </span>
       </td>
       <td className={styles.num} title={gastoTitle}>
@@ -755,7 +755,6 @@ export default function CriativoDetail({ criativo, oferta, rows, eventos = [], s
         oferta={oferta}
         eventos={mudancas}
         store={store}
-        money={money}
         orcamentoAtual={lastBudget}
       />
 
@@ -795,7 +794,7 @@ export default function CriativoDetail({ criativo, oferta, rows, eventos = [], s
               points={rows.map(r => ({ date: r.data, value: summarize([r], oferta.ticket_medio).cpa }))}
               format={money}
               mudancas={mudancas}
-              money={money}
+              moedaOrc={moedaContaOf(oferta)}
             />
             <MiniLineChart
               label="Vendas por dia"
@@ -803,7 +802,7 @@ export default function CriativoDetail({ criativo, oferta, rows, eventos = [], s
               format={integer}
               color="#4ade80"
               mudancas={mudancas}
-              money={money}
+              moedaOrc={moedaContaOf(oferta)}
             />
           </div>
           {tiposNoGrafico.length > 0 && <LegendaEventos tipos={tiposNoGrafico} />}

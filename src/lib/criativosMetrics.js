@@ -403,13 +403,34 @@ export function campanhaVerdict(campanha, total, oferta, money = v => v.toFixed(
 
 // ── Ranking ───────────────────────────────────────────────────────────────────
 
-// Mais vendas primeiro; empate → menor CPA (sem CPA vai depois). Reprovados
-// e pausados sempre no final, com a mesma regra entre eles.
-export function rankCompare(a, b) {
+// Columns the offer ranking can be sorted by, with the direction used on the
+// first click (CPA: lower is better). The default is lucro, descending.
+export const RANK_SORTS = {
+  lucro: 'desc',
+  vendas: 'desc',
+  roi: 'desc',
+  roas: 'desc',
+  cpa: 'asc',
+  taxaConversaVenda: 'desc',
+  taxaCliqueVenda: 'desc',
+}
+export const RANK_DEFAULT = { key: 'lucro', dir: 'desc' }
+
+// Ranking of the offer table: the chosen column (lucro by default), ROI as
+// the tie-break, then the criativo number. Empty values (e.g. CPA without
+// sales) always go last, whatever the direction. Reprovados e pausados
+// sempre no final, com a mesma regra entre eles.
+export function rankCompare(a, b, sort = RANK_DEFAULT) {
   const inactive = c => (c.criativo.fase === 'reprovado' || c.criativo.fase === 'pausado') ? 1 : 0
+  const by = (key, dir) => {
+    const va = a.totals[key], vb = b.totals[key]
+    const na = va == null || Number.isNaN(va), nb = vb == null || Number.isNaN(vb)
+    if (na || nb) return na - nb
+    return dir === 'asc' ? va - vb : vb - va
+  }
   return inactive(a) - inactive(b)
-    || b.totals.vendas - a.totals.vendas
-    || (a.totals.cpa ?? Infinity) - (b.totals.cpa ?? Infinity)
+    || by(sort.key, sort.dir)
+    || (sort.key !== 'roi' ? by('roi', 'desc') : 0)
     || (a.criativo.numero ?? 0) - (b.criativo.numero ?? 0)
 }
 

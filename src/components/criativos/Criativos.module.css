@@ -152,18 +152,21 @@
 }
 .folderActions { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; }
 
+/* Each stat takes the width of its value: nothing is cut with "…". When the
+   card is too narrow, the last stat wraps to the next line instead. */
 .cardStats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
 }
-.cardStats > div { display: flex; flex-direction: column; min-width: 0; }
+.cardStats > div { display: flex; flex-direction: column; flex: 1 0 auto; }
 .statLabel { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; }
 .statValue {
   font-family: var(--font-display);
   font-size: 15px; font-weight: 700;
   color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Fase badges & colors ── */
@@ -539,7 +542,7 @@ a.thumb:hover { border-color: var(--accent); }
   .topbar { padding: 1.5rem 2rem 1rem; }
   .content { padding: 0 2rem 2rem; gap: 24px; }
 
-  .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 
   .sheetWrap { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
 
@@ -1021,3 +1024,23 @@ a.thumb:hover { border-color: var(--accent); }
   .evDot { width: 5px; height: 5px; }
   .evItem { padding: 9px 10px; gap: 8px; }
 }
+
+/* ── Ranking da oferta: ordenar pelo cabeçalho + selos ───────────────────── */
+.thSortBtn {
+  display: inline-flex; align-items: center; gap: 3px;
+  font: inherit; letter-spacing: inherit; text-transform: inherit;
+  color: inherit; background: none; border: none; padding: 2px 0; cursor: pointer;
+}
+.thSortBtn:hover { color: var(--text); }
+.thSortIdle { opacity: 0.45; }
+.sheet th.thSortActive { color: var(--accent-light); }
+
+.seloRow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.selo {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; line-height: 1; white-space: nowrap;
+  padding: 3px 6px; border-radius: 999px;
+}
+.seloLucro { color: #a16207; background: rgba(234,179,8,0.14); }
+.seloVendas { color: var(--accent-light); background: var(--accent-dim); }
+[data-theme="dark"] .seloLucro { color: #facc15; }

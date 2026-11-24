@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Plus, Settings, Pencil } from 'lucide-react'
+import { Plus, Settings, Pencil, ArrowDown, ArrowUp, ArrowUpDown, Trophy, ShoppingCart } from 'lucide-react'
 import {
-  summarize, computeVerdict, rankCompare,
+  summarize, computeVerdict, rankCompare, RANK_SORTS, RANK_DEFAULT,
   summarizeFora, totalOferta, campanhaVerdict, currency,
 } from '../../lib/criativosMetrics'
 import { FaseBadge, DriveThumb, InfoTip } from './shared'
@@ -23,6 +23,11 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
   const [periodo, setPeriodo] = useState(null)
   // Tabela | Análise
   const [aba, setAba] = useState('tabela')
+  // Ranking order: lucro (R$) first by default, every time the screen opens.
+  const [sort, setSort] = useState(RANK_DEFAULT)
+  const ordenarPor = key => setSort(s => (s.key === key
+    ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' }
+    : { key, dir: RANK_SORTS[key] }))
   const datasComDados = useMemo(() => new Set([
     ...criativos.flatMap(c => (rowsByCriativo[c.id] || []).map(r => r.data)),
     ...vendasFora.map(v => v.data),
@@ -55,7 +60,15 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
       // própria janela (acumulado, últimos 3 dias, etc).
       verdict: computeVerdict(c, all, oferta),
     }
-  }).sort(rankCompare), [criativos, rowsByCriativo, periodo, oferta])
+  }).sort((a, b) => rankCompare(a, b, sort)), [criativos, rowsByCriativo, periodo, oferta, sort])
+
+  // Badges for the period shown: highest profit and most sales (can be the
+  // same criativo). Only when the value is above zero; ties go to the one
+  // ranked higher.
+  const destaques = useMemo(() => {
+    const melhor = key => ranked.reduce((best, r) => (r.totals[key] > 0 && (!best || r.totals[key] > best.totals[key]) ? r : best), null)?.criativo.id
+    return { lucro: melhor('lucro'), vendas: melhor('vendas') }
+  }, [ranked])
 
   const total = useMemo(() => {
     const rows = criativos.flatMap(c => filtrarPeriodo(rowsByCriativo[c.id] || [], periodo))
@@ -141,17 +154,41 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
                 <th className={styles.stickyThumb}></th>
                 <th className={styles.stickyName}>Nome</th>
                 <th>Status</th>
-                {cols.map(c => (
-                  <th key={c.key} className={styles.num}>
-                    <span className={styles.thInfo}>{c.label}<InfoTip info={c.info} title={c.label} /></span>
-                  </th>
-                ))}
+                {cols.map(c => {
+                  const ordenavel = c.key in RANK_SORTS
+                  const ativo = sort.key === c.key
+                  const Seta = !ativo ? ArrowUpDown : sort.dir === 'desc' ? ArrowDown : ArrowUp
+                  return (
+                    <th
+                      key={c.key}
+                      className={`${styles.num} ${ativo ? styles.thSortActive : ''}`}
+                      aria-sort={ativo ? (sort.dir === 'desc' ? 'descending' : 'ascending') : undefined}
+                    >
+                      <span className={styles.thInfo}>
+                        {ordenavel ? (
+                          <button
+                            type="button"
+                            className={styles.thSortBtn}
+                            onClick={() => ordenarPor(c.key)}
+                            title={ativo
+                              ? `Ordenado por ${c.label} (${sort.dir === 'desc' ? 'maior para o menor' : 'menor para o maior'}). Toque para inverter.`
+                              : `Ordenar por ${c.label}`}
+                          >
+                            {c.label}
+                            <Seta size={12} className={ativo ? '' : styles.thSortIdle} aria-hidden="true" />
+                          </button>
+                        ) : c.label}
+                        <InfoTip info={c.info} title={c.label} />
+                      </span>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
               {ranked.map(({ criativo, totals, verdict }, i) => (
                 <tr key={criativo.id} className={criativo.fase === 'reprovado' ? styles.rowReprovado : ''}>
-                  <td className={`${styles.stickyPos} ${styles.num} ${styles.pos} ${i === 0 && totals.vendas > 0 && !['reprovado', 'pausado'].includes(criativo.fase) ? styles.posChampion : ''}`}>
+                  <td className={`${styles.stickyPos} ${styles.num} ${styles.pos} ${i === 0 && !['reprovado', 'pausado'].includes(criativo.fase) && (totals[sort.key] != null) ? styles.posChampion : ''}`}>
                     {i + 1}º
                   </td>
                   <td className={styles.stickyThumb}>
@@ -176,6 +213,20 @@ export default function OfertaTabela({ oferta, criativos, rowsByCriativo, vendas
                     >
                       <Pencil size={13} />
                     </button>
+                    {(destaques.lucro === criativo.id || destaques.vendas === criativo.id) && (
+                      <span className={styles.seloRow}>
+                        {destaques.lucro === criativo.id && (
+                          <span className={`${styles.selo} ${styles.seloLucro}`} title={`Mais lucrativo${periodo ? ' no período' : ''}: ${money(totals.lucro)}`}>
+                            <Trophy size={10} aria-hidden="true" /> Mais lucro
+                          </span>
+                        )}
+                        {destaques.vendas === criativo.id && (
+                          <span className={`${styles.selo} ${styles.seloVendas}`} title={`Mais vendas${periodo ? ' no período' : ''}: ${totals.vendas}`}>
+                            <ShoppingCart size={10} aria-hidden="true" /> Mais vendas
+                          </span>
+                        )}
+                      </span>
+                    )}
                     {criativo.angulo && <span className={styles.nameSub}>{criativo.angulo}</span>}
                   </td>
                   <td>

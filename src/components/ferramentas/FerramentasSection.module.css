@@ -1,0 +1,93 @@
+/* "Ferramentas" tab — same side menu as Atividades / Dados, cards like the
+   Criativos folders. */
+.wrapper { display: flex; flex: 1; min-height: 0; }
+
+.nav {
+  width: 190px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.navHeader { display: flex; align-items: center; padding: 0 0 12px 10px; }
+.navTitle {
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text3);
+}
+.navItem {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 13.5px; font-weight: 500;
+  transition: all 0.15s;
+  text-align: left;
+}
+.navItem:hover { background: var(--bg3); color: var(--text); }
+.navItemActive { background: var(--accent-dim2); color: var(--accent-light); font-weight: 600; }
+
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 1.1rem 1rem 0.9rem;
+}
+.topbarText { min-width: 0; }
+.title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; letter-spacing: -0.02em; }
+.subtitle { font-size: 13px; color: var(--text3); margin-top: 3px; max-width: 70ch; }
+.backBtn {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 34px; height: 34px; margin-top: 1px;
+  border-radius: var(--radius); color: var(--text2);
+  transition: all 0.15s;
+}
+.backBtn:hover { background: var(--bg3); color: var(--text); }
+
+.body { padding: 0 1rem 2rem; }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cardIcon {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: var(--radius);
+  background: var(--accent-dim2); color: var(--accent-light);
+}
+.cardName { font-family: var(--font-display); font-size: 15.5px; font-weight: 700; color: var(--text); }
+.cardDesc { font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg3); color: var(--text3); }
+
+.empty { display: flex; align-items: center; justify-content: center; padding: 4rem 0; }
+.loadingIcon {
+  color: var(--accent); font-size: 32px;
+  animation: pulse 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px var(--accent));
+}
+@keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(0.9) } 50% { opacity: 1; transform: scale(1.1) } }
+
+@media (min-width: 720px) {
+  .topbar { padding: 1.5rem 2rem 1rem; }
+  .body { padding: 0 2rem 2rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .navHeader { padding-bottom: 8px; }
+  .navItem { padding: 12px 10px; font-size: 14px; }
+}

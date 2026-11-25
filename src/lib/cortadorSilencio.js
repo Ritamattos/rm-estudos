@@ -9,7 +9,9 @@ export const PREDEFINICOES = {
   vsl:       { thr: -40, min: 300, pad: 90 },
   agressivo: { thr: -35, min: 180, pad: 40 },
 }
-export const CONFIG_PADRAO = { thr: -40, min: 300, pad: 90, speed: 1, pitch: true, mono: false }
+// autoThr: the silence threshold is measured from each audio (limiteAuto)
+// instead of the fixed value of the preset — works with background noise.
+export const CONFIG_PADRAO = { thr: -40, min: 300, pad: 90, speed: 1, pitch: true, mono: false, autoThr: true }
 
 // Mono mix, loudness per 10 ms frame (dB) and the min/max envelope used to
 // draw the waveform (up to 8000 buckets).

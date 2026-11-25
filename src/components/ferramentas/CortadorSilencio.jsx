@@ -165,6 +165,8 @@ export default function CortadorSilencio() {
       proc().carregar(channels, buf.sampleRate)
       setArquivo({ nome: f.name, duracao: buf.length / buf.sampleRate })
       setAn(analise)
+      // Automatic cut: the threshold is measured from this audio.
+      if (S.autoThr) set({ thr: limiteAuto(analise) })
       setStatus('')
     } catch {
       setStatus('Não consegui ler esse arquivo. Tente MP3, WAV, M4A, OGG ou MP4.')
@@ -242,18 +244,26 @@ export default function CortadorSilencio() {
 
   // ── Controles ─────────────────────────────────────────────────────────────
   const set = patch => setS(prev => ({ ...prev, ...patch }))
+  // With the automatic threshold on, a preset only sets the minimum silence
+  // and the breathing room; the threshold keeps following the audio.
   const presetAtivo = Object.keys(PREDEFINICOES).find(p => {
     const v = PREDEFINICOES[p]
-    return v.thr === S.thr && v.min === S.min && v.pad === S.pad
+    return v.min === S.min && v.pad === S.pad && (S.autoThr || v.thr === S.thr)
   })
-
-  function auto() {
-    if (!an) return
-    const thr = limiteAuto(an)
-    set({ thr })
-    setStatus(`Limite ajustado para ${thr} dB.`)
+  function aplicarPreset(p) {
+    const v = PREDEFINICOES[p]
+    set(S.autoThr ? { min: v.min, pad: v.pad } : v)
   }
 
+  function auto() {
+    if (!an) { set({ autoThr: true }); return }
+    const thr = limiteAuto(an)
+    set({ thr, autoThr: true })
+    setStatus(`Limite ajustado para ${thr} dB (medido neste áudio).`)
+  }
+
+  // Cuts between words (not the silence at the very start or end).
+  const pausasNoMeio = det ? det.cuts.filter(([a, b]) => a > 0 && b < an.n).length : null
   const original = arquivo?.duracao ?? 0
   const final = det ? segundosFinais(det.keeps, an.sr, S.speed) : 0
   const diff = original - final
@@ -310,6 +320,36 @@ export default function CortadorSilencio() {
         </div>
       )}
 
+      {/* Listen / download right under the waveform. */}
+      <div className={styles.acts}>
+        <button type="button" className={styles.btn} onClick={() => ouvir('orig')} disabled={!an || (ocupado && tocando !== 'orig')}>
+          {tocando === 'orig' ? <><Square size={14} /> Parar</> : <><Play size={14} /> Ouvir original</>}
+        </button>
+        <button type="button" className={styles.btn} onClick={() => ouvir('res')} disabled={!an || (ocupado && tocando !== 'res')}>
+          {tocando === 'res' ? <><Square size={14} /> Parar</> : <><Play size={14} /> Ouvir resultado</>}
+        </button>
+        <button type="button" className={styles.primaryBtn} onClick={baixar} disabled={!an || ocupado}>
+          <Download size={15} /> Baixar WAV
+        </button>
+        <span className={styles.status} aria-live="polite">{status}</span>
+      </div>
+
+      {pausasNoMeio === 0 && (
+        <div className={styles.aviso} role="status">
+          <strong>Nenhuma pausa no meio da fala foi cortada{det.cuts.length ? ' (só o silêncio do começo ou do fim)' : ''}.</strong>{' '}
+          As pausas deste áudio são mais curtas que {S.min} ms{S.autoThr ? '' : ` ou têm ruído acima de ${S.thr} dB`}.
+          <span className={styles.avisoBtns}>
+            {!['vsl', 'agressivo'].includes(presetAtivo) && (
+              <button type="button" className={styles.btnSm} onClick={() => { aplicarPreset('vsl'); if (!S.autoThr) auto() }}>Usar “Narração / VSL”</button>
+            )}
+            {presetAtivo !== 'agressivo' && (
+              <button type="button" className={styles.btnSm} onClick={() => { aplicarPreset('agressivo'); if (!S.autoThr) auto() }}>Usar “Agressivo”</button>
+            )}
+            {!S.autoThr && <button type="button" className={styles.btnSm} onClick={auto}><Wand2 size={13} /> Limite automático</button>}
+          </span>
+        </div>
+      )}
+
       <section className={styles.grid}>
         <div className={styles.res}>
           <div>
@@ -326,18 +366,6 @@ export default function CortadorSilencio() {
             <dt>Cortes</dt><dd>{det ? det.cuts.length : '–'}</dd>
             <dt>Velocidade</dt><dd>{num(S.speed, 2)}×{S.speed !== 1 ? (S.pitch ? ' · tom mantido' : ' · tom muda') : ''}</dd>
           </dl>
-          <div className={styles.acts}>
-            <button type="button" className={styles.btn} onClick={() => ouvir('orig')} disabled={!an || (ocupado && tocando !== 'orig')}>
-              {tocando === 'orig' ? <><Square size={14} /> Parar</> : <><Play size={14} /> Ouvir original</>}
-            </button>
-            <button type="button" className={styles.btn} onClick={() => ouvir('res')} disabled={!an || (ocupado && tocando !== 'res')}>
-              {tocando === 'res' ? <><Square size={14} /> Parar</> : <><Play size={14} /> Ouvir resultado</>}
-            </button>
-            <button type="button" className={styles.primaryBtn} onClick={baixar} disabled={!an || ocupado}>
-              <Download size={15} /> Baixar WAV
-            </button>
-          </div>
-          <div className={styles.status} aria-live="polite">{status}</div>
         </div>
 
         <div className={styles.ctl}>
@@ -345,17 +373,28 @@ export default function CortadorSilencio() {
             <div className={styles.lab}>Predefinição</div>
             <div className={styles.chips}>
               {Object.keys(PREDEFINICOES).map(p => (
-                <button key={p} type="button" aria-pressed={presetAtivo === p} onClick={() => set(PREDEFINICOES[p])}>{PRESET_LABEL[p]}</button>
+                <button key={p} type="button" aria-pressed={presetAtivo === p} onClick={() => aplicarPreset(p)}>{PRESET_LABEL[p]}</button>
               ))}
             </div>
           </div>
 
           <div className={styles.row}>
-            <label htmlFor="cs-thr">Limite do silêncio <output>{S.thr} dB</output></label>
-            <input id="cs-thr" type="range" min="-65" max="-15" step="1" value={S.thr} onChange={e => set({ thr: +e.target.value })} />
+            <label htmlFor="cs-thr">Limite do silêncio <output>{S.thr} dB{S.autoThr ? ' · automático' : ''}</output></label>
+            {/* Moving the slider switches to a manual threshold. */}
+            <input id="cs-thr" type="range" min="-65" max="-15" step="1" value={S.thr} onChange={e => set({ thr: +e.target.value, autoThr: false })} />
             <div className={styles.rowFoot}>
-              <p className={styles.note}>Tudo abaixo desse volume conta como silêncio. Com ruído de fundo, suba.</p>
-              <button type="button" className={styles.btnSm} onClick={auto} disabled={!an}><Wand2 size={13} /> Auto</button>
+              <p className={styles.note}>
+                {S.autoThr
+                  ? 'Medido em cada áudio que você sobe, considerando o ruído de fundo. Mexa na barra para ajustar à mão.'
+                  : 'Tudo abaixo desse volume conta como silêncio. Com ruído de fundo, suba.'}
+              </p>
+              <button
+                type="button"
+                className={`${styles.btnSm} ${S.autoThr ? styles.btnSmOn : ''}`}
+                onClick={auto}
+                aria-pressed={S.autoThr}
+                title="Medir o limite neste áudio"
+              ><Wand2 size={13} /> Auto</button>
             </div>
           </div>
 
